@@ -9,7 +9,7 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand">HSK Flashcards</div>
+        <div class="brand" style="margin:0 auto">HSK Flashcards</div>
         <div class="controls">
           <button id="btnNewRun" class="secondary">New Run</button>
           <button id="btnReplay" class="secondary">Replay…</button>
@@ -130,6 +130,11 @@
             </section>
             <section style="margin-bottom:12px">
               <label class="toggle"><input type="checkbox" id="settingsMinimalUI" /> <span>Minimal UI (hide Back/Reveal/Next)</span></label>
+            </section>
+            <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Mobile</div>
+              <label class="toggle"><input type="checkbox" id="settingsOutdoor" /> <span>Outdoor mode (high contrast)</span></label>
+              <label class="toggle" style="margin-left:12px"><input type="checkbox" id="settingsAudio" /> <span>Audio feedback on mark/unmark</span></label>
             </section>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Info</div>

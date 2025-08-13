@@ -108,7 +108,8 @@ function setActionsDisabled(disabled) {
 }
 
 function setProgress(current, total) {
-  el.progressText.textContent = `${current} / ${total}`;
+  const prefix = state.levelLabel ? `${state.levelLabel} · ` : '';
+  el.progressText.textContent = `${prefix}${current} / ${total}`;
 }
 
 function setMistakes(count) {

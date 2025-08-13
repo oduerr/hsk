@@ -133,6 +133,20 @@ button.danger { border-color: #7f1d1d; color: #fecaca; }
 /* Build info */
 .buildinfo { position: fixed; bottom: 6px; right: 8px; color: #64748b; font-size: 12px; }
 
+/* Outdoor mode (mobile) */
+.outdoor body, body.outdoor {
+  --bg: #000000;
+  --panel: #000000;
+  --text: #ffffff;
+  --muted: #cbd5e1;
+  --accent: #ffffff;
+  --danger: #ff4444;
+  --border: #334155;
+}
+body.outdoor .card { background: #000; border-color: #334155; }
+body.outdoor .english, body.outdoor .hanzi, body.outdoor .pinyin { color: #ffffff; }
+body.outdoor button { font-weight: 700; }
+
 @keyframes shake {
   0% { transform: translateX(0); }
   25% { transform: translateX(-4px); }

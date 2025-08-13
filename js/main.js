@@ -221,7 +221,7 @@ function onKeyDown(e) {
   } else if (key === 'enter') {
     e.preventDefault();
     onNext();
-  } else if (key === 'm') {
+  } else if (key === 'm' || (e.shiftKey && key === 'shift')) {
     e.preventDefault();
     onMistake();
   } else if (key === 'u') {
@@ -236,10 +236,10 @@ function onKeyDown(e) {
   } else if (key === 'arrowright') {
     e.preventDefault();
     onNext();
-  } else if (key === 'arrowleft' || key === 'arrowup') {
+  } else if (key === 'arrowleft') {
     e.preventDefault();
     onBack();
-  } else if (key === 'arrowdown') {
+  } else if (key === 'arrowdown' || key === 'arrowup') {
     e.preventDefault();
     onReveal();
   }
@@ -296,6 +296,14 @@ document.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
+// Tap on card toggles mistake on mobile per 4.06
+document.getElementById('card')?.addEventListener('click', () => {
+  // Only on small screens: heuristic via width
+  if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
+    onMistake();
+  }
+});
+
 // ---------- Level Picker ----------
 async function loadLevelsAndStart(levels) {
   // levels: array of '1'..'6'
@@ -310,11 +318,11 @@ async function loadLevelsAndStart(levels) {
   if (cards.length) {
     saveDeck(cards);
     newRun(cards);
+    state.levelLabel = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
     render();
     startCountdownIfNeeded();
-    const label = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
     saveLastLevel(levels.length === 1 ? levels[0] : 'custom');
-    if (levelInfo) levelInfo.textContent = `Loaded ${label} • ${cards.length} cards`;
+    if (levelInfo) levelInfo.textContent = `Loaded ${state.levelLabel} • ${cards.length} cards`;
   } else {
     alert('Failed to load selected level(s).');
   }

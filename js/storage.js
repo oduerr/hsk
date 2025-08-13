@@ -91,9 +91,15 @@ export function saveCheckpoint(fullSnapshot) {
 }
 
 export function loadSettings() {
-  const def = { timerEnabled: false, timerSeconds: 5, lastCsvHash: '', minimalUI: false };
+  const def = { timerEnabled: false, timerSeconds: 5, lastCsvHash: '', minimalUI: false, outdoorMode: false, audioFeedback: null };
   const s = readJson(SETTINGS_KEY, def) || def;
   if (typeof s.minimalUI !== 'boolean') s.minimalUI = false;
+  if (typeof s.outdoorMode !== 'boolean') s.outdoorMode = false;
+  if (s.audioFeedback === null || typeof s.audioFeedback === 'undefined') {
+    // default: ON for mobile, OFF for desktop
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    s.audioFeedback = !!isMobile;
+  }
   return s;
 }
 

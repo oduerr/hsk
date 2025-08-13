@@ -32,6 +32,7 @@ export let state = {
   mistakes: new Set(),
   autoReveal: false,
   autoRevealSeconds: 5,
+  levelLabel: '',
   session: {
     id: '',
     startedAt: '',
