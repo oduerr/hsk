@@ -45,6 +45,7 @@
         <section id="card" class="card">
           <div id="mistakeBadge" class="mistake-badge" hidden>Marked mistake</div>
           <button id="btnSpeak" class="speak-btn" aria-label="Speak Chinese">🔊</button>
+          <button id="btnTone" class="tone-btn" aria-label="Tone visualizer" title="Tone visualizer">🎙️</button>
           <div id="cardFront" class="face front">
             <div id="englishText" class="english">—</div>
           </div>
@@ -157,6 +158,24 @@
               <button id="settingsUndo" class="secondary">Undo</button>
               <a href="./help.html" target="_blank" class="secondary" style="text-decoration:none; padding:10px 14px; border:1px solid var(--border); border-radius:10px">Help</a>
             </section>
+          </div>
+        </div>
+      </div>
+      <div id="toneDialog" class="modal" hidden>
+        <div class="modal-backdrop" data-close="1"></div>
+        <div class="modal-panel">
+          <div class="modal-header">
+            <div class="modal-title">Tone visualizer</div>
+            <button class="secondary" id="toneClose">Close</button>
+          </div>
+          <div class="modal-body">
+            <div id="toneInfo" class="muted" style="margin-bottom:8px">—</div>
+            <canvas id="toneCanvas" width="640" height="240" style="width:100%; height:240px; background:#0b1220; border:1px solid var(--border); border-radius:8px"></canvas>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+              <button id="toneRecord" class="primary">Record</button>
+              <button id="toneStop" class="secondary">Stop</button>
+              <span id="toneStatus" class="muted"></span>
+            </div>
           </div>
         </div>
       </div>

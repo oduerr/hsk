@@ -461,6 +461,46 @@ This tool is designed for active recall and spaced repetition. You can rename a 
 Update the version to 4.09 — 莉娜老师的版本
 
 
+4.11 Tone Visualization (Optional, Non-Blocking Feature)
+
+Goal:
+Allow the user to record their pronunciation of a Chinese character and visualize the pitch contour, comparing it with the ideal tone contour for that syllable. This feature should be entirely optional and should not interfere with the main flashcard workflow if unavailable or unsupported.
+
+⸻
+
+Functional Requirements
+	1.	Activation
+	•	Add a small “Tone Visualizer” button/icon near the “Play Sound” button on each card.
+	•	Clicking opens a modal dialog (or overlay) with the tone visualizer.
+	•	Works on both desktop and mobile; mobile devices must request microphone access.
+	2.	Display
+	•	Show pinyin with tone mark for the current card at the top of the modal.
+	•	Draw an idealized tone curve for that tone number before recording:
+	•	Tone 1: flat line (high level)
+	•	Tone 2: rising line
+	•	Tone 3: falling-then-rising curve
+	•	Tone 4: falling line
+	•	Tone curves should be normalized to the display (not absolute Hz).
+	3.	Recording
+	•	On “Record”, request microphone access and capture audio for up to ~2 seconds.
+	•	Analyze pitch (fundamental frequency) in real time or after recording using a lightweight pitch detection algorithm (e.g., autocorrelation or YIN).
+	4.	Visualization
+	•	Plot the user’s detected pitch contour in blue over the existing ideal curve.
+	•	Normalize user pitch to match the vertical scaling of the ideal curve for easy visual comparison.
+	•	If pitch detection fails, show a message (“No pitch detected, try again”).
+	5.	Closure
+	•	Close the modal with an “X” or “Close” button without affecting the flashcard state.
+	•	All audio and visualizer code should be isolated from main app logic.
+
+⸻
+
+Technical Notes
+	•	Use the Web Audio API for pitch detection.
+	•	Use Canvas or SVG for drawing curves.
+	•	No server calls — must be entirely client-side.
+	•	Feature should gracefully skip if navigator.mediaDevices.getUserMedia is unavailable.
+	•	Pinyin and tone number come from the CSV dataset; no extra API required.
+
 
 
 ### Round 5 – QoL & Safety

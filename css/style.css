@@ -94,6 +94,15 @@ label.seconds input {
   z-index: 2; /* above card so it captures clicks */
   pointer-events: auto;
 }
+.tone-btn {
+  position: absolute;
+  top: 12px;
+  right: 56px; /* just left of speaker */
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 14px;
+  z-index: 2;
+}
 
 .face { width: 100%; }
 .english { font-size: clamp(24px, 5vw, 44px); line-height: 1.25; }
