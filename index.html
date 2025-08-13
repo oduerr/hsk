@@ -16,9 +16,9 @@
         <div class="topinfo-line"><div id="topInfo">—</div></div>
         <div class="progressbar"><div id="progressFill" class="fill"></div></div>
         <div class="controls btnrow">
-          <button id="btnNewRun" class="secondary">New Run</button>
-          <button id="btnReplay" class="secondary">Replay…</button>
-          <button id="btnSaveProgressTop" class="secondary">Save Progress</button>
+          <button id="btnNewRun" class="secondary" title="Start a new learning session">New Run</button>
+          <button id="btnReplay" class="secondary" title="Replay a previously saved session">Replay…</button>
+          <button id="btnSaveProgressTop" class="secondary" title="Save your progress in the current session">Save Progress</button>
           <button id="btnMistakeTop" class="danger">Mistake</button>
           <button id="btnSettings" class="secondary" aria-label="Settings">⚙️</button>
         </div>
@@ -155,6 +155,7 @@
               <button id="settingsImportBtn" class="secondary">Import sessions</button>
               <input id="settingsImportInput" type="file" accept="application/json" hidden />
               <button id="settingsUndo" class="secondary">Undo</button>
+              <a href="./help.html" target="_blank" class="secondary" style="text-decoration:none; padding:10px 14px; border:1px solid var(--border); border-radius:10px">Help</a>
             </section>
           </div>
         </div>

@@ -432,6 +432,35 @@ Keep the Rest
 
 Update the version to 4.08 — 莉娜老师的版本
 
+### 4.09 Help Page
+Task:
+	1.	Add a new static help page (help.html) to the project.
+	2.	The page should briefly describe the main controls and the philosophy behind sessions. Use the following text:
+
+Session Controls
+	•	New Run – Starts a fresh session using the chosen vocabulary list.
+	•	Replay… – Loads and replays a previously saved session.
+	•	Save Progress – Saves your current learning progress for later continuation.
+
+Philosophy
+
+This tool is designed for active recall and spaced repetition. You can rename a session, replay it later, and track mistakes over time. The goal is to encourage focused, distraction-free practice while allowing flexibility to pause and resume learning at your own pace.
+
+
+	3.	Add tooltips to the buttons in the main UI with these texts:
+	•	New Run → "Start a new learning session"
+	•	Replay… → "Replay a previously saved session"
+	•	Save Progress → "Save your progress in the current session"
+
+	4.	Ensure the tooltips match the button functionality.
+	5.	Verify the actual button logic matches the descriptions above — if not, update the help page text and tooltips so they reflect the actual behavior.
+	6.	Add a “Help” link inside the gear menu that opens help.html in a new tab
+
+7. Minor Tweak Add the loudspeaker symbol to the upper right side of the card. Then it is better accessible for a right handed person.
+
+Update the version to 4.09 — 莉娜老师的版本
+
+
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.
