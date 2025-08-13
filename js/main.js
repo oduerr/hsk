@@ -106,7 +106,15 @@ async function bootstrap() {
   // Show version/build info: date + latest session or checkpoint id
   try {
     const lastId = loadLastCheckpointId();
-    buildInfo.textContent = `HSK Flash v1 • 莉娜老师的版本 • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
+    // Try to read VERSION.TXT for version label
+    let versionLabel = 'HSK Flash v1';
+    try {
+      const v = await fetch('./VERSION.TXT').then(r => r.text()).catch(() => '');
+      versionLabel = v ? v.trim() : versionLabel;
+      const brandEl = document.getElementById('brandText');
+      if (brandEl && versionLabel) brandEl.textContent = versionLabel.split('—')[0].trim();
+    } catch {}
+    buildInfo.textContent = `${versionLabel} • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
   } catch {}
   // Load settings
   try {
@@ -164,9 +172,11 @@ function onMistake() {
   if (!card) return;
   if (state.mistakes.has(card.id)) {
     unmarkMistake();
+    playMarkAudio(true);
   } else {
     markMistake();
     flashMistake();
+    playMarkAudio(false);
   }
   render();
 }
@@ -303,6 +313,41 @@ document.getElementById('card')?.addEventListener('click', () => {
     onMistake();
   }
 });
+
+// Audio feedback
+let audioCtx = null;
+function ensureAudio() {
+  if (audioCtx) return audioCtx;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  return audioCtx;
+}
+function playBeep(freq, ms) {
+  const s = loadSettings();
+  if (!s.audioFeedback) { console.log('[audio] feedback disabled'); return; }
+  const ctx = ensureAudio();
+  if (!ctx || typeof ctx.createOscillator !== 'function') { console.log('[audio] no audio context'); return; }
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.frequency.value = freq;
+  gain.gain.value = 0.001;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+  osc.start();
+  // quick fade in/out
+  gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms / 1000);
+  osc.stop(ctx.currentTime + ms / 1000 + 0.01);
+}
+function playMarkAudio(isUnmark) {
+  if (isUnmark) {
+    console.log('[audio] mark->correct');
+    playBeep(880, 120);
+  } else {
+    console.log('[audio] correct->mark');
+    playBeep(220, 160);
+  }
+}
 
 // ---------- Level Picker ----------
 async function loadLevelsAndStart(levels) {

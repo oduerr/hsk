@@ -379,6 +379,16 @@ Schema: hanzi,pinyin,english[,german] (German optional, not yet implemented).
 - Plays positive tone when changing Mistake → Correct, negative tone for Correct → Mistake.
 - Implement via shared AudioContext unlocked on first gesture; silently skip if unsupported.
 
+### 4.06.01 Some UI changes
+Functions not implemented but requested in 4.06
+- HSK-Flashcards should be on the top center of the screen (in the top bar) not working
+- Ourdoor mode (high contrast) massively increase front size of the card.
+- No Tone playing on my device (Pixel 6) add console logging for debugging.
+
+
+In addtion change the information shown to be read from a VERSION.TXT file starting with 
+4.06.01 — 莉娜老师的版本
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.

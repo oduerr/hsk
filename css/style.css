@@ -24,7 +24,9 @@ body {
 .topbar, .bottombar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .bottombar { border-top: 1px solid var(--border); border-bottom: none; }
 
-.brand { font-weight: 600; color: var(--text); }
+.brand { font-weight: 600; color: var(--text); flex: 1 1 auto; display: flex; justify-content: center; }
+.controls { order: 1; }
+.status { order: 3; }
 .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .status { display: flex; align-items: center; gap: 10px; color: var(--muted); flex-wrap: wrap; justify-content: flex-end; }
 .status-metrics { display: flex; align-items: center; gap: 6px; }
