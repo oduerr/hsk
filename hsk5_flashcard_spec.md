@@ -242,6 +242,20 @@ Agent tasks
 	JSON export/import compatibility
 	•	The checkpoint must be saved in the same JSON structure as a finished session, with the only difference being a status flag:
 
+
+### Round 3.8
+- In the discreet version indicator at the bottom add The Chinese label “莉娜老师的版本” 
+- Past Sessions / Replay UI changes
+	•	When listing sessions, show for each 
+  YYYY-MM-DD-hh:mm • <finished>/<total> • <mistakes> mistakes • status: complete|incomplete
+  * Allow inline renaming of session titles, persist changes in session summaries.
+  * Move Export all sessions and Import sessions buttons into the Past Sessions / Replay dialog.
+  * For each session in the list, provide buttons:
+	•	Replay mistakes
+	•	Resume (if status = incomplete)
+	•	Rename
+	•	Delete
+
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.

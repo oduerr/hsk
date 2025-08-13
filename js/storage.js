@@ -37,6 +37,21 @@ export function saveSessionSummary(summary) {
   writeJson(SESSIONS_KEY, list);
 }
 
+export function renameSession(id, title) {
+  const list = loadSessionSummaries();
+  const idx = list.findIndex((s) => s.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], title: title || '' };
+    writeJson(SESSIONS_KEY, list);
+  }
+}
+
+export function deleteSession(id) {
+  const list = loadSessionSummaries().filter((s) => s.id !== id);
+  writeJson(SESSIONS_KEY, list);
+  try { localStorage.removeItem(SESSION_PREFIX + id); } catch {}
+}
+
 export function saveDeck(cards) {
   writeJson(DECK_KEY, cards);
 }

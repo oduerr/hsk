@@ -13,9 +13,6 @@
         <div class="controls">
           <button id="btnNewRun" class="secondary">New Run</button>
           <button id="btnReplay" class="secondary">Replay…</button>
-          <button id="btnExport" class="secondary">Export</button>
-          <button id="btnImport" class="secondary">Import</button>
-          <input id="importInput" type="file" accept="application/json" hidden />
           <div class="divider"></div>
           <label class="toggle">
             <input type="checkbox" id="autoRevealToggle" />
@@ -75,7 +72,12 @@
         <div class="modal-panel">
           <div class="modal-header">
             <div class="modal-title">Replay past session</div>
-            <button class="secondary" id="replayClose">Close</button>
+            <div style="display:flex; gap:8px; align-items:center">
+              <button id="dlgExport" class="secondary">Export sessions</button>
+              <button id="dlgImportBtn" class="secondary">Import sessions</button>
+              <input id="dlgImportInput" type="file" accept="application/json" hidden />
+              <button class="secondary" id="replayClose">Close</button>
+            </div>
           </div>
           <div class="modal-body">
             <div id="replayEmpty" class="muted" hidden>No sessions found.</div>

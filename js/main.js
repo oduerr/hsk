@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId } from './storage.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 
@@ -12,8 +12,7 @@ const btnNext = /** @type {HTMLButtonElement} */($('btnNext'));
 const btnMistake = /** @type {HTMLButtonElement} */($('btnMistake'));
 const btnNewRun = /** @type {HTMLButtonElement} */($('btnNewRun'));
 const btnReplay = /** @type {HTMLButtonElement} */($('btnReplay'));
-const btnImport = /** @type {HTMLButtonElement} */($('btnImport'));
-const importInput = /** @type {HTMLInputElement} */($('importInput'));
+// Removed top-level import/export buttons; moved to dialog
 const autoToggle = /** @type {HTMLInputElement} */($('autoRevealToggle'));
 const autoSeconds = /** @type {HTMLInputElement} */($('autoRevealSeconds'));
 const btnExport = /** @type {HTMLButtonElement} */(document.getElementById('btnExport'));
@@ -86,7 +85,7 @@ async function bootstrap() {
   // Show version/build info: date + latest session or checkpoint id
   try {
     const lastId = loadLastCheckpointId();
-    buildInfo.textContent = `HSK Flash v1 • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
+    buildInfo.textContent = `HSK Flash v1 • 莉娜老师的版本 • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
   } catch {}
 }
 
@@ -248,26 +247,29 @@ btnUsePastedCsv?.addEventListener('click', () => {
   }
 });
 
-// Import via file input
-if (btnImport && importInput) {
-  btnImport.addEventListener('click', () => importInput.click());
-  importInput.addEventListener('change', async () => {
-    const file = importInput.files && importInput.files[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const obj = JSON.parse(text);
-      const res = importSessionsFromObject(obj);
-      console.log('Imported sessions:', res);
-      alert('Import complete. You can open Replay… to view sessions.');
-    } catch (e) {
-      console.error('Import failed:', e);
-      alert('Import failed. Check console for details.');
-    } finally {
-      importInput.value = '';
-    }
-  });
-}
+// Dialog import/export controls
+const dlgExport = /** @type {HTMLButtonElement} */(document.getElementById('dlgExport'));
+const dlgImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('dlgImportBtn'));
+const dlgImportInput = /** @type {HTMLInputElement} */(document.getElementById('dlgImportInput'));
+dlgExport?.addEventListener('click', () => {
+  try { const snapshot = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snapshot); } catch (e) { console.error(e); }
+});
+dlgImportBtn?.addEventListener('click', () => dlgImportInput?.click());
+dlgImportInput?.addEventListener('change', async () => {
+  const file = dlgImportInput.files && dlgImportInput.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const obj = JSON.parse(text);
+    const res = importSessionsFromObject(obj);
+    console.log('Imported sessions:', res);
+    // Refresh list
+    openReplayDialog();
+  } catch (e) {
+    console.error('Import failed:', e);
+    alert('Import failed. Check console.');
+  } finally { dlgImportInput.value = ''; }
+});
 
 // ---------- Replay Dialog ----------
 const replayDialog = /** @type {HTMLElement} */(document.getElementById('replayDialog'));
@@ -296,14 +298,19 @@ function openReplayDialog() {
       const left = document.createElement('div');
       const right = document.createElement('div');
       const right2 = document.createElement('div');
-      left.innerHTML = `<div><strong>${new Date(s.startedAt).toLocaleString()}</strong></div>` +
+      const started = new Date(s.startedAt);
+      const ymdhm = `${started.getFullYear()}-${String(started.getMonth()+1).padStart(2,'0')}-${String(started.getDate()).padStart(2,'0')}-${String(started.getHours()).padStart(2,'0')}:${String(started.getMinutes()).padStart(2,'0')}`;
+      const finished = s.counts?.total ?? 0;
+      const progressed = (s.finishedAt ? finished : Math.min(finished, (loadFullSession(s.id)?.events || []).filter(e => e.type==='next').length));
+      const status = s.finishedAt ? 'complete' : 'incomplete';
+      const title = s.title ? ` — ${escapeHtml(s.title)}` : '';
+      left.innerHTML = `<div><strong>${ymdhm}</strong>${title}</div>` +
         `<div class="sid">${s.id}</div>`;
       right.className = 'counts';
-      right.textContent = `${s.counts?.mistakes ?? 0} mistakes / ${s.counts?.total ?? 0}`;
+      right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes • status: ${status}`;
       const disabledReplay = (s.mistakeIds?.length ?? 0) === 0;
       const actions = document.createElement('div');
-      actions.style.display = 'flex';
-      actions.style.gap = '6px';
+      actions.className = 'actions';
       const btnReplay = document.createElement('button');
       btnReplay.className = 'primary';
       btnReplay.textContent = 'Replay mistakes';
@@ -317,8 +324,20 @@ function openReplayDialog() {
       btnResume.disabled = !isInProgress;
       if (isInProgress) btnResume.addEventListener('click', () => resumeFromSummary(s));
 
+      const btnRename = document.createElement('button');
+      btnRename.className = 'secondary';
+      btnRename.textContent = 'Rename';
+      btnRename.addEventListener('click', () => renameSummaryInline(li, s));
+
+      const btnDelete = document.createElement('button');
+      btnDelete.className = 'danger';
+      btnDelete.textContent = 'Delete';
+      btnDelete.addEventListener('click', () => deleteSummary(s));
+
       actions.appendChild(btnReplay);
       actions.appendChild(btnResume);
+      actions.appendChild(btnRename);
+      actions.appendChild(btnDelete);
       right2.appendChild(actions);
       li.appendChild(left);
       li.appendChild(right);
@@ -352,6 +371,40 @@ function resumeFromSummary(summary) {
   render();
   startCountdownIfNeeded();
   closeReplayDialog();
+}
+
+function renameSummaryInline(li, summary) {
+  const current = summary.title || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.placeholder = 'Session title';
+  input.style.width = '100%';
+  const leftDiv = li.firstChild;
+  if (leftDiv && leftDiv.firstChild) {
+    leftDiv.firstChild.replaceWith(input);
+    input.focus();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { commit(); }
+      if (e.key === 'Escape') { openReplayDialog(); }
+    });
+    input.addEventListener('blur', commit);
+  }
+  function commit() {
+    const title = input.value.trim();
+    renameSession(summary.id, title);
+    openReplayDialog();
+  }
+}
+
+function deleteSummary(summary) {
+  if (!confirm('Delete this session? This cannot be undone.')) return;
+  deleteSession(summary.id);
+  openReplayDialog();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"]+/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 }
 
 // Initialize default auto reveal settings in state from UI controls
