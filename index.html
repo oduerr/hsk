@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HSK5 Flashcards</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">HSK Flashcards</div>
+        <div class="controls">
+          <button id="btnNewRun" class="secondary">New Run</button>
+          <div class="divider"></div>
+          <label class="toggle">
+            <input type="checkbox" id="autoRevealToggle" />
+            <span>Auto‑reveal</span>
+          </label>
+          <label class="seconds">
+            <span>after</span>
+            <input type="number" id="autoRevealSeconds" min="1" max="60" value="5" />
+            <span>sec</span>
+          </label>
+        </div>
+        <div class="status">
+          <span id="progressText">0 / 0</span>
+        </div>
+      </header>
+
+      <main class="stage">
+        <div id="message" class="message" hidden></div>
+        <section id="card" class="card">
+          <div id="cardFront" class="face front">
+            <div id="englishText" class="english">—</div>
+          </div>
+          <div id="cardBack" class="face back" hidden>
+            <div id="hanziText" class="hanzi">—</div>
+            <div id="pinyinText" class="pinyin">—</div>
+            <div id="englishSmall" class="english-small">—</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="bottombar">
+        <div class="left">
+          <span id="countdown" class="countdown" hidden>—</span>
+        </div>
+        <div class="actions">
+          <button id="btnReveal" class="primary">Reveal</button>
+          <button id="btnMistake" class="danger">Mistake</button>
+          <button id="btnNext" class="primary">Next</button>
+        </div>
+        <div class="right"></div>
+      </footer>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+  </body>
+  </html>
+
+
