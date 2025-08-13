@@ -1,4 +1,4 @@
-import { shuffle, clamp } from './util.js';
+import { shuffle, clamp, fnv1a32 } from './util.js';
 
 /**
  * Simple state container for a run (Round 1 scope: in-memory only).
@@ -32,18 +32,36 @@ export let state = {
   mistakes: new Set(),
   autoReveal: false,
   autoRevealSeconds: 5,
+  session: {
+    id: '',
+    startedAt: '',
+    finishedAt: null,
+    events: [],
+    replayOf: null,
+  },
 };
 
 /**
  * Initialize a new shuffled run.
  * @param {Card[]} cards
  */
-export function newRun(cards) {
+export function newRun(cards, opts = { replayOf: null }) {
   state.deck = cards.slice();
   state.order = shuffle([...Array(state.deck.length).keys()]);
   state.index = 0;
   state.face = 'front';
   state.mistakes = new Set();
+  const startedAt = new Date().toISOString();
+  const salt = Math.random().toString(36).slice(2);
+  state.session = {
+    id: fnv1a32(`${startedAt}|${cards.length}|${salt}`),
+    startedAt,
+    finishedAt: null,
+    events: [
+      { type: 'start', at: startedAt, index: 0 },
+    ],
+    replayOf: opts?.replayOf || null,
+  };
 }
 
 /**
@@ -59,18 +77,19 @@ export function currentCard() {
 export function reveal() {
   if (state.face === 'back') return;
   state.face = 'back';
+  logEvent('reveal');
 }
 
 export function markMistake() {
   const c = currentCard();
   if (!c) return;
   state.mistakes.add(c.id);
+  logEvent('mistake', c.id);
 }
 
 export function nextCard() {
-  if (state.index < state.order.length) {
-    state.index += 1;
-  }
+  logEvent('next');
+  if (state.index < state.order.length) state.index += 1;
   state.face = 'front';
 }
 
@@ -81,6 +100,62 @@ export function isFinished() {
 export function setAutoReveal(enabled, seconds) {
   state.autoReveal = !!enabled;
   state.autoRevealSeconds = clamp(Number(seconds) || 0, 1, 60);
+}
+
+function logEvent(type, cardId) {
+  const at = new Date().toISOString();
+  const evt = { type, at, index: state.index };
+  if (cardId) evt.cardId = cardId;
+  state.session.events.push(evt);
+}
+
+/**
+ * If finished and not yet finalized, finalize and return { full, summary }.
+ * Otherwise returns null.
+ */
+export function finalizeIfFinished() {
+  if (!isFinished()) return null;
+  if (state.session.finishedAt) return null;
+  const finishedAt = new Date().toISOString();
+  state.session.finishedAt = finishedAt;
+  state.session.events.push({ type: 'finish', at: finishedAt, index: state.index });
+
+  const mistakeIds = Array.from(state.mistakes);
+  const full = {
+    id: state.session.id,
+    startedAt: state.session.startedAt,
+    finishedAt,
+    cards: state.deck,
+    order: state.order,
+    events: state.session.events,
+    mistakeIds,
+    counts: { total: state.order.length, mistakes: mistakeIds.length },
+  };
+  const summary = {
+    id: state.session.id,
+    startedAt: state.session.startedAt,
+    finishedAt,
+    mistakeIds,
+    counts: { total: state.order.length, mistakes: mistakeIds.length },
+  };
+  return { full, summary };
+}
+
+/**
+ * Build a full-session snapshot of the current in-memory run (finished or not).
+ */
+export function getFullSessionSnapshot() {
+  const mistakeIds = Array.from(state.mistakes);
+  return {
+    id: state.session.id,
+    startedAt: state.session.startedAt,
+    finishedAt: state.session.finishedAt || null,
+    cards: state.deck,
+    order: state.order,
+    events: state.session.events.slice(),
+    mistakeIds,
+    counts: { total: state.order.length, mistakes: mistakeIds.length },
+  };
 }
 
 

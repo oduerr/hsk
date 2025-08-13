@@ -12,6 +12,10 @@
         <div class="brand">HSK Flashcards</div>
         <div class="controls">
           <button id="btnNewRun" class="secondary">New Run</button>
+          <button id="btnReplay" class="secondary">Replay…</button>
+          <button id="btnExport" class="secondary">Export</button>
+          <button id="btnImport" class="secondary">Import</button>
+          <input id="importInput" type="file" accept="application/json" hidden />
           <div class="divider"></div>
           <label class="toggle">
             <input type="checkbox" id="autoRevealToggle" />
@@ -25,6 +29,9 @@
         </div>
         <div class="status">
           <span id="progressText">0 / 0</span>
+          <span> · </span>
+          <span id="mistakesText">Mistakes: 0</span>
+          <span id="replayTag" class="tag" hidden></span>
         </div>
       </header>
 
@@ -53,6 +60,23 @@
         </div>
         <div class="right"></div>
       </footer>
+
+      <div id="replayDialog" class="modal" hidden>
+        <div class="modal-backdrop" data-close="1"></div>
+        <div class="modal-panel">
+          <div class="modal-header">
+            <div class="modal-title">Replay past session</div>
+            <button class="secondary" id="replayClose">Close</button>
+          </div>
+          <div class="modal-body">
+            <div id="replayEmpty" class="muted" hidden>No sessions found.</div>
+            <ul id="replayList" class="session-list"></ul>
+          </div>
+        </div>
+      </div>
+      <div id="dropOverlay" class="drop-overlay" hidden>
+        <div class="drop-panel">Drop session JSON to import</div>
+      </div>
     </div>
 
     <script type="module" src="./js/main.js"></script>

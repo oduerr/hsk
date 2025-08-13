@@ -176,7 +176,37 @@ start New Run with note {replayOf: sessionId}
 
 **Exit criteria:** Can select a session, replay only its mistakes, finish a replay-run.
 
-### Round 4 – QoL & Safety
+### Round 3.5 Replay Mode Clarification
+A) “Built-in” replay from LocalStorage (default)
+	•	Every run writes a session summary + full session JSON to LocalStorage.
+	•	UI: a Replay… button opens a dialog listing past sessions (date, size, mistakes).
+	•	You pick a session → app computes mistakeIds → builds a deck from those cards → starts a replay run (shuffled).
+	•	No files needed; works fully offline once the first run is recorded.
+
+Agent tasks
+	•	Render a session list from localStorage['hsk.flash.sessions'].
+	•	Disable “Replay” when mistakeIds.length === 0.
+
+B) Import & replay from a JSON file (drag & drop or file picker)
+	•	If you exported on another machine—or wiped LocalStorage—you can drag-and-drop a flash_sessions_*.json file into the app (or use an Import button).
+	•	The app merges sessions from that file into LocalStorage (dedupe by session.id).
+	•	After import, use the same Replay… dialog as in A.
+
+UI hooks
+	•	Drop zone over the page: “Drop session JSON to import.”
+	•	Hidden <input type="file" accept="application/json"> for the Import button.
+
+Agent tasks
+	•	Validate JSON shape ({ sessions:[summary...], session.<id>: {...} } or a flat array—support both).
+	•	On import:
+	•	Add any missing full sessions to localStorage['hsk.flash.session.<id>'].
+	•	Add/update summaries in localStorage['hsk.flash.sessions'] (no duplicates).
+
+
+
+
+
+### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.
 - Import JSON to merge sessions (dedupe by id).

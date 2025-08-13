@@ -12,6 +12,8 @@ const el = {
   englishSmall: /** @type {HTMLElement} */ (document.getElementById('englishSmall')),
   countdown: /** @type {HTMLElement} */ (document.getElementById('countdown')),
   progressText: /** @type {HTMLElement} */ (document.getElementById('progressText')),
+  mistakesText: /** @type {HTMLElement} */ (document.getElementById('mistakesText')),
+  replayTag: /** @type {HTMLElement} */ (document.getElementById('replayTag')),
   btnReveal: /** @type {HTMLButtonElement} */ (document.getElementById('btnReveal')),
   btnNext: /** @type {HTMLButtonElement} */ (document.getElementById('btnNext')),
   btnMistake: /** @type {HTMLButtonElement} */ (document.getElementById('btnMistake')),
@@ -44,6 +46,7 @@ export function render() {
   clearMessage();
   setActionsDisabled(false);
   setProgress(state.index + 1, state.order.length);
+  setMistakes(state.mistakes.size);
 
   if (state.face === 'front') {
     el.front.hidden = false;
@@ -55,6 +58,13 @@ export function render() {
     el.hanzi.textContent = card.hanzi || '—';
     el.pinyin.textContent = card.pinyin || '—';
     el.englishSmall.textContent = card.english || '—';
+  }
+
+  if (state.session.replayOf) {
+    el.replayTag.hidden = false;
+    el.replayTag.textContent = `Replay of ${state.session.replayOf}`;
+  } else {
+    el.replayTag.hidden = true;
   }
 }
 
@@ -78,6 +88,10 @@ function setActionsDisabled(disabled) {
 
 function setProgress(current, total) {
   el.progressText.textContent = `${current} / ${total}`;
+}
+
+function setMistakes(count) {
+  el.mistakesText.textContent = `Mistakes: ${count}`;
 }
 
 export function showCountdown(seconds) {
