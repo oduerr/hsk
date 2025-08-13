@@ -122,9 +122,15 @@ function onNext() {
 }
 
 function onMistake() {
-  markMistake();
-  flashMistake();
-  // Re-render to update mistakes counter live
+  // Toggle by space tap or button: if already marked, unmark; else mark
+  const card = state.index < state.order.length ? state.deck[state.order[state.index]] : null;
+  if (!card) return;
+  if (state.mistakes.has(card.id)) {
+    unmarkMistake();
+  } else {
+    markMistake();
+    flashMistake();
+  }
   render();
 }
 
@@ -192,9 +198,12 @@ function onKeyDown(e) {
   } else if (key === 'arrowright') {
     e.preventDefault();
     onNext();
-  } else if (key === 'arrowleft') {
+  } else if (key === 'arrowleft' || key === 'arrowup') {
     e.preventDefault();
     onBack();
+  } else if (key === 'arrowdown') {
+    e.preventDefault();
+    onReveal();
   }
 }
 
@@ -208,6 +217,27 @@ btnNewRun.addEventListener('click', onNewRun);
 autoToggle.addEventListener('change', onAutoToggleChanged);
 autoSeconds.addEventListener('change', onSecondsChanged);
 window.addEventListener('keydown', onKeyDown, { passive: false });
+// Touch swipe gestures for mobile
+let touchStartX = 0, touchStartY = 0;
+const SWIPE_THRESHOLD = 30;
+document.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY;
+}, { passive: true });
+document.addEventListener('touchend', (e) => {
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > SWIPE_THRESHOLD) {
+      if (dx < 0) onNext(); else onBack();
+    }
+  } else {
+    if (Math.abs(dy) > SWIPE_THRESHOLD) {
+      onReveal();
+    }
+  }
+}, { passive: true });
 window.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.hidden = false; });
 window.addEventListener('dragleave', (e) => { if (e.target === document || e.target === document.body) dropOverlay.hidden = true; });
 window.addEventListener('drop', async (e) => {

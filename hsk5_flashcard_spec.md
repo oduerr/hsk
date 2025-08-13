@@ -272,6 +272,11 @@ Agent tasks
 - swipe left and right to navigate to the previous and next card.
 - swipe up or down to switch from back to front of the card.
 
+### Round 4.01 Mobile Friendly (clean)
+- Keep Build Date in status (at least for now)
+- To mimic same look and feel on mobile and desktop up arrow and down arrow should habe the same functionality as swipe up and down.
+- Make Mistake and Mark Correct a toggle button. On the mobile version this should activate by douple tapping on the card.
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
