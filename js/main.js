@@ -309,7 +309,9 @@ document.addEventListener('touchend', (e) => {
 }, { passive: true });
 
 // Tap on card toggles mistake on mobile per 4.06
-document.getElementById('card')?.addEventListener('click', () => {
+document.getElementById('card')?.addEventListener('click', (ev) => {
+  // If the click originated from the speak button, do not toggle mistake
+  if (ev.target && ev.target instanceof HTMLElement && ev.target.id === 'btnSpeak') return;
   // Only on small screens: heuristic via width
   if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
     onMistake();

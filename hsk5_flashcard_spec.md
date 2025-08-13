@@ -414,6 +414,14 @@ Details:
 Update the version to 4.07 — 莉娜老师的版本
 
 
+### 4.07.01 Sound Button Interaction Safety
+	•	The Play Sound button must be in its own tap/click area, visually distinct from the card’s Mistake/Correct toggle zone.
+	•	Tapping/clicking the sound button must only play audio and never toggle the mistake state.
+	•	Maintain a minimum safe distance (8–12 px) from any toggle area to prevent accidental activation.
+	•	Applies to both desktop and mobile layouts.
+
+Update the version to 4.07.01 — 莉娜老师的版本
+
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.

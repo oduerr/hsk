@@ -81,7 +81,16 @@ label.seconds input {
 [data-mistake="1"].card { border-color: var(--danger); }
 .mistake-badge { position: absolute; top: 12px; right: 12px; color: #fecaca; border: 1px solid #7f1d1d; padding: 2px 6px; border-radius: 999px; font-size: 12px; background: rgba(127,29,29,0.2); }
 .
-.speak-btn { position: absolute; top: 12px; left: 12px; border-radius: 999px; padding: 6px 8px; font-size: 14px; }
+.speak-btn {
+  position: absolute;
+  top: 12px; /* >= 12px safe distance from edges */
+  left: 12px; /* keep away from mistake badge on right */
+  border-radius: 999px;
+  padding: 8px 10px; /* larger hit area, distinct */
+  font-size: 14px;
+  z-index: 2; /* above card so it captures clicks */
+  pointer-events: auto;
+}
 
 .face { width: 100%; }
 .english { font-size: clamp(24px, 5vw, 44px); line-height: 1.25; }
