@@ -277,6 +277,10 @@ Agent tasks
 - To mimic same look and feel on mobile and desktop up arrow and down arrow should habe the same functionality as swipe up and down.
 - Make Mistake and Mark Correct a toggle button. On the mobile version this should activate by douple tapping on the card.
 
+### Round 4.02 Mobile Friendly (clean)
+- Make the app a single full-screen flex column.
+- Prevent page scroll (so swipes stay on the card), allow internal panels to scroll if needed.
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.

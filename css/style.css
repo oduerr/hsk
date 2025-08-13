@@ -9,7 +9,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
@@ -19,7 +19,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-#app { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+#app { display: flex; flex-direction: column; min-height: 100vh; }
 
 .topbar, .bottombar {
   display: grid;
@@ -48,7 +48,8 @@ label.seconds input {
   border-radius: 6px;
 }
 
-.stage { display: grid; place-items: center; padding: 16px; }
+.stage { display: flex; align-items: center; justify-content: center; padding: 16px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.modal-panel { -webkit-overflow-scrolling: touch; }
 
 /* Mobile-friendly hit targets */
 @media (max-width: 640px) {
