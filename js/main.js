@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
-import { initSpeech, speak, testOpenAITts } from './speech.js';
+import { initSpeech, speak, testOpenAITts, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
@@ -324,12 +324,13 @@ ttsEngineRadios.forEach(r => r?.addEventListener('change', () => {
     const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
     const engine = Array.from(ttsEngineRadios).find(x => x.checked)?.value || 'browser';
     localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, engine }));
+    try { setTtsSettings({ engine }); } catch {}
   } catch {}
 }));
 ttsOpenAIKey?.addEventListener('change', () => { try { localStorage.setItem('hsk.tts.openai.key', ttsOpenAIKey.value || ''); } catch {} });
 ttsTestOpenAI?.addEventListener('click', async () => {
   ttsStatus && (ttsStatus.textContent = 'Testing OpenAI TTS…');
-  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '学习中文真好！';
+  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '莉娜老师的版本';
   const res = await testOpenAITts(phrase, 'zh-CN');
   if (res.ok) {
     const ts = new Date().toLocaleTimeString();
@@ -340,25 +341,28 @@ ttsTestOpenAI?.addEventListener('click', async () => {
 });
 ttsCompareBrowser?.addEventListener('click', async () => {
   ttsStatus && (ttsStatus.textContent = 'Browser TTS comparison…');
-  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '学习中文真好！';
+  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '莉娜老师的版本';
   try { await speak(phrase, 'zh-CN'); ttsStatus && (ttsStatus.textContent = 'Browser TTS played.'); } catch (e) { ttsStatus && (ttsStatus.textContent = 'Browser TTS unavailable.'); }
 });
 ttsModel?.addEventListener('change', () => {
   try {
     const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
     localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, model: ttsModel.value }));
+    try { setTtsSettings({ model: ttsModel.value }); } catch {}
   } catch {}
 });
 ttsCacheToggle?.addEventListener('change', () => {
   try {
     const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
     localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, cache: !!ttsCacheToggle.checked }));
+    try { setTtsSettings({ cache: !!ttsCacheToggle.checked }); } catch {}
   } catch {}
 });
 ttsOpenAIVoice?.addEventListener('change', () => {
   try {
     const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
     localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, openaiVoice: ttsOpenAIVoice.value }));
+    try { setTtsSettings({ openaiVoice: ttsOpenAIVoice.value }); } catch {}
   } catch {}
 });
 ttsClearCache?.addEventListener('click', () => {
