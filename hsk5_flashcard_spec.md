@@ -501,6 +501,93 @@ Technical Notes
 	•	Feature should gracefully skip if navigator.mediaDevices.getUserMedia is unavailable.
 	•	Pinyin and tone number come from the CSV dataset; no extra API required.
 
+### 4.11a Tone Visualizer — Refactor & UX Update
+
+Goal:
+Move the tone visualizer out of main.js, and change its UX to record immediately on open, with an explicit Stop action, post-record analysis, and replay of the captured audio.
+
+⸻
+
+A) Architecture & Refactor
+	•	Create a dedicated module (e.g., js/toneVisualizer.js) with a small public API:
+	•	openToneVisualizer(card) — opens modal, starts recording immediately.
+	•	closeToneVisualizer() — closes and fully disposes resources.
+	•	main.js should only wire events (e.g., clicking the Tone Visualizer button) and call the module API. No visualizer logic inside main.js.
+	•	The module must be self-contained (UI, audio, analysis) and failure-tolerant (if unsupported or permission denied, show message and exit without affecting the app).
+
+⸻
+
+B) UI & Flow (Modal)
+	1.	Open → immediate recording
+	•	On openToneVisualizer(card), the modal appears and instantly starts mic capture (request permission if needed).
+	•	Top section: show pinyin (with tone mark); draw ideal tone curve for the current syllable.
+	2.	Controls
+	•	Buttons (left→right): Stop, Replay, Close.
+	•	Stop: ends recording and triggers analysis.
+	•	Replay: disabled during live recording; enabled after Stop to play back the captured audio once.
+	•	Close: cancels/finishes; releases mic and audio nodes.
+	3.	Canvas
+	•	Background: idealized tone curve.
+	•	During live recording: (optional) show an updating “live” pitch trace (light stroke).
+	•	After Stop: render the final user pitch contour (e.g., blue), normalized to the canvas.
+
+⸻
+
+C) Recording & Analysis
+	•	Start immediately on open:
+	•	Request getUserMedia({ audio: true }).
+	•	Create a single shared AudioContext (reuse if already created by the app).
+	•	Capture up to a max duration (e.g., 3 s) if user doesn’t press Stop.
+	•	Stop behavior
+	•	On Stop: stop tracks, finalize buffer, run pitch detection on the buffered audio (no network).
+	•	Draw final contour and enable Replay.
+	•	Replay
+	•	Store the captured audio in memory (a short buffer); play via Web Audio graph.
+	•	No persistence beyond the modal; cleared on Close.
+
+⸻
+
+D) Error Handling & Non-Blocking
+	•	If mic permission is denied/unavailable:
+	•	Show inline message: “Microphone unavailable. Tone visualizer not supported on this device.”
+	•	Close button remains; do not impact main flashcard flow.
+	•	If pitch cannot be detected (silence/noise):
+	•	Show: “No clear pitch detected—try again closer to the mic.”
+	•	Keep the modal open; allow the user to Close and retry later.
+	•	Always release media tracks and audio nodes on Stop/Close (no background capture).
+
+⸻
+
+E) Visuals & Scaling
+	•	Pinyin + tone displayed at the top (e.g., “xué”).
+	•	Ideal curves (normalized, not Hz):
+	•	T1: high flat; T2: rising; T3: fall–rise; T4: falling.
+	•	Map user F0 → normalized 0–1 range using a robust min/max or median-based window to handle loudness variation.
+	•	Distinct colors: ideal (gray), live trace (light), final user (blue).
+
+⸻
+
+F) Performance & Limits
+	•	Keep CPU usage low; stop analyzers when recording stops.
+	•	Hard cap recording length (e.g., 3 s); auto-stop and analyze if exceeded.
+	•	No writes to LocalStorage or sessions.
+
+⸻
+
+G) Accessibility & UX Polish
+	•	Buttons have labels/aria: “Stop recording”, “Replay recording”, “Close”.
+	•	If audio feedback (beeps) is globally enabled, do not play tones in this modal to avoid confusion.
+
+⸻
+
+H) Acceptance Criteria
+	1.	Opening the Tone Visualizer immediately starts recording; Stop performs analysis; Replay plays back the just-recorded audio.
+	2.	The feature is fully isolated in js/toneVisualizer.js; main.js only calls its API.
+	3.	On permission denial or unsupported API, a clear message appears and the app remains usable.
+	4.	Final view shows pinyin, ideal tone curve, and the user’s pitch contour overlay.
+	5.	Closing the modal releases all audio resources; reopening works reliably.
+
+⸻
 
 
 ### Round 5 – QoL & Safety

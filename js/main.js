@@ -1,4 +1,5 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
+import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
@@ -261,7 +262,7 @@ btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnCardMistakeToggle?.addEventListener('click', onMistake);
 btnSpeak?.addEventListener('click', speakChinese);
-btnTone?.addEventListener('click', () => { openToneDialog(); });
+btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
 btnUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); } });
@@ -346,128 +347,6 @@ function playBeep(freq, ms) {
   osc.stop(ctx.currentTime + ms / 1000 + 0.01);
 }
 
-// ---------- Tone Visualizer (4.11, optional) ----------
-const toneDialog = /** @type {HTMLElement} */(document.getElementById('toneDialog'));
-const toneClose = /** @type {HTMLButtonElement} */(document.getElementById('toneClose'));
-const toneCanvas = /** @type {HTMLCanvasElement} */(document.getElementById('toneCanvas'));
-const toneInfo = /** @type {HTMLElement} */(document.getElementById('toneInfo'));
-const toneRecordBtn = /** @type {HTMLButtonElement} */(document.getElementById('toneRecord'));
-const toneStopBtn = /** @type {HTMLButtonElement} */(document.getElementById('toneStop'));
-const toneStatus = /** @type {HTMLElement} */(document.getElementById('toneStatus'));
-
-let toneStream = null;
-let toneAnalyser = null;
-let toneAudioCtx = null;
-let toneSource = null;
-let toneReqId = 0;
-let toneRecording = false;
-
-function getToneNumber(pinyin) {
-  // naive: extract 1-4 if present; tone 5/neutral → 5
-  const m = /([1-5])\b/.exec(pinyin);
-  return m ? Number(m[1]) : 5;
-}
-
-function drawIdealCurve(ctx, w, h, tone) {
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  const x0 = 20, x1 = w - 20, yMid = h / 2, yHigh = h * 0.3, yLow = h * 0.75;
-  const toX = (t) => x0 + t * (x1 - x0);
-  if (tone === 1) { ctx.moveTo(x0, yHigh); ctx.lineTo(x1, yHigh); }
-  else if (tone === 2) { ctx.moveTo(x0, yMid); ctx.lineTo(x1, yHigh); }
-  else if (tone === 3) { ctx.moveTo(x0, yHigh); ctx.lineTo((x0+x1)/2, yLow); ctx.lineTo(x1, yHigh); }
-  else if (tone === 4) { ctx.moveTo(x0, yHigh); ctx.lineTo(x1, yLow); }
-  else { ctx.moveTo(x0, yMid); ctx.lineTo(x1, yMid); }
-  ctx.stroke();
-}
-
-function openToneDialog() {
-  if (!toneDialog || !toneCanvas) return;
-  const ctx = toneCanvas.getContext('2d');
-  if (ctx) { ctx.clearRect(0, 0, toneCanvas.width, toneCanvas.height); drawIdealCurve(ctx, toneCanvas.width, toneCanvas.height, getToneNumber(document.getElementById('pinyinText')?.textContent || '')); }
-  if (toneInfo) {
-    const p = document.getElementById('pinyinText')?.textContent || '';
-    toneInfo.textContent = p ? `Pinyin: ${p}` : '—';
-  }
-  toneDialog.hidden = false;
-}
-
-toneClose?.addEventListener('click', () => { toneDialog.hidden = true; stopTone(); });
-
-async function startTone() {
-  try {
-    if (!navigator.mediaDevices?.getUserMedia) { toneStatus.textContent = 'Microphone not supported.'; return; }
-    toneAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    toneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    toneSource = toneAudioCtx.createMediaStreamSource(toneStream);
-    toneAnalyser = toneAudioCtx.createAnalyser();
-    toneAnalyser.fftSize = 2048;
-    toneSource.connect(toneAnalyser);
-    toneRecording = true;
-    toneStatus.textContent = 'Recording…';
-    renderTone();
-  } catch (e) {
-    console.error('tone start failed', e);
-    toneStatus.textContent = 'Cannot access microphone.';
-  }
-}
-
-function stopTone() {
-  toneRecording = false;
-  if (toneReqId) cancelAnimationFrame(toneReqId);
-  try { toneStream?.getTracks()?.forEach(t => t.stop()); } catch {}
-  try { toneAudioCtx?.close(); } catch {}
-  toneStream = null; toneAudioCtx = null; toneAnalyser = null; toneSource = null;
-  toneStatus.textContent = '';
-}
-
-function estimatePitchHz(analyser, sampleRate) {
-  const bufLen = analyser.fftSize;
-  const buf = new Float32Array(bufLen);
-  analyser.getFloatTimeDomainData(buf);
-  // simple autocorrelation
-  let bestOfs = -1, bestCorr = 0;
-  for (let ofs = 8; ofs < bufLen / 2; ofs++) {
-    let corr = 0;
-    for (let i = 0; i < bufLen - ofs; i++) corr += buf[i] * buf[i + ofs];
-    if (corr > bestCorr) { bestCorr = corr; bestOfs = ofs; }
-  }
-  if (bestOfs > 0) return sampleRate / bestOfs;
-  return 0;
-}
-
-function renderTone() {
-  if (!toneAnalyser || !toneCanvas) return;
-  const ctx = toneCanvas.getContext('2d');
-  const w = toneCanvas.width, h = toneCanvas.height;
-  if (!ctx) return;
-  ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, w, h);
-  drawIdealCurve(ctx, w, h, getToneNumber(document.getElementById('pinyinText')?.textContent || ''));
-  // Draw live pitch points
-  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.beginPath();
-  const sampleRate = toneAudioCtx.sampleRate;
-  const now = performance.now();
-  const duration = 2000; // 2s window
-  const step = 40; // ms per sample
-  const points = [];
-  for (let t = 0; t <= duration; t += step) {
-    const hz = estimatePitchHz(toneAnalyser, sampleRate);
-    // map hz to y relative (log scale-ish)
-    const y = hz > 0 ? h - Math.min(h * 0.9, Math.log10(hz) * (h / 3)) : h * 0.9;
-    const x = 20 + (t / duration) * (w - 40);
-    points.push({ x, y });
-  }
-  if (points.length) {
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-    ctx.stroke();
-  }
-  if (toneRecording) toneReqId = requestAnimationFrame(renderTone);
-}
-
-toneRecordBtn?.addEventListener('click', startTone);
-toneStopBtn?.addEventListener('click', stopTone);
 function playMarkAudio(isUnmark) {
   if (isUnmark) {
     console.log('[audio] mark->correct');
