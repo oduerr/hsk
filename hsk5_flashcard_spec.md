@@ -214,6 +214,33 @@ Agent tasks
 	•	Support an optional ?v=<version> query parameter to bypass browser caching when the CSV is updated.
 	•	No hardcoded repo name—read from a config constant so repo renaming doesn’t break loading.
 
+## 3.7 Debugging build indicator + manual session save
+### Version indicator
+	  -	Display a very small, subtle version/build info element at the bottom of the app.
+	  -	The content should be 
+	  -	The last modified timestamp of the main code file(s).
+	  -	Purpose: to verify that the browser is serving the latest build from GitHub Pages (avoid confusion with cached or delayed updates).
+### Manual session save button
+	- Add a button (label: “Save session to LocalStorage” or similar) in debug mode.
+	  - 	Clicking the button immediately serializes the current run state (deck, order, mistakes so far, timestamps) into LocalStorage, overwriting the active session entry.
+	  - This allows testing persistence and replay logic without finishing a run.
+  •	Add a Save Progress button available during a run (both in debug and normal mode).
+	•	Clicking it serializes the current run state — including:
+    •	Deck and current order
+    •	Cards already seen, cards remaining
+    •	Mistake list so far
+    •	Timestamps and any session metadata
+    •	Stored in LocalStorage as a “checkpoint” session.
+	On restart, user can choose to:
+    1.	Resume from last checkpoint (unfinished cards + mistakes intact)
+    2.	Replay only mistakes from the checkpoint
+    3.	Start a fresh run
+	•	This supports:
+	•	Debug/testing persistence without finishing a run.
+	•	Practical early save for large decks (e.g., HSK5’s ~1,300 cards).
+	•	Continuation after closing the browser or pausing for long periods.
+	JSON export/import compatibility
+	•	The checkpoint must be saved in the same JSON structure as a finished session, with the only difference being a status flag:
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.

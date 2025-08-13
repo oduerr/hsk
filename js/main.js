@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck } from './storage.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun } from './state.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 
@@ -22,6 +22,8 @@ const fallbackPanel = /** @type {HTMLElement} */(document.getElementById('fallba
 const csvFileInput = /** @type {HTMLInputElement} */(document.getElementById('csvFileInput'));
 const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('csvTextArea'));
 const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
+const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
+const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -81,6 +83,11 @@ async function bootstrap() {
       $('card').hidden = true;
     }
   }
+  // Show version/build info: date + latest session or checkpoint id
+  try {
+    const lastId = loadLastCheckpointId();
+    buildInfo.textContent = `HSK Flash v1 • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
+  } catch {}
 }
 
 function onReveal() {
@@ -190,6 +197,17 @@ if (btnExport) {
     } catch (e) { console.error(e); }
   });
 }
+// Save progress / checkpoint
+btnSaveProgress?.addEventListener('click', () => {
+  try {
+    const snapshot = getFullSessionSnapshot();
+    saveCheckpoint(snapshot);
+    alert('Progress saved to LocalStorage. You can export or resume later.');
+  } catch (e) {
+    console.error('Save progress failed:', e);
+    alert('Save failed.');
+  }
+});
 // Manual CSV fallbacks
 csvFileInput?.addEventListener('change', async () => {
   const file = csvFileInput.files && csvFileInput.files[0];
@@ -282,10 +300,26 @@ function openReplayDialog() {
         `<div class="sid">${s.id}</div>`;
       right.className = 'counts';
       right.textContent = `${s.counts?.mistakes ?? 0} mistakes / ${s.counts?.total ?? 0}`;
-      const disabled = (s.mistakeIds?.length ?? 0) === 0;
-      right2.innerHTML = `<button class="primary" ${disabled ? 'disabled' : ''}>Replay mistakes</button>`;
-      const btn = right2.querySelector('button');
-      if (!disabled) btn.addEventListener('click', () => startReplayFromSummary(s));
+      const disabledReplay = (s.mistakeIds?.length ?? 0) === 0;
+      const actions = document.createElement('div');
+      actions.style.display = 'flex';
+      actions.style.gap = '6px';
+      const btnReplay = document.createElement('button');
+      btnReplay.className = 'primary';
+      btnReplay.textContent = 'Replay mistakes';
+      btnReplay.disabled = disabledReplay;
+      if (!disabledReplay) btnReplay.addEventListener('click', () => startReplayFromSummary(s));
+
+      const btnResume = document.createElement('button');
+      btnResume.className = 'secondary';
+      btnResume.textContent = 'Resume checkpoint';
+      const isInProgress = !!s.inProgress || !s.finishedAt;
+      btnResume.disabled = !isInProgress;
+      if (isInProgress) btnResume.addEventListener('click', () => resumeFromSummary(s));
+
+      actions.appendChild(btnReplay);
+      actions.appendChild(btnResume);
+      right2.appendChild(actions);
       li.appendChild(left);
       li.appendChild(right);
       li.appendChild(right2);
@@ -306,6 +340,15 @@ function startReplayFromSummary(summary) {
     return;
   }
   newRun(deck, { replayOf: summary.id });
+  render();
+  startCountdownIfNeeded();
+  closeReplayDialog();
+}
+
+function resumeFromSummary(summary) {
+  const full = loadFullSession(summary.id);
+  if (!full) { alert('No saved checkpoint found.'); return; }
+  resumeRun(full, { replayOf: full.replayOf || null });
   render();
   startCountdownIfNeeded();
   closeReplayDialog();

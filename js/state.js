@@ -158,4 +158,28 @@ export function getFullSessionSnapshot() {
   };
 }
 
+/**
+ * Resume an in-progress run from a saved full-session snapshot.
+ * @param {any} full
+ * @param {{ replayOf?: string|null }} [opts]
+ */
+export function resumeRun(full, opts = {}) {
+  state.deck = Array.isArray(full?.cards) ? full.cards.slice() : [];
+  state.order = Array.isArray(full?.order) ? full.order.slice() : [];
+  const progressed = Array.isArray(full?.events)
+    ? full.events.filter((e) => e && e.type === 'next').length
+    : 0;
+  state.index = Math.min(progressed, state.order.length);
+  state.face = 'front';
+  state.mistakes = new Set(Array.isArray(full?.mistakeIds) ? full.mistakeIds : []);
+  const startedAt = full?.startedAt || new Date().toISOString();
+  state.session = {
+    id: full?.id || fnv1a32(`${startedAt}|${state.deck.length}|resume`),
+    startedAt,
+    finishedAt: null,
+    events: Array.isArray(full?.events) ? full.events.slice() : [{ type: 'start', at: startedAt, index: 0 }],
+    replayOf: opts?.replayOf || null,
+  };
+}
+
 

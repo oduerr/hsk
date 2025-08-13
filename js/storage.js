@@ -1,6 +1,7 @@
 const SESSIONS_KEY = 'hsk.flash.sessions';
 const SESSION_PREFIX = 'hsk.flash.session.';
 const DECK_KEY = 'hsk.flash.deck.hsk5';
+const LAST_CHECKPOINT_KEY = 'hsk.flash.lastCheckpointId';
 
 function readJson(key, fallback) {
   try {
@@ -42,6 +43,34 @@ export function saveDeck(cards) {
 
 export function loadDeck() {
   return readJson(DECK_KEY, null);
+}
+
+export function saveLastCheckpointId(id) {
+  localStorage.setItem(LAST_CHECKPOINT_KEY, id);
+}
+
+export function loadLastCheckpointId() {
+  return localStorage.getItem(LAST_CHECKPOINT_KEY);
+}
+
+export function clearLastCheckpointId() {
+  localStorage.removeItem(LAST_CHECKPOINT_KEY);
+}
+
+export function saveCheckpoint(fullSnapshot) {
+  // Save full
+  saveFullSession(fullSnapshot);
+  // Save summary with inProgress flag
+  const summary = {
+    id: fullSnapshot.id,
+    startedAt: fullSnapshot.startedAt,
+    finishedAt: fullSnapshot.finishedAt || null,
+    mistakeIds: fullSnapshot.mistakeIds || [],
+    counts: fullSnapshot.counts || { total: fullSnapshot.order?.length || 0, mistakes: fullSnapshot.mistakeIds?.length || 0 },
+    inProgress: !fullSnapshot.finishedAt,
+  };
+  saveSessionSummary(summary);
+  saveLastCheckpointId(fullSnapshot.id);
 }
 
 /**
