@@ -40,6 +40,7 @@ const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementBy
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
 const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('settingsUndo'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
+const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const levelPicker = /** @type {HTMLSelectElement} */(document.getElementById('levelPicker'));
 const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('customLevelsRow'));
 const loadCustomLevelsBtn = /** @type {HTMLButtonElement} */(document.getElementById('loadCustomLevels'));
@@ -259,6 +260,7 @@ btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnCardMistakeToggle?.addEventListener('click', onMistake);
+btnSpeak?.addEventListener('click', speakChinese);
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
 btnUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); } });
@@ -382,6 +384,44 @@ levelPicker?.addEventListener('change', async () => {
     await loadLevelsAndStart([levelPicker.value]);
   }
 });
+
+// Web Speech – Speak Chinese
+let cachedVoices = [];
+function pickZhVoice() {
+  try {
+    if (!('speechSynthesis' in window)) return null;
+    const saved = localStorage.getItem('hsk.flash.voice');
+    if (cachedVoices.length === 0) cachedVoices = window.speechSynthesis.getVoices();
+    const list = cachedVoices.filter(v => /zh|chinese/i.test(v.lang) || /zh/i.test(v.name));
+    let voice = null;
+    if (saved) voice = list.find(v => v.voiceURI === saved || v.name === saved) || null;
+    if (!voice) voice = list[0] || null;
+    return voice;
+  } catch { return null; }
+}
+
+function speakChinese() {
+  try {
+    if (!('speechSynthesis' in window)) { console.log('[speak] unsupported'); return; }
+    window.speechSynthesis.cancel();
+    const idx = state.order[state.index];
+    const card = state.deck[idx];
+    if (!card) return;
+    const utter = new SpeechSynthesisUtterance(card.hanzi || card.pinyin || '');
+    const voice = pickZhVoice();
+    if (voice) {
+      utter.voice = voice;
+      localStorage.setItem('hsk.flash.voice', voice.voiceURI || voice.name);
+    }
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  } catch (e) { console.log('[speak] error', e); }
+}
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => { cachedVoices = window.speechSynthesis.getVoices(); };
+}
 
 loadCustomLevelsBtn?.addEventListener('click', async () => {
   const checkboxes = Array.from(customLevelsRow.querySelectorAll('input.lvl'));

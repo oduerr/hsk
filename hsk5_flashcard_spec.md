@@ -389,6 +389,30 @@ Functions not implemented but requested in 4.06
 In addtion change the information shown to be read from a VERSION.TXT file starting with 
 4.06.01 — 莉娜老师的版本
 
+### Round 4.07 – Web Speech “Speak Chinese” Button
+
+Scope:
+Add a button to play Mandarin audio for the Chinese term, available in both front (English) and back (Chinese + pinyin) states of the flashcard.
+
+Details:
+	•	Placement:
+	•	Small speaker icon button in the card UI, aligned top-right of card text area.
+	•	Visible in both states of the card.
+	•	Functionality:
+	•	Uses browser Web Speech API (speechSynthesis) with a zh-CN voice.
+	•	Falls back silently if no suitable voice is found.
+	•	On click, speaks the Chinese characters currently shown (from CSV).
+	•	Persistence:
+	•	Remember last used voice ID in localStorage if multiple zh-CN voices are available.
+	•	Performance:
+	•	Cancel any ongoing speech before starting new playback.
+	•	No blocking of other card functions while speaking.
+	•	Accessibility:
+	•	Add aria-label="Speak Chinese" for screen readers.
+	•	Limitations:
+	•	Mobile Safari may require a prior user gesture to unlock speech; first tap on the button will initialize audio context.
+Update the version to 4.07 — 莉娜老师的版本
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
