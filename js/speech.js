@@ -123,7 +123,7 @@ export async function speak(text, lang='zh-CN') {
 }
 
 // Explicit OpenAI connectivity test (4.21)
-export async function testOpenAITts(sampleText = '莉娜老师的版本.', lang = 'zh-CN') {
+export async function testOpenAITts(sampleText = '学习中文真好！', lang = 'zh-CN') {
   const started = performance.now();
   const key = localStorage.getItem(KEY_OPENAI) || '';
   if (!key) {
