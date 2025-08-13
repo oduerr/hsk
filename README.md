@@ -12,9 +12,9 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 
 - Uses `data/hsk5.csv` with columns: `hanzi,pinyin,english`.
 - Parser supports quoted fields and UTF‑8; pinyin spacing is normalized.
-- Data comes from https://github.com/plaktos/hsk_csv/tree/master
+- Data comes from [plaktos/hsk_csv](https://github.com/plaktos/hsk_csv/tree/master)
 
-## Current features (Rounds 0 → 3.5)
+## Current features (as of v4.09)
 
 - Round 0
   - CSV loader + parser and normalization
@@ -42,6 +42,18 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
     - Standard: `{ version?, exportedAt?, summaries: [], sessions: [] }`
     - Keyed: `{ "hsk.flash.session.<id>": {…} }` or `{ "session.<id>": {…} }`
     - Flat array: `[ { full session }, … ]`
+- Round 4.x highlights
+  - Mobile‑friendly layout (top info line, progress bar, button row)
+  - Settings dialog (gear): auto‑reveal, minimal UI, outdoor mode (mobile), audio feedback, info panel
+  - Save Progress checkpoint button (top and bottom)
+  - Back/Reveal/Next via keys and gestures; single‑tap mistake toggle on mobile
+  - Speaker button (Web Speech API, Mandarin) on both card faces
+  - Help page with quick guidance
+
+
+### 4.10 Minimal Make Pinyin larger
+- Make the pinyin larger and more readable at least 3 times larger than the English text.
+- Update the version to 4.10 — 莉娜老师的版本
 
 ## UI and controls
 
@@ -63,10 +75,29 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 
 ## Export / Import
 
-- Export: downloads `flash_sessions_YYYYMMDD.json` containing all summaries and full sessions.
-  - If a run is in progress, the current snapshot is included so `mistakeIds` are preserved.
-- Import: use the Import button (JSON file) or drag a JSON file onto the page.
-  - Sessions are merged into LocalStorage; summaries are added/updated; duplicates are ignored by `id`.
+The app supports exporting and importing your recorded learning sessions. This lets you back up your progress or move it between devices/browsers.
+
+- Where to find it:
+  - Gear menu (Settings): buttons “Export sessions” and “Import sessions”.
+  - Replay dialog: also contains Export/Import.
+  - Drag & drop: You can drop a supported JSON file anywhere on the page to import.
+
+- Export behavior:
+  - Downloads a file named `flash_sessions_YYYYMMDD.json`.
+  - Contains all session summaries and full sessions stored in LocalStorage.
+  - If a run is currently in progress, an in‑memory snapshot of that run is included so your current `mistakeIds` are preserved for replay later.
+
+- Import behavior:
+  - Pick a JSON file (or drag it in). The app merges its sessions into LocalStorage.
+  - Supported shapes:
+    - `{ version?, exportedAt?, summaries: [], sessions: [] }` (preferred)
+    - keyed object like `{ "hsk.flash.session.<id>": {…} }` or `{ "session.<id>": {…} }`
+    - flat array of full sessions `[ {…}, {…} ]`
+  - Existing sessions are de‑duplicated by `id` and updated if needed. No existing data is deleted.
+
+Notes:
+
+- Export/import currently covers sessions (summaries + full sessions). Deck caches and settings are not exported.
 
 ## Replay mode
 

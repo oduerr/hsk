@@ -99,7 +99,8 @@ label.seconds input {
 .english { font-size: clamp(24px, 5vw, 44px); line-height: 1.25; }
 .english-small { font-size: clamp(14px, 2.5vw, 18px); color: var(--muted); margin-top: 12px; }
 .hanzi { font-size: clamp(36px, 8vw, 72px); line-height: 1.25; margin-top: 6px; }
-.pinyin { font-size: clamp(18px, 4vw, 28px); color: var(--muted); margin-top: 8px; }
+/* 4.10: Make pinyin much larger and more readable (>= 3x english-small) */
+.pinyin { font-size: clamp(42px, 7.5vw, 54px); color: var(--text); margin-top: 8px; }
 
 .actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; justify-content: center; width: 100%; max-width: 900px; }
 .actions button { width: 100%; }
