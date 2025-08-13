@@ -587,6 +587,80 @@ H) Acceptance Criteria
 	4.	Final view shows pinyin, ideal tone curve, and the user’s pitch contour overlay.
 	5.	Closing the modal releases all audio resources; reopening works reliably.
 
+
+### 4.11b Tone Visualizer — Refactor & UX Update
+
+1) Capture: get a cleaner mic signal
+	•	Do not monitor the mic (no mic → speakers route).
+	•	Request mic with analysis-friendly constraints:
+echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1.
+	•	Aim for 48 kHz input if available (just request; browsers pick the closest).
+	•	Keep the mic close and speak one sustained syllable (e.g., “ma”) — short, punchy utterances are harder to track.
+
+2) Remove silence before/after
+	•	During capture, run a voice activity check on the incoming samples (simple is fine):
+	•	Compute short-window RMS energy (e.g., 20 ms).
+	•	Mark frames with RMS below a threshold (e.g., −45 dBFS) as silence.
+	•	At Stop, trim leading/trailing silence from the recorded buffer before analysis & drawing.
+	•	(Optional) Use zero-crossing rate with RMS to avoid breath noise being misread as voice.
+
+3) Live updates (your main complaint)
+
+Right now you only see the plot after stopping because your loop samples the same frame multiple times. Fix the behavior conceptually like this:
+	•	Exactly one pitch estimate per animation frame (60 fps typical):
+	•	Each requestAnimationFrame → call analyser.getFloatTimeDomainData(...) once → estimate F0 once → append to a ring buffer of the last ~2–3 s.
+	•	Redraw the canvas every frame from the ring buffer (newest on the right).
+	•	Result: you’ll see the curve moving live while speaking.
+
+4) Make pitch estimation stable (why you don’t “see the tone”)
+
+Your current autocorrelation is very raw. Tighten it:
+	•	Zero-mean + Hann window each frame before correlation (reduces drift & leakage).
+	•	Search only plausible lags: speech F0 ~80–350 Hz → lags = sampleRate/350 … sampleRate/80.
+	•	Normalize autocorrelation by energy (rho = num / √(E0·Elag)) and apply a voicing threshold (e.g., ρ < 0.35 ⇒ unvoiced).
+	•	Smooth F0 over time with a tiny median filter (3–5 frames) or EMA — kills spikes.
+	•	If you still see flat lines: try longer frames (e.g., 1024–2048 samples) for more stable autocorrelation.
+
+5) Map pitch to screen so contours are obvious
+	•	Don’t map Hz directly to pixels. Convert to semitones relative to the median F0 of the last ~1 s:
+st = 12 * log2(f0 / medianF0).
+	•	Draw a vertical range of ±12 semitones (octave) around 0.
+	•	Result: everyone’s voice centers near 0, and rising/falling tones visibly slope up/down regardless of speaker.
+
+6) Ideal tone overlay (to “see” what you expect)
+	•	Keep your idealized lines (T1 flat high, T2 rising, T3 dip, T4 falling).
+	•	Draw them first in a neutral color.
+	•	Draw the live/user contour on top (thin while recording, thicker once stopped).
+	•	Add faint guide lines at top/bottom (e.g., 20% and 80% height) so “falling vs rising” is visually anchored.
+
+7) Spectrogram (optional, but if you keep it)
+	•	If you want a real spectrogram, don’t fake it with F0:
+	•	Use analyser.getByteFrequencyData() each frame, paint a 1-px column of magnitudes, and scroll or advance x.
+	•	Show only 80–4000 Hz log-scaled; this makes voice bands pop.
+
+8) UX flow you wanted
+	•	Open visualizer → immediately start recording.
+	•	Show live contour updating every frame.
+	•	Stop → trim silence, render final smoothed contour, enable Replay.
+	•	Replay plays the recorded buffer only (no live mic routing).
+	•	Close releases the mic and cancels animation.
+
+9) Quick diagnostics (to confirm it’s fixed)
+	•	While speaking a steady “ma”—the live curve should stabilize near 0 semitones.
+	•	Speak a Tone 2 (rising) “má” — the curve should tilt upward over ~300–600 ms.
+	•	Speak a Tone 4 (falling) “mà” — the curve should tilt downward clearly.
+	•	Background noise off, no echo, no live monitoring; replay sounds clean (no doubled audio).
+
+10) Acceptance checklist for you
+	•	Live curve visibly updates while I speak (no waiting for Stop).
+	•	F0 isn’t jumpy: occasional blips are smoothed; unvoiced parts drop to baseline.
+	•	Tone 2 feels rising; Tone 4 feels falling; Tone 3 shows a dip then rise on longer syllables.
+	•	Start/Stop/Replay work; Stop trims leading/trailing silence.
+	•	No feedback/echo during recording.
+
+Update the version to 4.11b — 莉娜老师的版本
+
+
 ⸻
 
 

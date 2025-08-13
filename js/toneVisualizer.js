@@ -3,6 +3,8 @@ let audioCtx = null;
 let stream = null, source = null, analyser = null, reqId = 0;
 let recordedBuffer = null;
 let isRecording = false;
+let liveSemitoneBuffer = [];
+const LIVE_MAX_FRAMES = 180; // ~3s at 60fps
 
 function byId(id) { return /** @type {any} */(document.getElementById(id)); }
 
@@ -30,17 +32,48 @@ function drawIdealCurve(ctx, w, h, tone) {
   ctx.stroke();
 }
 
+function hannWindow(len) {
+  const w = new Float32Array(len);
+  for (let i = 0; i < len; i++) w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+  return w;
+}
+
+const cachedHann = {};
+function getHann(len) { if (!cachedHann[len]) cachedHann[len] = hannWindow(len); return cachedHann[len]; }
+
+function estimatePitchHzFromBuffer(buf, sampleRate) {
+  const n = buf.length;
+  if (n < 256) return 0;
+  // zero-mean and window
+  let mean = 0; for (let i = 0; i < n; i++) mean += buf[i]; mean /= n;
+  const w = getHann(n);
+  let e0 = 0; const x = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const v = (buf[i] - mean) * w[i]; x[i] = v; e0 += v * v; }
+  if (e0 <= 1e-7) return 0;
+  const minLag = Math.floor(sampleRate / 350);
+  const maxLag = Math.floor(sampleRate / 80);
+  let bestLag = -1; let bestRho = 0;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let num = 0, eLag = 0;
+    for (let i = 0; i < n - lag; i++) { const a = x[i]; const b = x[i + lag]; num += a * b; eLag += b * b; }
+    const rho = num / Math.sqrt(e0 * (eLag || 1e-7));
+    if (rho > bestRho) { bestRho = rho; bestLag = lag; }
+  }
+  if (bestLag < 0 || bestRho < 0.35) return 0; // unvoiced
+  return sampleRate / bestLag;
+}
+
 function estimatePitchHz(analyser, sampleRate) {
   const bufLen = analyser.fftSize;
   const buf = new Float32Array(bufLen);
   analyser.getFloatTimeDomainData(buf);
-  let bestOfs = -1, bestCorr = 0;
-  for (let ofs = 8; ofs < bufLen / 2; ofs++) {
-    let corr = 0;
-    for (let i = 0; i < bufLen - ofs; i++) corr += buf[i] * buf[i + ofs];
-    if (corr > bestCorr) { bestCorr = corr; bestOfs = ofs; }
-  }
-  return bestOfs > 0 ? sampleRate / bestOfs : 0;
+  return estimatePitchHzFromBuffer(buf, sampleRate);
+}
+
+function median(arr) {
+  const v = arr.slice().sort((a,b)=>a-b);
+  const n = v.length; if (!n) return 0; const mid = Math.floor(n/2);
+  return n % 2 ? v[mid] : (v[mid-1]+v[mid])/2;
 }
 
 function renderLive() {
@@ -48,43 +81,72 @@ function renderLive() {
   const ctx = toneCanvas.getContext('2d');
   const w = toneCanvas.width, h = toneCanvas.height;
   if (!ctx) return;
+  // 1 sample per frame
+  const sr = audioCtx.sampleRate;
+  const hz = estimatePitchHz(analyser, sr);
+  let st = 0;
+  if (hz > 0) {
+    // convert to semitones relative to median of recent voiced frames
+    const voiced = liveSemitoneBuffer.filter((x)=>Number.isFinite(x));
+    const medHz = 200; // default center
+    const med = voiced.length ? median(voiced.map(x=>x.hz)) : medHz;
+    st = 12 * Math.log2(hz / med);
+    // simple smoothing
+    if (voiced.length) {
+      const last = voiced[voiced.length-1].st;
+      st = 0.7 * last + 0.3 * st;
+    }
+    liveSemitoneBuffer.push({ st, hz });
+  } else {
+    liveSemitoneBuffer.push({ st: null, hz: 0 });
+  }
+  if (liveSemitoneBuffer.length > LIVE_MAX_FRAMES) liveSemitoneBuffer.shift();
+
+  // draw background
   ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, w, h);
   drawIdealCurve(ctx, w, h, getToneNumber(byId('pinyinText')?.textContent || ''));
-  // light live trace
+  // guides
+  ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1; ctx.beginPath();
+  ctx.moveTo(20, h*0.2); ctx.lineTo(w-20, h*0.2); ctx.moveTo(20, h*0.8); ctx.lineTo(w-20, h*0.8); ctx.stroke();
+
+  // draw live semitone contour
+  const range = 24; // +/- 12 st
+  const yFromSt = (v) => {
+    const clamped = Math.max(-range/2, Math.min(range/2, v));
+    return h/2 - (clamped / (range/2)) * (h*0.3);
+  };
   ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1.5; ctx.beginPath();
-  const sr = audioCtx.sampleRate;
-  const duration = 3000, step = 40; // 3s window
   let moved = false;
-  for (let t = 0; t <= duration; t += step) {
-    const hz = estimatePitchHz(analyser, sr);
-    const y = hz > 0 ? h - Math.min(h * 0.9, Math.log10(hz) * (h / 3)) : h * 0.9;
-    const x = 20 + (t / duration) * (w - 40);
+  for (let i = 0; i < liveSemitoneBuffer.length; i++) {
+    const x = 20 + (i / (LIVE_MAX_FRAMES-1)) * (w - 40);
+    const entry = liveSemitoneBuffer[i];
+    if (!entry || entry.st === null) continue;
+    const y = yFromSt(entry.st);
     if (!moved) { ctx.moveTo(x, y); moved = true; } else { ctx.lineTo(x, y); }
   }
-  ctx.stroke();
+  if (moved) ctx.stroke();
+
   if (isRecording) reqId = requestAnimationFrame(renderLive);
 }
 
 async function startRecording() {
   try {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toneStatus.textContent = 'Microphone unavailable.'; return;
-    }
+    if (!navigator.mediaDevices?.getUserMedia) { toneStatus.textContent = 'Microphone unavailable.'; return; }
     const ctx = ensureAudioContext();
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
     source = ctx.createMediaStreamSource(stream);
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     source.connect(analyser);
     isRecording = true;
+    liveSemitoneBuffer = [];
     toneStatus.textContent = 'Recording…';
     // capture to buffer
     const recorder = ctx.createScriptProcessor(4096, 1, 1);
     const chunks = [];
-    source.connect(recorder); recorder.connect(ctx.destination);
-    recorder.onaudioprocess = (e) => {
-      if (!isRecording) return;
-      chunks.push(e.inputBuffer.getChannelData(0).slice());
-    };
+    source.connect(recorder);
+    // do not monitor mic: connect through silent gain
+    const silentGain = ctx.createGain(); silentGain.gain.value = 0; recorder.connect(silentGain); silentGain.connect(ctx.destination);
+    recorder.onaudioprocess = (e) => { if (isRecording) chunks.push(e.inputBuffer.getChannelData(0).slice()); };
     renderLive();
     // auto-stop after 3s
     setTimeout(() => { if (isRecording) stopRecording(chunks, recorder); }, 3000);
@@ -104,7 +166,9 @@ function stopRecording(chunks, recorder) {
   if (reqId) cancelAnimationFrame(reqId);
   // build buffer
   const ctx = ensureAudioContext();
-  const flat = flattenChunks(chunks);
+  let flat = flattenChunks(chunks);
+  // trim silence (RMS window 20ms, threshold ~ -45 dBFS)
+  flat = trimSilence(flat, ctx.sampleRate, 0.02, -45);
   recordedBuffer = ctx.createBuffer(1, flat.length, ctx.sampleRate);
   recordedBuffer.copyToChannel(flat, 0, 0);
   toneStatus.textContent = 'Recorded.';
@@ -128,21 +192,31 @@ function drawFinalContour(samples, sr) {
   ctx2d.fillStyle = '#0b1220'; ctx2d.fillRect(0, 0, w, h);
   drawIdealCurve(ctx2d, w, h, getToneNumber(byId('pinyinText')?.textContent || ''));
   ctx2d.strokeStyle = '#3b82f6'; ctx2d.lineWidth = 2; ctx2d.beginPath();
-  const duration = 3000, step = 40;
-  for (let t = 0; t <= duration; t += step) {
-    const idx = Math.min(samples.length - 2048, Math.floor((t / duration) * (samples.length - 2048)));
-    let corr = 0, best = 0, bestLag = 0;
-    for (let lag = 8; lag < 1024; lag++) {
-      corr = 0;
-      for (let i = 0; i < 1024; i++) corr += samples[idx + i] * samples[idx + i + lag];
-      if (corr > best) { best = corr; bestLag = lag; }
-    }
-    const hz = bestLag ? sr / bestLag : 0;
-    const y = hz > 0 ? h - Math.min(h * 0.9, Math.log10(hz) * (h / 3)) : h * 0.9;
-    const x = 20 + (t / duration) * (w - 40);
-    if (t === 0) ctx2d.moveTo(x, y); else ctx2d.lineTo(x, y);
+  const frame = 1024; const hop = 512; const nFrames = Math.max(1, Math.floor((samples.length - frame) / hop));
+  const stVals = [];
+  for (let f = 0; f < nFrames; f++) {
+    const start = f * hop;
+    const seg = samples.slice(start, start + frame);
+    const hz = estimatePitchHzFromBuffer(seg, sr);
+    if (hz > 0) stVals.push(hz);
   }
-  ctx2d.stroke();
+  const med = stVals.length ? median(stVals) : 200;
+  const toY = (st) => {
+    const v = 12 * Math.log2(st / med);
+    const clamped = Math.max(-12, Math.min(12, v));
+    return h/2 - (clamped / 12) * (h*0.3);
+  };
+  let moved = false;
+  for (let f = 0; f < nFrames; f++) {
+    const start = f * hop;
+    const seg = samples.slice(start, start + frame);
+    const hz = estimatePitchHzFromBuffer(seg, sr);
+    if (hz <= 0) continue;
+    const x = 20 + (f / Math.max(1, nFrames-1)) * (w - 40);
+    const y = toY(hz);
+    if (!moved) { ctx2d.moveTo(x, y); moved = true; } else { ctx2d.lineTo(x, y); }
+  }
+  if (moved) ctx2d.stroke();
 }
 
 function replay() {
@@ -170,6 +244,26 @@ export function closeToneVisualizer() {
   try { stream?.getTracks()?.forEach(t => t.stop()); } catch {}
   if (reqId) cancelAnimationFrame(reqId);
   toneDialog.hidden = true;
+}
+
+function rmsDbfs(samples) {
+  let sum = 0; for (let i = 0; i < samples.length; i++) { const v = samples[i]; sum += v * v; }
+  const rms = Math.sqrt(sum / Math.max(1, samples.length));
+  return 20 * Math.log10(rms + 1e-12);
+}
+
+function trimSilence(samples, sr, windowSec, thresholdDb) {
+  const w = Math.max(1, Math.floor(sr * windowSec));
+  let start = 0, end = samples.length;
+  // leading
+  for (let i = 0; i < samples.length - w; i += w) {
+    if (rmsDbfs(samples.slice(i, i + w)) > thresholdDb) { start = i; break; }
+  }
+  // trailing
+  for (let i = samples.length - w; i > start; i -= w) {
+    if (rmsDbfs(samples.slice(i - w, i)) > thresholdDb) { end = i; break; }
+  }
+  return samples.slice(start, end);
 }
 
 
