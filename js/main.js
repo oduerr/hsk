@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession } from './storage.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 
@@ -25,6 +25,7 @@ const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
 const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
 const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
+const btnUndo = /** @type {HTMLButtonElement} */(document.getElementById('btnUndo'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -89,6 +90,13 @@ async function bootstrap() {
     const lastId = loadLastCheckpointId();
     buildInfo.textContent = `HSK Flash v1 • 莉娜老师的版本 • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
   } catch {}
+  // Load settings
+  try {
+    const s = loadSettings();
+    autoToggle.checked = !!s.timerEnabled;
+    autoSeconds.value = String(s.timerSeconds ?? 5);
+    setAutoReveal(autoToggle.checked, parseInt(autoSeconds.value || '5', 10));
+  } catch {}
 }
 
 function onReveal() {
@@ -134,6 +142,7 @@ function onBack() {
 function onNewRun() {
   // Re-bootstrap using same deck we already loaded in state.deck
   if (!state.deck.length) return;
+  if (!confirm('Start a new run? Current progress will be lost (unless saved).')) return;
   newRun(state.deck, { replayOf: null });
   render();
   startCountdownIfNeeded();
@@ -143,6 +152,7 @@ function onAutoToggleChanged() {
   const enabled = autoToggle.checked;
   const secs = parseInt(autoSeconds.value || '5', 10);
   setAutoReveal(enabled, secs);
+  try { saveSettings({ timerEnabled: enabled, timerSeconds: secs, lastCsvHash: '' }); } catch {}
   if (enabled && state.face === 'front') {
     startCountdownIfNeeded();
   } else {
@@ -153,6 +163,7 @@ function onAutoToggleChanged() {
 function onSecondsChanged() {
   const secs = parseInt(autoSeconds.value || '5', 10);
   setAutoReveal(autoToggle.checked, secs);
+  try { saveSettings({ timerEnabled: autoToggle.checked, timerSeconds: secs, lastCsvHash: '' }); } catch {}
   if (state.autoReveal && state.face === 'front') {
     startCountdownIfNeeded();
   }
@@ -192,6 +203,7 @@ btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnBack.addEventListener('click', onBack);
 btnCorrect.addEventListener('click', onUnmistake);
+btnUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); } });
 btnNewRun.addEventListener('click', onNewRun);
 autoToggle.addEventListener('change', onAutoToggleChanged);
 autoSeconds.addEventListener('change', onSecondsChanged);

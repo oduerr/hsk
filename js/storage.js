@@ -2,6 +2,7 @@ const SESSIONS_KEY = 'hsk.flash.sessions';
 const SESSION_PREFIX = 'hsk.flash.session.';
 const DECK_KEY = 'hsk.flash.deck.hsk5';
 const LAST_CHECKPOINT_KEY = 'hsk.flash.lastCheckpointId';
+const SETTINGS_KEY = 'hsk.flash.settings';
 
 function readJson(key, fallback) {
   try {
@@ -86,6 +87,14 @@ export function saveCheckpoint(fullSnapshot) {
   };
   saveSessionSummary(summary);
   saveLastCheckpointId(fullSnapshot.id);
+}
+
+export function loadSettings() {
+  return readJson(SETTINGS_KEY, { timerEnabled: false, timerSeconds: 5, lastCsvHash: '' });
+}
+
+export function saveSettings(settings) {
+  writeJson(SETTINGS_KEY, settings);
 }
 
 /**

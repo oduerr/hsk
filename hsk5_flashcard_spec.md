@@ -265,8 +265,12 @@ Agent tasks
 
 ### Round 3.95 Minor Bug fixes.
 
-* Pressing space should not advance, you should stay on the same card. Pressing space again would then unreveal. So, re-veal and unreveal go from the English to the Chinese by pressing space, switching to that state but don't go further.
-* The button for no error is missing, please fix add 	Mark Correct ✅ 
+
+### Round 4.0 Mobile Friendly
+- Add a Mobile friendly version of the app.
+- Adopt the layout for mobile devices.
+- swipe left and right to navigate to the previous and next card.
+- swipe up or down to switch from back to front of the card.
 
 
 ### Round 5 – QoL & Safety

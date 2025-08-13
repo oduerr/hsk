@@ -204,4 +204,45 @@ export function resumeRun(full, opts = {}) {
   };
 }
 
+/**
+ * Undo last user action if possible by popping last event and recomputing state.
+ * Supports: next, reveal, unreveal, mistake, unmistake.
+ */
+export function undoLast() {
+  if (!state.session.events.length) return false;
+  // remove last user event; keep start intact
+  let removed = null;
+  for (let i = state.session.events.length - 1; i >= 0; i--) {
+    const ev = state.session.events[i];
+    if (ev.type !== 'start') { removed = state.session.events.splice(i, 1)[0]; break; }
+  }
+  if (!removed) return false;
+  // Rebuild state from scratch based on events
+  const base = state;
+  base.index = 0;
+  base.face = 'front';
+  base.mistakes = new Set();
+  for (const ev of base.session.events) {
+    switch (ev.type) {
+      case 'reveal': base.face = 'back'; break;
+      case 'unreveal': base.face = 'front'; break;
+      case 'mistake': {
+        const idx = base.order[base.index];
+        const card = base.deck[idx];
+        if (card) base.mistakes.add(card.id);
+        break;
+      }
+      case 'unmistake': {
+        const idx = base.order[base.index];
+        const card = base.deck[idx];
+        if (card) base.mistakes.delete(card.id);
+        break;
+      }
+      case 'next': base.index = Math.min(base.index + 1, base.order.length); base.face = 'front'; break;
+      default: break;
+    }
+  }
+  return true;
+}
+
 
