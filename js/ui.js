@@ -4,6 +4,7 @@ import { state, currentCard, isFinished } from './state.js';
 const el = {
   message: /** @type {HTMLElement} */ (document.getElementById('message')),
   card: /** @type {HTMLElement} */ (document.getElementById('card')),
+  mistakeBadge: /** @type {HTMLElement} */ (document.getElementById('mistakeBadge')),
   front: /** @type {HTMLElement} */ (document.getElementById('cardFront')),
   back: /** @type {HTMLElement} */ (document.getElementById('cardBack')),
   english: /** @type {HTMLElement} */ (document.getElementById('englishText')),
@@ -58,6 +59,16 @@ export function render() {
     el.hanzi.textContent = card.hanzi || '—';
     el.pinyin.textContent = card.pinyin || '—';
     el.englishSmall.textContent = card.english || '—';
+  }
+
+  // Mistake highlighting for current card
+  const isMistake = !!(card && state.mistakes.has(card.id));
+  if (isMistake) {
+    el.card.setAttribute('data-mistake', '1');
+    el.mistakeBadge.hidden = false;
+  } else {
+    el.card.removeAttribute('data-mistake');
+    el.mistakeBadge.hidden = true;
   }
 
   if (state.session.replayOf) {

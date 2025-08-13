@@ -80,11 +80,33 @@ export function reveal() {
   logEvent('reveal');
 }
 
+export function unreveal() {
+  if (state.face === 'front') return;
+  state.face = 'front';
+  logEvent('unreveal');
+}
+
 export function markMistake() {
   const c = currentCard();
   if (!c) return;
   state.mistakes.add(c.id);
   logEvent('mistake', c.id);
+}
+
+export function unmarkMistake() {
+  const c = currentCard();
+  if (!c) return;
+  if (state.mistakes.has(c.id)) {
+    state.mistakes.delete(c.id);
+    logEvent('unmistake', c.id);
+  }
+}
+
+export function prevCard() {
+  if (state.index > 0) {
+    state.index -= 1;
+    state.face = 'front';
+  }
 }
 
 export function nextCard() {

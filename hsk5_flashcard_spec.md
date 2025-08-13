@@ -256,6 +256,19 @@ Agent tasks
 	•	Rename
 	•	Delete
 
+
+### Round 3.9 
+- Include a Back button to navigate to the previous card.
+- Support keyboard arrow keys: ← (previous), → (next).
+- When navigating back to a card previously marked as a mistake, clearly flag it as such (e.g., red border, icon).
+- Allow changing the status of a previously marked mistake to correct; update the session log, mistake count, and replay list accordingly.
+
+### Round 3.95 Minor Bug fixes.
+
+* Pressing space should not advance, you should stay on the same card. Pressing space again would then unreveal. So, re-veal and unreveal go from the English to the Chinese by pressing space, switching to that state but don't go further.
+* The button for no error is missing, please fix add 	Mark Correct ✅ 
+
+
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.

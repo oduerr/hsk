@@ -43,6 +43,7 @@
           <textarea id="csvTextArea" rows="6" style="width:100%; resize:vertical" placeholder="hanzi,pinyin,english\n唉,āi,interjection or grunt of agreement\n…"></textarea>
         </div>
         <section id="card" class="card">
+          <div id="mistakeBadge" class="mistake-badge" hidden>Marked mistake</div>
           <div id="cardFront" class="face front">
             <div id="englishText" class="english">—</div>
           </div>
@@ -59,8 +60,10 @@
           <span id="countdown" class="countdown" hidden>—</span>
         </div>
         <div class="actions">
+          <button id="btnBack" class="secondary">Back</button>
           <button id="btnReveal" class="primary">Reveal</button>
           <button id="btnMistake" class="danger">Mistake</button>
+          <button id="btnCorrect" class="secondary">Mark Correct ✅</button>
           <button id="btnNext" class="primary">Next</button>
           <button id="btnSaveProgress" class="secondary">Save Progress</button>
         </div>

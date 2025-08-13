@@ -1,5 +1,5 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -23,6 +23,8 @@ const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('
 const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
 const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
+const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
+const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -90,7 +92,8 @@ async function bootstrap() {
 }
 
 function onReveal() {
-  reveal();
+  // Space/Reveal toggles front/back without advancing
+  if (state.face === 'front') reveal(); else unreveal();
   render();
   resetCountdown();
 }
@@ -115,6 +118,17 @@ function onMistake() {
   flashMistake();
   // Re-render to update mistakes counter live
   render();
+}
+
+function onUnmistake() {
+  unmarkMistake();
+  render();
+}
+
+function onBack() {
+  prevCard();
+  render();
+  startCountdownIfNeeded();
 }
 
 function onNewRun() {
@@ -146,24 +160,38 @@ function onSecondsChanged() {
 
 function onKeyDown(e) {
   const key = e.key.toLowerCase();
-  if (key === ' ' || key === 'enter') {
+  if (key === ' ') {
     e.preventDefault();
-    if (state.face === 'front') onReveal(); else onNext();
+    onReveal();
+  } else if (key === 'enter') {
+    e.preventDefault();
+    onNext();
   } else if (key === 'm') {
     e.preventDefault();
     onMistake();
+  } else if (key === 'u') {
+    e.preventDefault();
+    onUnmistake();
   } else if (key === 'n') {
     e.preventDefault();
     onNext();
   } else if (key === 'r') {
     e.preventDefault();
     openReplayDialog();
+  } else if (key === 'arrowright') {
+    e.preventDefault();
+    onNext();
+  } else if (key === 'arrowleft') {
+    e.preventDefault();
+    onBack();
   }
 }
 
 btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
+btnBack.addEventListener('click', onBack);
+btnCorrect.addEventListener('click', onUnmistake);
 btnNewRun.addEventListener('click', onNewRun);
 autoToggle.addEventListener('change', onAutoToggleChanged);
 autoSeconds.addEventListener('change', onSecondsChanged);
