@@ -13,6 +13,8 @@ const el = {
   englishSmall: /** @type {HTMLElement} */ (document.getElementById('englishSmall')),
   countdown: /** @type {HTMLElement} */ (document.getElementById('countdown')),
   progressText: /** @type {HTMLElement} */ (document.getElementById('progressText')),
+  topInfo: /** @type {HTMLElement} */ (document.getElementById('topInfo')),
+  progressFill: /** @type {HTMLElement} */ (document.getElementById('progressFill')),
   mistakesText: /** @type {HTMLElement} */ (document.getElementById('mistakesText')),
   replayTag: /** @type {HTMLElement} */ (document.getElementById('replayTag')),
   btnReveal: /** @type {HTMLButtonElement} */ (document.getElementById('btnReveal')),
@@ -110,6 +112,13 @@ function setActionsDisabled(disabled) {
 function setProgress(current, total) {
   const prefix = state.levelLabel ? `${state.levelLabel} · ` : '';
   el.progressText.textContent = `${prefix}${current} / ${total}`;
+  if (el.topInfo) {
+    el.topInfo.textContent = `${state.levelLabel || ''}  |  ${current} / ${total}  |  Mistakes: ${state.mistakes.size}`.trim();
+  }
+  if (el.progressFill && total > 0) {
+    const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));
+    el.progressFill.style.width = pct + '%';
+  }
 }
 
 function setMistakes(count) {

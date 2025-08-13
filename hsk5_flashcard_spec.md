@@ -422,6 +422,16 @@ Update the version to 4.07 — 莉娜老师的版本
 
 Update the version to 4.07.01 — 莉娜老师的版本
 
+### 4.08 Layout Tweak
+- Change the layout from: image_curreny.png to image.png (handdrawn)
+- That is 
+1. Remove 4.07.01 from the main card.
+2. Have the information displayed in top
+3. Have the buttons Replay, Save, MistakToggle, and Gear in the next row
+Keep the Rest
+
+Update the version to 4.08 — 莉娜老师的版本
+
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.
 - Confirm on New Run if a run is in progress.

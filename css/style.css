@@ -21,12 +21,15 @@ body {
 
 #app { display: flex; flex-direction: column; min-height: 100vh; }
 
-.topbar, .bottombar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
-.bottombar { border-top: 1px solid var(--border); border-bottom: none; }
+.topbar { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.bottombar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--panel); border-top: 1px solid var(--border); border-bottom: none; }
 
-.brand { font-weight: 600; color: var(--text); flex: 1 1 auto; display: flex; justify-content: center; }
-.controls { order: 1; }
-.status { order: 3; }
+.brand { font-weight: 600; color: var(--text); display: flex; justify-content: center; }
+.topinfo { display: grid; grid-template-rows: auto auto; gap: 6px; }
+.topinfo-line { color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+.progressbar { width: min(600px, 60vw); height: 8px; background: #0b1220; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.progressbar .fill { height: 100%; width: 0%; background: #2563eb; }
+.btnrow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .status { display: flex; align-items: center; gap: 10px; color: var(--muted); flex-wrap: wrap; justify-content: flex-end; }
 .status-metrics { display: flex; align-items: center; gap: 6px; }
@@ -80,7 +83,6 @@ label.seconds input {
 }
 [data-mistake="1"].card { border-color: var(--danger); }
 .mistake-badge { position: absolute; top: 12px; right: 12px; color: #fecaca; border: 1px solid #7f1d1d; padding: 2px 6px; border-radius: 999px; font-size: 12px; background: rgba(127,29,29,0.2); }
-.
 .speak-btn {
   position: absolute;
   top: 12px; /* >= 12px safe distance from edges */

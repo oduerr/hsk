@@ -12,15 +12,17 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand"><span id="brandText">HSK Flashcards</span></div>
-        <div class="controls">
+        <div class="brand"><span id="brandText">HSK‑Flashcards</span></div>
+        <div class="topinfo-line"><div id="topInfo">—</div></div>
+        <div class="progressbar"><div id="progressFill" class="fill"></div></div>
+        <div class="controls btnrow">
           <button id="btnNewRun" class="secondary">New Run</button>
           <button id="btnReplay" class="secondary">Replay…</button>
           <button id="btnSaveProgressTop" class="secondary">Save Progress</button>
           <button id="btnMistakeTop" class="danger">Mistake</button>
           <button id="btnSettings" class="secondary" aria-label="Settings">⚙️</button>
         </div>
-        <div class="status">
+        <div class="status" hidden>
           <div class="status-metrics">
             <span id="progressText">0 / 0</span>
             <span> · </span>

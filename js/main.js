@@ -112,8 +112,7 @@ async function bootstrap() {
     try {
       const v = await fetch('./VERSION.TXT').then(r => r.text()).catch(() => '');
       versionLabel = v ? v.trim() : versionLabel;
-      const brandEl = document.getElementById('brandText');
-      if (brandEl && versionLabel) brandEl.textContent = versionLabel.split('—')[0].trim();
+      // Do not show version in the main header brand; keep static brand text
     } catch {}
     buildInfo.textContent = `${versionLabel} • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
   } catch {}
