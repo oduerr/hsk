@@ -24,6 +24,7 @@ const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('
 const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
 const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
 const btnSaveProgressTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
+const btnMistakeTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
 const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
 const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
@@ -261,6 +262,7 @@ settingsImportInput?.addEventListener('change', async () => {
   finally { settingsImportInput.value = ''; }
 });
 btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
+btnMistakeTop?.addEventListener('click', onMistake);
 window.addEventListener('keydown', onKeyDown, { passive: false });
 // Touch swipe gestures for mobile
 let touchStartX = 0, touchStartY = 0;
