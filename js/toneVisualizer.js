@@ -1,10 +1,11 @@
-let toneDialog, toneClose, toneCanvas, toneInfo, toneStopBtn, toneReplayBtn, toneStatus;
+let toneDialog, toneClose, toneCanvas, toneInfo, toneStopBtn, toneReplayBtn, toneStatus, toneHint, toneSpectro;
 let audioCtx = null;
 let stream = null, source = null, analyser = null, reqId = 0;
 let recordedBuffer = null;
 let isRecording = false;
 let liveSemitoneBuffer = [];
 const LIVE_MAX_FRAMES = 180; // ~3s at 60fps
+let spectrogramEnabled = false;
 
 function byId(id) { return /** @type {any} */(document.getElementById(id)); }
 
@@ -102,12 +103,25 @@ function renderLive() {
   }
   if (liveSemitoneBuffer.length > LIVE_MAX_FRAMES) liveSemitoneBuffer.shift();
 
-  // draw background
-  ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, w, h);
-  drawIdealCurve(ctx, w, h, getToneNumber(byId('pinyinText')?.textContent || ''));
-  // guides
-  ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1; ctx.beginPath();
-  ctx.moveTo(20, h*0.2); ctx.lineTo(w-20, h*0.2); ctx.moveTo(20, h*0.8); ctx.lineTo(w-20, h*0.8); ctx.stroke();
+  // spectrogram or clean background
+  if (spectrogramEnabled) {
+    const freq = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(freq);
+    const img = ctx.getImageData(1, 0, w-1, h);
+    ctx.putImageData(img, 0, 0);
+    for (let y = 0; y < h; y++) {
+      const i = Math.floor((y / h) * freq.length);
+      const v = freq[i];
+      ctx.fillStyle = `hsl(220,80%,${20 + (v/255)*50}%)`;
+      ctx.fillRect(w-1, y, 1, 1);
+    }
+    drawIdealCurve(ctx, w, h, getToneNumber(byId('pinyinText')?.textContent || ''));
+  } else {
+    ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, w, h);
+    drawIdealCurve(ctx, w, h, getToneNumber(byId('pinyinText')?.textContent || ''));
+    ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(20, h*0.2); ctx.lineTo(w-20, h*0.2); ctx.moveTo(20, h*0.8); ctx.lineTo(w-20, h*0.8); ctx.stroke();
+  }
 
   // draw live semitone contour
   const range = 24; // +/- 12 st
@@ -139,6 +153,7 @@ async function startRecording() {
     source.connect(analyser);
     isRecording = true;
     liveSemitoneBuffer = [];
+    if (toneHint) toneHint.textContent = '';
     toneStatus.textContent = 'Recording…';
     // capture to buffer
     const recorder = ctx.createScriptProcessor(4096, 1, 1);
@@ -175,6 +190,7 @@ function stopRecording(chunks, recorder) {
   toneReplayBtn.disabled = false;
   // draw final contour
   drawFinalContour(flat, ctx.sampleRate);
+  if (toneHint) toneHint.textContent = computeHint(flat, ctx.sampleRate);
 }
 
 function flattenChunks(chunks) {
@@ -219,6 +235,26 @@ function drawFinalContour(samples, sr) {
   if (moved) ctx2d.stroke();
 }
 
+function computeHint(samples, sr) {
+  const frame = 1024, hop = 512; const vals = [];
+  for (let p = 0; p + frame <= samples.length; p += hop) {
+    const hz = estimatePitchHzFromBuffer(samples.slice(p, p + frame), sr);
+    if (hz > 0) vals.push(hz);
+  }
+  if (vals.length < 3) return 'No clear pitch detected—try again closer to the mic.';
+  const med = median(vals);
+  const st = vals.map(hz => 12 * Math.log2(hz / med));
+  const n = st.length;
+  const firstThird = st.slice(0, Math.floor(n/3)).filter(Number.isFinite);
+  const lastThird = st.slice(Math.floor(2*n/3)).filter(Number.isFinite);
+  const overallSlope = (median(lastThird) - median(firstThird));
+  const dip = Math.min(...st) - (median([st[0], st[n-1]]));
+  if (overallSlope > 2) return 'Looks mostly rising.';
+  if (overallSlope < -2) return 'Looks mostly falling.';
+  if (dip < -2) return 'Shows a dip then rise.';
+  return 'Stable pitch.';
+}
+
 function replay() {
   if (!recordedBuffer || !audioCtx) return;
   const src = audioCtx.createBufferSource();
@@ -229,13 +265,15 @@ function replay() {
 
 export function openToneVisualizer() {
   toneDialog = byId('toneDialog'); toneClose = byId('toneClose'); toneCanvas = byId('toneCanvas');
-  toneInfo = byId('toneInfo'); toneStopBtn = byId('toneStop'); toneReplayBtn = byId('toneReplay'); toneStatus = byId('toneStatus');
+  toneInfo = byId('toneInfo'); toneStopBtn = byId('toneStop'); toneReplayBtn = byId('toneReplay'); toneStatus = byId('toneStatus'); toneHint = byId('toneHint'); toneSpectro = byId('toneSpectro');
   if (!toneDialog) return;
   const p = byId('pinyinText')?.textContent || '';
   if (toneInfo) toneInfo.textContent = p ? `Pinyin: ${p}` : '—';
   toneReplayBtn.disabled = true;
   toneDialog.hidden = false;
   toneClose.onclick = () => closeToneVisualizer();
+  spectrogramEnabled = !!(toneSpectro && toneSpectro.checked);
+  if (toneSpectro) toneSpectro.onchange = () => { spectrogramEnabled = !!toneSpectro.checked; };
   startRecording();
   toneReplayBtn.onclick = () => replay();
 }

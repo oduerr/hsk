@@ -661,47 +661,300 @@ st = 12 * log2(f0 / medianF0).
 Update the version to 4.11b — 莉娜老师的版本
 
 
+### 4.11c Tone Visualizer — Research‑Inspired Upgrades (Agent Tasks)
+
+A) Live UX & Recording
+	1.	Immediate Start + Live Plot
+	•	On open: start mic, begin one F0 estimate per animation frame; render live contour (newest at right).
+	•	Show Stop (analyze), Replay, Close.
+	•	Acceptance: user sees the curve move while speaking (no need to press Stop to see updates).
+	2.	Silence Trimming
+	•	On Stop: detect leading/trailing silence via RMS threshold (e.g., −45 dBFS) and trim before final analysis.
+	•	Acceptance: replay does not include long silent lead‑in/out.
+
+B) Signal Quality
+	3.	Mic Constraints
+	•	echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1.
+	•	Do not route mic to speakers (no monitoring).
+	•	Acceptance: no audible feedback/echo; replay is clean.
+	4.	Robust Pitch Estimation
+	•	Frame size 1024–2048 samples; zero‑mean + Hann window.
+	•	Autocorrelation with energy normalization, search lag range for 80–350 Hz.
+	•	Voicing threshold (ρ < 0.35 ⇒ unvoiced).
+	•	Temporal smoothing of F0 (median(3–5) or EMA).
+	•	Acceptance: fewer jumpy spikes; steady vowel yields steady line.
+
+C) Visualization & Comparison
+	5.	Normalized Pitch Scale
+	•	Convert Hz → semitones relative to the median F0 of the last ~1 s.
+	•	Y‑range = ±12 st; unvoiced frames near the bottom baseline.
+	•	Acceptance: rising (Tone 2) visibly slopes up; falling (Tone 4) slopes down.
+	6.	Ideal Tone Overlay
+	•	Draw idealized contour for tone (1 flat high / 2 rise / 3 dip‑rise / 4 fall).
+	•	Render live user contour on top; after Stop, render thicker final curve.
+	•	Acceptance: both curves visible; color legend in the modal header.
+	7.	Optional Spectrogram (toggle)
+	•	If enabled: each frame, getByteFrequencyData() → paint 1‑px column; log‑frequency 80–4000 Hz band.
+	•	Acceptance: clear vocal band; doesn’t tank FPS on mobile.
+
+D) Simple Feedback Metrics (no grading)
+	8.	Slope & Shape Hints (Post‑Stop)
+	•	Compute two simple metrics:
+	•	Overall slope (first vs. last voiced third).
+	•	Valley depth (for Tone 3: min vs. endpoints).
+	•	Display short, non‑judgmental hints:
+	•	“Looks mostly rising” / “Looks mostly falling” / “Shows a dip then rise.”
+	•	Acceptance: hints appear under the canvas after Stop; no pass/fail.
+
+E) UI Details
+	9.	Pinyin & Tone Label
+	•	Show pinyin with tone mark at top (“xué”, “mà”, etc.).
+	•	Acceptance: correct label shown for the current card.
+	10.	Controls & States
+
+	•	Stop → ends capture, trims silence, freezes final plot, enables Replay.
+	•	Replay → plays captured buffer (no live mic).
+	•	Close → releases mic, cancels animation.
+	•	Acceptance: resources are freed; reopening works.
+
+F) Error Handling (Non‑blocking)
+	11.	Unsupported / Permission Denied
+
+	•	Show: “Tone visualizer not supported / microphone unavailable.”
+	•	App continues normally.
+	•	Acceptance: no crashes; main app unaffected.
+
+G) Testing & Acceptance
+	12.	Manual Test Script
+
+	•	Speak “má” (Tone 2): final line tilts upward.
+	•	Speak “mà” (Tone 4): final line tilts downward.
+	•	Speak “mǎ” (Tone 3): visible dip then rise when vowel is long enough.
+	•	Hold steady “ma”: line stays near 0 st (stable).
+	•	Acceptance: all four behaviors visible on a typical laptop mic and Android phone.
+
+H) Optional (later, if easy)
+	13.	Model Curve from Audio Sample
+
+	•	Allow loading a short exemplar (native speaker) for the same syllable; draw its precomputed contour as a third curve (thin gray).
+	•	Cache per syllable to avoid recomputing.
+
+Update the version to 4.11c — 莉娜老师的版本
 ⸻
 
+Notes for the Agent
+	•	Keep all logic in js/toneVisualizer.js; main.js should only call openToneVisualizer(pinyin).
+	•	Use requestAnimationFrame for live updates; maintain a ring buffer of recent F0 values.
+	•	Use Canvas (not DOM) for performance.
+	•	No network calls; everything client‑side.
+	•	Guard everything with feature detection; fail gracefully.
 
-### Round 5 – QoL & Safety
-- Undo last action (pop last event; recompute state if feasible) – optional if complex.
-- Confirm on New Run if a run is in progress.
-- Import JSON to merge sessions (dedupe by id).
-- Settings persistence (auto-reveal on/off, seconds).
+This gives you live feedback, clearer contours, and a tiny bit of “research‑inspired” guidance—without turning it into a heavy grading system.
 
-**Exit criteria:** Settings persist; import/export roundtrips; basic undo works or is hidden.
+⸻
+### 4.20 Speech Synthesis Module (OpenAI + Browser Fallback)
 
+4.20 Speech Synthesis Module (OpenAI + Browser Fallback)
 
-## Testing Plan
-- **Unit-ish** (manual):
-  - CSV with commas and semicolons in definitions parses correctly.
-  - Tone marks preserved in pinyin; no mojibake.
-  - Keyboard shortcuts function and do not scroll page.
-  - Auto-reveal countdown pauses on reveal/back state change.
-  - Session export → import on fresh browser restores sessions.
-- **Edge**:
-  - Empty CSV → disable run buttons with message.
-  - All-correct session → replay button disabled for that session.
-  - LocalStorage quota: simulate by filling; app shows export/clear prompt.
+Goal
+Provide high-quality Chinese TTS with OpenAI as primary engine and Browser TTS as fallback. Keep it modular, optional, and safe. The main app only calls speak().
 
----
+⸻
 
-## Nonfunctional Requirements
-- Load and first paint < 1s on modern laptop with 2,500 cards.
-- No network after initial CSV fetch; works via `file://`.
-- No external dependencies required; optional tiny helpers allowed if vendored.
+A) Scope & Outcomes
+	•	Users can tap Speak to hear the current card’s hanzi (fallback: pinyin).
+	•	If OpenAI TTS fails or is disabled, the app automatically uses the browser’s Web Speech voice.
+	•	(Optional) Cache audio per text to avoid repeat synthesis and reduce latency/cost.
+	•	All TTS code lives outside main.js.
 
----
+⸻
 
-## 15) Agent Task Checklist
-- [ ] Create skeleton files and minimal CSS.
-- [ ] Implement CSV parser and card normalization.
-- [ ] Implement state machine and controls.
-- [ ] Implement session logging and persistence.
-- [ ] Build replay dialog + flow.
-- [ ] Add export/import of sessions.
-- [ ] Add auto-reveal timer + countdown UI.
-- [ ] Write inline JSDoc for public functions.
-- [ ] Provide `README.md` with usage and privacy note.
+B) Files & Structure
+	•	js/speech.js — the only place for TTS logic (module).
+	•	config/voice.config.json — defaults (engine, rates, etc.).
+	•	UI wiring: a small Voice section in the Gear menu.
 
+⸻
+
+C) Public API (used by main app)
+	•	initSpeech(configUrl?: string): Promise<void> — loads defaults, merges user settings, detects browser voices.
+	•	speak(text: string, lang?: string): Promise<void> — plays audio using selected engine; cancels any ongoing playback.
+	•	stop(): void — stops playback immediately.
+	•	(Optional) setSettings(partial) — apply/persist user changes from Gear.
+
+Main app rule: do not implement TTS logic in main.js; only import and call speak().
+
+⸻
+
+D) Engines & Behavior
+	1.	Primary: OpenAI TTS
+	•	Models: tts-1 or tts-1-hd.
+	•	Config fields: voice, audioFormat (mp3/opus), rate/pitch (if supported), enabled: true/false.
+	•	API Key Handling:
+	•	The OpenAI API key is entered by the user in the Gear UI (masked input).
+	•	It is stored only in localStorage (or IndexedDB) under a dedicated key (e.g., hsk.tts.openai.key).
+	•	It is never included in any export/import JSON and never committed to the repo.
+	•	If request fails (no key, network, quota), fallback to Browser TTS (if allowed).
+	2.	Fallback: Browser TTS (Web Speech)
+	•	Auto-select best zh-CN voice; allow manual pick in settings.
+	•	Config: rate, pitch, preferredLangs.
+	•	If no zh voice exists, still speak with available voice (warn once).
+
+⸻
+
+E) Gear / Settings (minimal UI)
+	•	Engine: OpenAI TTS / Browser TTS.
+	•	OpenAI: masked API key field (stored locally only), voice name, audio format, “Test voice” button.
+	•	Browser: voice picker (available zh voices), rate (0.75–1.1), pitch (0.8–1.2).
+	•	Cache: toggle “Cache synthesized audio” (default ON).
+	•	Fallback: toggle “Fallback to Browser if cloud fails” (default ON).
+	•	Persist engine/voice/rate/pitch/cache locally; do not export the key.
+
+⸻
+
+F) Caching (optional but recommended)
+	•	If engine = OpenAI and Cache = ON:
+	•	Key: lang|voice|text (or cardId if stable).
+	•	Store small audio blobs in IndexedDB (preferred) or in-memory Map.
+	•	On cache hit: play immediately, skip network call.
+	•	Provide a “Clear TTS cache” button in Gear (shows size estimate if easy).
+
+⸻
+
+G) Security & Privacy
+	•	Never hard-code or ship API keys.
+	•	Keys stay only in the browser (localStorage/IndexedDB).
+	•	Optionally show a one-line notice: “Your API key is stored locally on this device.”
+
+⸻
+
+H) UX & Error Handling
+	•	Debounce: calling speak() stops any current playback first.
+	•	If OpenAI fails → toast “Cloud voice unavailable — using browser voice.” (once per session).
+	•	If both engines fail → non-blocking toast (“Speech not available”).
+	•	Respect global audio feedback setting: TTS is separate; do not suppress TTS when feedback beeps are off.
+
+⸻
+
+I) Integration Points
+	•	Gear menu section: “Voice”.
+	•	Speak button handler in the card view:
+	•	speak(card.hanzi || card.pinyin, 'zh-CN')
+	•	No other module should call Web Speech or network TTS directly.
+
+⸻
+
+J) Acceptance Criteria
+	•	Selecting OpenAI and entering a local API key produces clear Mandarin audio; rapid replays cancel/restart cleanly.
+	•	Removing the key seamlessly uses Browser TTS.
+	•	Cache ON avoids repeat network calls for the same text.
+	•	Settings persist across reloads; API key is not included in app exports.
+	•	No TTS code remains in main.js beyond imports and speak() calls.
+
+Update the version to 4.20 — 莉娜老师的版本
+
+### 4.21 OpenAI TTS Connectivity Test (from Gear Menu)
+
+Goal
+Provide a built-in test that confirms OpenAI TTS is configured and reachable, distinct from Browser TTS. The test should be callable from the Gear → Voice section and report clear diagnostics without affecting normal app state.
+
+⸻
+
+A) Entry point (UI)
+	•	Add a “Test OpenAI TTS” button in Gear → Voice (visible regardless of current engine).
+	•	Under the button, show a compact status line area for results.
+
+⸻
+
+B) What the test does (sequence)
+	1.	Pre-checks
+	•	Verify an API key is present in local storage.
+	•	If missing: show “No API key found. Enter your key and try again.” (link focus to the key field).
+	2.	Sample synthesis (OpenAI only)
+	•	Disable any TTS cache for the test.
+	•	Send a one-line sample (e.g., 学习中文真好！) to OpenAI TTS (tts-1 or tts-1-hd) using current Voice settings.
+	•	Measure round-trip latency (request start → audio ready).
+	3.	Playback
+	•	Play the returned OpenAI audio buffer.
+	•	Ensure no fallback to Browser TTS during this test (if request fails, do not speak via browser).
+	4.	Optional A/B
+	•	Offer a “Compare with Browser TTS” sub-button that immediately speaks the same text using Browser TTS for ear comparison.
+
+⸻
+
+C) Diagnostics to show (in the Gear panel)
+	•	Result: ✅ “OpenAI TTS OK” or ❌ “OpenAI TTS failed”
+	•	Latency: e.g., “Latency: 480 ms”
+	•	Model/Voice: e.g., tts-1-hd • zh-CN-XiaoxiaoNeural (use whatever is configured)
+	•	Audio format: mp3 / opus
+	•	Key scope: “Key detected locally” (never display the key)
+	•	Fallback used: Yes/No (for this test it should be No; if Yes, mark as warning)
+	•	Timestamp of last successful test
+
+On failure, show a concise error cause if detectable:
+	•	Missing/invalid key
+	•	Network/CORS blocked
+	•	Quota/auth error (HTTP status)
+	•	Non-audio response/parse error
+
+⸻
+
+D) Behavior & Safety
+	•	The test never stores the API key in exports; it only reads from local storage.
+	•	The test does not change the user’s selected engine or settings.
+	•	If playback is already running, the test should stop it before starting.
+	•	If the call fails, do not auto-fallback to Browser TTS (to avoid confusion).
+
+⸻
+
+E) Acceptance criteria
+	•	From Gear → Voice, clicking Test OpenAI TTS:
+	•	Performs a real request to OpenAI and plays the cloud audio (when configured correctly).
+	•	Displays diagnostics (success/latency/voice/format/timestamp).
+	•	If anything fails, shows a clear reason and does not play Browser TTS.
+	•	Clicking Compare with Browser TTS plays the same text with the browser voice so differences are audible.
+	•	Running the test does not affect normal speak() calls or cached audio.
+
+  4.22 TTS Model Toggle & Cache Controls
+
+Goal
+Let the user choose between Speed (tts-1, default) and Quality (tts-1-hd) from the Gear menu, and add a Clear TTS Cache control for testing.
+
+⸻
+
+A) Gear → Voice (UI)
+	•	Model selector (radio or dropdown):
+	•	Speed (tts-1) — default
+	•	Quality (tts-1-hd) — shows a brief note: “higher quality, higher latency”
+	•	OpenAI Voice selector (existing).
+	•	Cache
+	•	Toggle: Cache synthesized audio (ON by default)
+	•	Button: Clear TTS cache → confirm dialog → clears cached audio.
+	•	(Optional) show a small estimate like “~X files, ~Y MB”.
+
+Persist all settings locally (engine, model, voice, cache ON/OFF). Do not export the API key.
+
+⸻
+
+B) Behavior
+	•	The selected model is used on the next synthesis request (no need to reload).
+	•	Cache key must include model + voice + lang + text so changing the model won’t reuse the wrong audio.
+	•	Clear TTS cache removes all stored synthesized audio (model-agnostic).
+	•	If OpenAI call fails or no key: gracefully fallback to Browser TTS (if fallback enabled).
+
+⸻
+
+C) Non-Goals / Safety
+	•	No changes to main study flow.
+	•	No API key stored in exports or logs.
+	•	If cache is OFF, always fetch from OpenAI (no writes to cache).
+
+⸻
+
+D) Acceptance Criteria
+	•	Switching Speed ↔ Quality affects new plays immediately and is remembered after reload.
+	•	With cache ON: first play fetches from OpenAI; second play of same text+voice+model uses cache (faster).
+	•	Clear TTS cache removes all entries; next play re-fetches from OpenAI.
+	•	When OpenAI is unavailable, Browser TTS is used (with a small toast), and the app continues normally.
+
+Update the version to 4.21 — 莉娜老师的版本

@@ -1,5 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
+import { initSpeech, speak, testOpenAITts } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
@@ -40,6 +41,12 @@ const settingsExport = /** @type {HTMLButtonElement} */(document.getElementById(
 const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('settingsImportBtn'));
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
 const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('settingsUndo'));
+// TTS (4.20)
+const ttsEngineRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="ttsEngine"]'));
+const ttsOpenAIKey = /** @type {HTMLInputElement} */(document.getElementById('ttsOpenAIKey'));
+const ttsTestOpenAI = /** @type {HTMLButtonElement} */(document.getElementById('ttsTestOpenAI'));
+const ttsCompareBrowser = /** @type {HTMLButtonElement} */(document.getElementById('ttsCompareBrowser'));
+const ttsStatus = /** @type {HTMLElement} */(document.getElementById('ttsStatus'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
@@ -106,6 +113,8 @@ async function bootstrap() {
       $('card').hidden = true;
     }
   }
+  // Initialize speech (4.20)
+  try { await initSpeech(); } catch {}
   // Show version/build info: date + latest session or checkpoint id
   try {
     const lastId = loadLastCheckpointId();
@@ -127,6 +136,14 @@ async function bootstrap() {
     if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
+    // TTS engine (persist choice in localStorage under speech settings module)
+    try {
+      const ttsSaved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+      const engine = ttsSaved.engine || 'browser';
+      ttsEngineRadios.forEach(r => { r.checked = r.value === engine; });
+      const keySaved = localStorage.getItem('hsk.tts.openai.key') || '';
+      if (ttsOpenAIKey) ttsOpenAIKey.value = keySaved;
+    } catch {}
     // Level picker
     const last = loadLastLevel();
     if (levelPicker && last) {
@@ -261,7 +278,12 @@ btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnCardMistakeToggle?.addEventListener('click', onMistake);
-btnSpeak?.addEventListener('click', speakChinese);
+btnSpeak?.addEventListener('click', () => {
+  const idx = state.order[state.index];
+  const card = state.deck[idx];
+  if (!card) return;
+  try { speak(card.hanzi || card.pinyin || '', 'zh-CN'); } catch {}
+});
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
@@ -287,6 +309,30 @@ settingsImportInput?.addEventListener('change', async () => {
 });
 btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
 btnMistakeTop?.addEventListener('click', onMistake);
+
+// TTS handlers
+ttsEngineRadios.forEach(r => r?.addEventListener('change', () => {
+  try {
+    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+    const engine = Array.from(ttsEngineRadios).find(x => x.checked)?.value || 'browser';
+    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, engine }));
+  } catch {}
+}));
+ttsOpenAIKey?.addEventListener('change', () => { try { localStorage.setItem('hsk.tts.openai.key', ttsOpenAIKey.value || ''); } catch {} });
+ttsTestOpenAI?.addEventListener('click', async () => {
+  ttsStatus && (ttsStatus.textContent = 'Testing OpenAI TTS…');
+  const res = await testOpenAITts('学习中文真好！', 'zh-CN');
+  if (res.ok) {
+    const ts = new Date().toLocaleTimeString();
+    ttsStatus.textContent = `✅ OpenAI TTS OK • Latency: ${res.latencyMs} ms • Model: ${res.model} • Voice: ${res.voice} • ${ts}`;
+  } else {
+    ttsStatus.textContent = `❌ OpenAI TTS failed • ${res.reason || 'Unknown error'}` + (res.detail ? ` • ${res.detail}` : '');
+  }
+});
+ttsCompareBrowser?.addEventListener('click', async () => {
+  ttsStatus && (ttsStatus.textContent = 'Browser TTS comparison…');
+  try { await speak('学习中文真好！', 'zh-CN'); ttsStatus && (ttsStatus.textContent = 'Browser TTS played.'); } catch (e) { ttsStatus && (ttsStatus.textContent = 'Browser TTS unavailable.'); }
+});
 window.addEventListener('keydown', onKeyDown, { passive: false });
 // Touch swipe gestures for mobile
 let touchStartX = 0, touchStartY = 0;

@@ -144,6 +144,18 @@
               <label class="toggle" style="margin-left:12px"><input type="checkbox" id="settingsAudio" /> <span>Audio feedback on mark/unmark</span></label>
             </section>
             <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Voice</div>
+              <div class="muted" style="margin-bottom:6px">Configure speech synthesis. API keys are stored only on this device.</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+                <label class="toggle"><input type="radio" name="ttsEngine" value="browser" checked /> <span>Browser TTS</span></label>
+                <label class="toggle"><input type="radio" name="ttsEngine" value="openai" /> <span>OpenAI TTS</span></label>
+                <input id="ttsOpenAIKey" type="password" placeholder="OpenAI API key" style="min-width:240px" />
+                <button id="ttsTestOpenAI" class="secondary" title="Run a real cloud TTS call and play the result">Test OpenAI TTS</button>
+                <button id="ttsCompareBrowser" class="secondary" title="Play with browser voice for comparison">Compare with Browser TTS</button>
+              </div>
+              <div id="ttsStatus" class="muted" style="margin-top:6px"></div>
+            </section>
+            <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Info</div>
               <div class="muted">Version: 莉娜老师的版本</div>
               <div class="muted">Build: <span id="infoBuildAt">—</span></div>
@@ -170,12 +182,15 @@
           </div>
           <div class="modal-body">
             <div id="toneInfo" class="muted" style="margin-bottom:8px">—</div>
+            <div class="muted" style="margin-bottom:6px">Legend: ideal (gray), live (light blue), final (blue)</div>
             <canvas id="toneCanvas" width="640" height="240" style="width:100%; height:240px; background:#0b1220; border:1px solid var(--border); border-radius:8px"></canvas>
             <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
               <button id="toneStop" class="primary" aria-label="Stop recording">Stop</button>
               <button id="toneReplay" class="secondary" aria-label="Replay recording" disabled>Replay</button>
+              <label class="toggle" style="margin-left:auto"><input id="toneSpectro" type="checkbox" /> <span>Spectrogram</span></label>
               <span id="toneStatus" class="muted"></span>
             </div>
+            <div id="toneHint" class="muted" style="margin-top:6px"></div>
           </div>
         </div>
       </div>
