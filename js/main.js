@@ -37,6 +37,7 @@ const settingsClose = /** @type {HTMLButtonElement} */(document.getElementById('
 const settingsAutoToggle = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoToggle'));
 const settingsAutoSeconds = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoSeconds'));
 const settingsMinimalUI = /** @type {HTMLInputElement} */(document.getElementById('settingsMinimalUI'));
+const settingsFlipAnim = /** @type {HTMLInputElement} */(document.getElementById('settingsFlipAnim'));
 const settingsExport = /** @type {HTMLButtonElement} */(document.getElementById('settingsExport'));
 const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('settingsImportBtn'));
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
@@ -141,6 +142,18 @@ async function bootstrap() {
     if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
+    // Apply flip animation preference; respects reduced motion
+    const enabled = s.flipAnim !== false;
+    document.documentElement.style.setProperty('--flip-duration', enabled ? '400ms' : '0ms');
+    if (settingsFlipAnim) settingsFlipAnim.checked = enabled;
+settingsFlipAnim?.addEventListener('change', () => {
+  try {
+    const s = loadSettings();
+    const enabled = !!settingsFlipAnim.checked;
+    saveSettings({ ...s, flipAnim: enabled });
+    document.documentElement.style.setProperty('--flip-duration', enabled ? '400ms' : '0ms');
+  } catch {}
+});
     // TTS engine (persist choice in localStorage under speech settings module)
     try {
       const ttsSaved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
@@ -276,9 +289,12 @@ function onKeyDown(e) {
   } else if (key === 'arrowleft') {
     e.preventDefault();
     onBack();
-  } else if (key === 'arrowdown' || key === 'arrowup') {
+  } else if (key === 'arrowup') {
     e.preventDefault();
-    onReveal();
+    if (state.face !== 'back') { reveal(); render(); resetCountdown(); }
+  } else if (key === 'arrowdown') {
+    e.preventDefault();
+    if (state.face !== 'front') { unreveal(); render(); startCountdownIfNeeded(); }
   }
 }
 
@@ -390,7 +406,11 @@ document.addEventListener('touchend', (e) => {
     }
   } else {
     if (Math.abs(dy) > SWIPE_THRESHOLD) {
-      onReveal();
+      if (dy < 0) { // swipe up → reveal/back
+        if (state.face !== 'back') { reveal(); render(); resetCountdown(); }
+      } else { // swipe down → front
+        if (state.face !== 'front') { unreveal(); render(); startCountdownIfNeeded(); }
+      }
     }
   }
 }, { passive: true });

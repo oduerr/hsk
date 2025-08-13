@@ -46,10 +46,10 @@
           <div id="mistakeBadge" class="mistake-badge" hidden>Marked mistake</div>
           <button id="btnSpeak" class="speak-btn" aria-label="Speak Chinese">🔊</button>
           <button id="btnTone" class="tone-btn" aria-label="Tone visualizer" title="Tone visualizer">🎙️</button>
-          <div id="cardFront" class="face front">
+           <div id="cardFront" class="face front" aria-label="Front (English)">
             <div id="englishText" class="english">—</div>
           </div>
-          <div id="cardBack" class="face back" hidden>
+           <div id="cardBack" class="face back" aria-label="Back (Chinese)">
             <div id="hanziText" class="hanzi">—</div>
             <div id="pinyinText" class="pinyin">—</div>
             <div id="englishSmall" class="english-small">—</div>
@@ -143,6 +143,10 @@
               <div style="font-weight:600; margin-bottom:6px">Mobile</div>
               <label class="toggle"><input type="checkbox" id="settingsOutdoor" /> <span>Outdoor mode (high contrast)</span></label>
               <label class="toggle" style="margin-left:12px"><input type="checkbox" id="settingsAudio" /> <span>Audio feedback on mark/unmark</span></label>
+            </section>
+            <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Animation</div>
+              <label class="toggle"><input type="checkbox" id="settingsFlipAnim" checked /> <span>Enable Flip Animation</span></label>
             </section>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Voice</div>

@@ -1002,3 +1002,42 @@ Verification:
 
 ⸻
 
+### 4.30 Card Flip Animation (Vertical Flip)
+
+Task:
+Implement an optional vertical flip animation for cards when switching between front and back.
+
+Details:
+	1.	Animation behavior:
+	•	Flip the card upward (or downward) like a physical flashcard being lifted, using a rotation around the horizontal (X) axis.
+	•	Pivot point should be along the top edge of the card (transform-origin: top center).
+	•	Duration: 300–500 ms, easing: ease-in-out.
+	•	Ensure correct direction depending on whether flipping from front → back or back → front.
+	2.	Structure:
+	•	Card must have separate front and back faces to enable this flip.
+	•	If the current rendering combines both sides in one element, refactor into two face elements stacked in 3D space.
+	3.	Toggle control:
+	•	Add a setting in the Gear menu:
+	•	“Enable Flip Animation” (default: enabled).
+	•	Store preference in localStorage.
+	•	When disabled, cards switch instantly with no animation.
+	4.	Accessibility:
+	•	Respect prefers-reduced-motion and disable animation if the user’s system requests reduced motion.
+	5.	Performance:
+	•	Use GPU-accelerated CSS transforms for smooth animation.
+	•	Avoid reflow or layout shift during the flip.
+	6.	Testing:
+	•	Verify that flip direction matches intended behavior (upward/downward).
+	•	Ensure the toggle works instantly without reload.
+
+  ### 4.30.a Card Flip Animation (Vertical Flip)
+  - Switch to rotateX
+  - Slightly color the card background make the chinese version a bit brighter
+  - Update the version to 4.30.a — 莉娜老师的版本
+
+  #### 4.30.b Card Flip Animation (Vertical Flip)
+- Larger difference between the front and back of the card
+- If i swipe up or press the up arrow the card should flip to the back like a physical card
+- If i swipe down or press the down arrow the card should flip to the front like a physical card in the other direction
+- The animation should be smooth and not jumpy 
+

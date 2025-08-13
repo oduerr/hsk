@@ -52,17 +52,17 @@ export function render() {
   setProgress(state.index + 1, state.order.length);
   setMistakes(state.mistakes.size);
 
-  if (state.face === 'front') {
-    el.front.hidden = false;
-    el.back.hidden = true;
-    el.english.textContent = card.english || '—';
-  } else {
-    el.front.hidden = true;
-    el.back.hidden = false;
-    el.hanzi.textContent = card.hanzi || '—';
-    el.pinyin.textContent = card.pinyin || '—';
-    el.englishSmall.textContent = card.english || '—';
-  }
+  // Update contents
+  el.english.textContent = card.english || '—';
+  el.hanzi.textContent = card.hanzi || '—';
+  el.pinyin.textContent = card.pinyin || '—';
+  el.englishSmall.textContent = card.english || '—';
+
+  // Flip state via class and hidden flags
+  const showBack = state.face !== 'front';
+  el.card.classList.toggle('show-back', showBack);
+  el.front.hidden = false;
+  el.back.hidden = false;
 
   // Mistake highlighting for current card
   const isMistake = !!(card && state.mistakes.has(card.id));
