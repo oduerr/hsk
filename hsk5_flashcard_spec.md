@@ -921,6 +921,7 @@ Goal
 Let the user choose between Speed (tts-1, default) and Quality (tts-1-hd) from the Gear menu, and add a Clear TTS Cache control for testing.
 
 ⸻
+### 4.22 TTS Model Toggle & Cache Controls
 
 A) Gear → Voice (UI)
 	•	Model selector (radio or dropdown):
@@ -958,3 +959,46 @@ D) Acceptance Criteria
 	•	When OpenAI is unavailable, Browser TTS is used (with a small toast), and the app continues normally.
 
 Update the version to 4.21 — 莉娜老师的版本
+
+
+### 4.23 – TTS Configuration Enhancements
+
+Tasks:
+	1.	Refactor TTS Implementation
+	•	Move all TTS-related functionality (OpenAI + browser speech synthesis) into a dedicated file, e.g., tts.js.
+	•	The main UI should only call high-level functions like ttsSpeak(text) or ttsTest().
+	•	The TTS module should:
+	•	Handle both OpenAI and browser speech synthesis.
+	•	Manage caching logic internally.
+	•	Provide utility functions for clearing cache, switching voices/models, and running test phrases.
+	2.	Voice Selection
+	•	Add a dropdown in the Gear menu to choose the OpenAI TTS voice.
+	•	Use a hardcoded list for OpenAI voices to ensure consistent availability:
+
+  const OPENAI_VOICES = [
+  "alloy", "verse", "sage", "blush", "bright",
+  "copper", "ember", "moss", "pearl", "sand"
+];
+
+•	Keep browser TTS voices in a separate list so the user can switch between OpenAI and browser mode.
+
+	2.	Model Toggle
+	•	Add a toggle in the Gear menu to switch between gpt-4o-mini-tts (TTS1) and gpt-4o-mini-tts-hd (TTS1-HD).
+	3.	Test Phrase Selection
+	•	Allow user to choose the phrase used for TTS testing from the Gear menu.
+	•	Use current default if the user does not change it.
+	4.	Test Script Integration
+	•	Add a “Test TTS” entry in the Gear menu to play the selected test phrase using the current TTS settings (voice, model, engine).
+	5.	Clear Cache
+	•	Add a “Clear TTS Cache” option in the Gear menu that deletes all locally cached audio files.
+	6.	Test Vocabulary File
+	•	Include hsk0.csv in the project alongside the other HSK files for testing purposes.
+	•	Ensure it is selectable in the same way as other HSK lists.
+
+Verification:
+	•	Confirm that voices in the dropdown exactly match the hardcoded OPENAI_VOICES list.
+	•	Verify that cache clearing works without breaking the app.
+	•	Ensure the test phrase plays correctly in both TTS1 and TTS1-HD.
+
+⸻
+

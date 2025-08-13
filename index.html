@@ -105,6 +105,7 @@
               <div style="font-weight:600; margin-bottom:6px">Level</div>
               <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
                 <select id="levelPicker">
+                  <option value="0">HSK 0 (test)</option>
                   <option value="1">HSK 1</option>
                   <option value="2">HSK 2</option>
                   <option value="3">HSK 3</option>
@@ -152,6 +153,25 @@
                 <input id="ttsOpenAIKey" type="password" placeholder="OpenAI API key" style="min-width:240px" />
                 <button id="ttsTestOpenAI" class="secondary" title="Run a real cloud TTS call and play the result">Test OpenAI TTS</button>
                 <button id="ttsCompareBrowser" class="secondary" title="Play with browser voice for comparison">Compare with Browser TTS</button>
+                <select id="ttsModel" title="Choose OpenAI model">
+                  <option value="tts-1" selected>Speed (tts-1)</option>
+                  <option value="tts-1-hd">Quality (tts-1-hd)</option>
+                </select>
+                <select id="ttsOpenAIVoice" title="OpenAI voice">
+                  <option value="alloy">alloy</option>
+                  <option value="verse">verse</option>
+                  <option value="sage">sage</option>
+                  <option value="blush">blush</option>
+                  <option value="bright">bright</option>
+                  <option value="copper">copper</option>
+                  <option value="ember">ember</option>
+                  <option value="moss">moss</option>
+                  <option value="pearl">pearl</option>
+                  <option value="sand">sand</option>
+                </select>
+                <input id="ttsTestPhrase" type="text" placeholder="Test phrase (默认: 学习中文真好！)" style="min-width:220px" />
+                <label class="toggle"><input id="ttsCacheToggle" type="checkbox" checked /> <span>Cache synthesized audio</span></label>
+                <button id="ttsClearCache" class="secondary" title="Clear cached TTS audio">Clear TTS cache</button>
               </div>
               <div id="ttsStatus" class="muted" style="margin-top:6px"></div>
             </section>

@@ -4,8 +4,8 @@
 const KEY_SETTINGS = 'hsk.tts.settings';
 const KEY_OPENAI = 'hsk.tts.openai.key';
 
-/** @type {{ engine: 'openai'|'browser', model?: 'tts-1'|'tts-1-hd', rate: number, pitch: number, voice?: string, cache: boolean, fallback: boolean, preferredLangs: string[] }} */
-let settings = { engine: 'browser', model: 'tts-1', rate: 0.95, pitch: 1.0, voice: '', cache: true, fallback: true, preferredLangs: ['zh-CN','zh','cmn-Hans-CN'] };
+/** @type {{ engine: 'openai'|'browser', model?: 'tts-1'|'tts-1-hd', rate: number, pitch: number, openaiVoice?: string, browserVoice?: string, cache: boolean, fallback: boolean, preferredLangs: string[] }} */
+let settings = { engine: 'browser', model: 'tts-1', rate: 0.95, pitch: 1.0, openaiVoice: 'alloy', browserVoice: '', cache: true, fallback: true, preferredLangs: ['zh-CN','zh','cmn-Hans-CN'] };
 
 /** @type {Map<string, ArrayBuffer>} */
 const ttsCache = new Map();
@@ -22,6 +22,7 @@ export async function initSpeech() {
       window.speechSynthesis.onvoiceschanged = () => { voices = window.speechSynthesis.getVoices(); };
     }
     if (!settings.model) settings.model = 'tts-1';
+    if (!settings.openaiVoice) settings.openaiVoice = 'alloy';
     console.info('[tts] init', { engine: settings.engine, model: settings.model, cache: settings.cache, fallback: settings.fallback });
     console.info('[tts] browser voices', { count: voices?.length || 0 });
   } catch {}
@@ -42,7 +43,7 @@ function pickBrowserVoice() {
   if (!voices || voices.length === 0) voices = window.speechSynthesis.getVoices();
   const match = voices.filter(v => settings.preferredLangs.some(l => (v.lang||'').toLowerCase().startsWith(l.toLowerCase())) || /zh|chinese/i.test(v.name));
   let voice = null;
-  if (settings.voice) voice = voices.find(v => v.voiceURI === settings.voice || v.name === settings.voice) || null;
+  if (settings.browserVoice) voice = voices.find(v => v.voiceURI === settings.browserVoice || v.name === settings.browserVoice) || null;
   if (!voice) voice = match[0] || voices[0] || null;
   return voice;
 }
@@ -69,7 +70,7 @@ async function speakWithOpenAI(text, lang='zh-CN') {
   if (!key) throw new Error('No OpenAI key');
   // Cache key
   const model = settings.model || 'tts-1';
-  const cacheKey = `${model}|${lang}|${settings.voice||'alloy'}|${text}`;
+  const cacheKey = `${model}|${lang}|${settings.openaiVoice||'alloy'}|${text}`;
   try {
     if (settings.cache && ttsCache.has(cacheKey)) {
       const buf = ttsCache.get(cacheKey);
@@ -77,11 +78,11 @@ async function speakWithOpenAI(text, lang='zh-CN') {
       return playArrayBuffer(buf);
     }
     const masked = key.length > 8 ? key.slice(0,3) + '...' + key.slice(-4) : '***';
-    console.info('[tts] openai request', { model, voice: settings.voice||'alloy', format: 'mp3', key: masked, textPreview: (text||'').slice(0,24) });
+    console.info('[tts] openai request', { model, voice: settings.openaiVoice||'alloy', format: 'mp3', key: masked, textPreview: (text||'').slice(0,24) });
     const resp = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model, voice: settings.voice || 'alloy', input: text, format: 'mp3' })
+      body: JSON.stringify({ model, voice: settings.openaiVoice || 'alloy', input: text, format: 'mp3' })
     });
     if (!resp.ok) {
       let errText = '';
@@ -122,7 +123,7 @@ export async function speak(text, lang='zh-CN') {
 }
 
 // Explicit OpenAI connectivity test (4.21)
-export async function testOpenAITts(sampleText = '学习中文真好！', lang = 'zh-CN') {
+export async function testOpenAITts(sampleText = '莉娜老师的版本.', lang = 'zh-CN') {
   const started = performance.now();
   const key = localStorage.getItem(KEY_OPENAI) || '';
   if (!key) {
@@ -132,12 +133,12 @@ export async function testOpenAITts(sampleText = '学习中文真好！', lang =
     // Temporarily bypass cache and fallback
     const prevCache = settings.cache; const prevEngine = settings.engine; const prevFallback = settings.fallback;
     settings.cache = false; settings.engine = 'openai'; settings.fallback = false;
-    const model = settings.model || 'tts-1';
+  const model = settings.model || 'tts-1';
     // Do raw fetch to ensure OpenAI path works
     const resp = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model, voice: settings.voice || 'alloy', input: sampleText, format: 'mp3' })
+    body: JSON.stringify({ model, voice: settings.openaiVoice || 'alloy', input: sampleText, format: 'mp3' })
     });
     if (!resp.ok) {
       let body = ''; try { body = await resp.text(); } catch {}
@@ -148,7 +149,7 @@ export async function testOpenAITts(sampleText = '学习中文真好！', lang =
     const latency = Math.round(performance.now() - started);
     await playArrayBuffer(buf);
     settings.cache = prevCache; settings.engine = prevEngine; settings.fallback = prevFallback;
-    return { ok: true, latencyMs: latency, model, voice: settings.voice || 'alloy', format: 'mp3', fallbackUsed: false, keyDetected: true };
+    return { ok: true, latencyMs: latency, model, voice: settings.openaiVoice || 'alloy', format: 'mp3', fallbackUsed: false, keyDetected: true };
   } catch (e) {
     return { ok: false, reason: String(e?.message || e), latencyMs: 0, fallbackUsed: false, keyDetected: true };
   }

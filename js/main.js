@@ -47,6 +47,11 @@ const ttsOpenAIKey = /** @type {HTMLInputElement} */(document.getElementById('tt
 const ttsTestOpenAI = /** @type {HTMLButtonElement} */(document.getElementById('ttsTestOpenAI'));
 const ttsCompareBrowser = /** @type {HTMLButtonElement} */(document.getElementById('ttsCompareBrowser'));
 const ttsStatus = /** @type {HTMLElement} */(document.getElementById('ttsStatus'));
+const ttsModel = /** @type {HTMLSelectElement} */(document.getElementById('ttsModel'));
+const ttsOpenAIVoice = /** @type {HTMLSelectElement} */(document.getElementById('ttsOpenAIVoice'));
+const ttsTestPhrase = /** @type {HTMLInputElement} */(document.getElementById('ttsTestPhrase'));
+const ttsCacheToggle = /** @type {HTMLInputElement} */(document.getElementById('ttsCacheToggle'));
+const ttsClearCache = /** @type {HTMLButtonElement} */(document.getElementById('ttsClearCache'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
@@ -143,6 +148,9 @@ async function bootstrap() {
       ttsEngineRadios.forEach(r => { r.checked = r.value === engine; });
       const keySaved = localStorage.getItem('hsk.tts.openai.key') || '';
       if (ttsOpenAIKey) ttsOpenAIKey.value = keySaved;
+      if (ttsModel) ttsModel.value = ttsSaved.model || 'tts-1';
+      if (ttsOpenAIVoice) ttsOpenAIVoice.value = ttsSaved.openaiVoice || 'alloy';
+      if (typeof ttsSaved.cache === 'boolean' && ttsCacheToggle) ttsCacheToggle.checked = !!ttsSaved.cache; else if (ttsCacheToggle) ttsCacheToggle.checked = true;
     } catch {}
     // Level picker
     const last = loadLastLevel();
@@ -321,7 +329,8 @@ ttsEngineRadios.forEach(r => r?.addEventListener('change', () => {
 ttsOpenAIKey?.addEventListener('change', () => { try { localStorage.setItem('hsk.tts.openai.key', ttsOpenAIKey.value || ''); } catch {} });
 ttsTestOpenAI?.addEventListener('click', async () => {
   ttsStatus && (ttsStatus.textContent = 'Testing OpenAI TTS…');
-  const res = await testOpenAITts('学习中文真好！', 'zh-CN');
+  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '学习中文真好！';
+  const res = await testOpenAITts(phrase, 'zh-CN');
   if (res.ok) {
     const ts = new Date().toLocaleTimeString();
     ttsStatus.textContent = `✅ OpenAI TTS OK • Latency: ${res.latencyMs} ms • Model: ${res.model} • Voice: ${res.voice} • ${ts}`;
@@ -331,7 +340,33 @@ ttsTestOpenAI?.addEventListener('click', async () => {
 });
 ttsCompareBrowser?.addEventListener('click', async () => {
   ttsStatus && (ttsStatus.textContent = 'Browser TTS comparison…');
-  try { await speak('学习中文真好！', 'zh-CN'); ttsStatus && (ttsStatus.textContent = 'Browser TTS played.'); } catch (e) { ttsStatus && (ttsStatus.textContent = 'Browser TTS unavailable.'); }
+  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '学习中文真好！';
+  try { await speak(phrase, 'zh-CN'); ttsStatus && (ttsStatus.textContent = 'Browser TTS played.'); } catch (e) { ttsStatus && (ttsStatus.textContent = 'Browser TTS unavailable.'); }
+});
+ttsModel?.addEventListener('change', () => {
+  try {
+    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, model: ttsModel.value }));
+  } catch {}
+});
+ttsCacheToggle?.addEventListener('change', () => {
+  try {
+    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, cache: !!ttsCacheToggle.checked }));
+  } catch {}
+});
+ttsOpenAIVoice?.addEventListener('change', () => {
+  try {
+    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, openaiVoice: ttsOpenAIVoice.value }));
+  } catch {}
+});
+ttsClearCache?.addEventListener('click', () => {
+  if (!confirm('Clear all cached TTS audio?')) return;
+  try {
+    // lazy import to avoid circular
+    import('./speech.js').then(m => { m.clearTtsCache && m.clearTtsCache(); ttsStatus && (ttsStatus.textContent = 'TTS cache cleared.'); });
+  } catch {}
 });
 window.addEventListener('keydown', onKeyDown, { passive: false });
 // Touch swipe gestures for mobile
@@ -405,7 +440,7 @@ function playMarkAudio(isUnmark) {
 
 // ---------- Level Picker ----------
 async function loadLevelsAndStart(levels) {
-  // levels: array of '1'..'6'
+  // levels: array of '0'..'6'
   const texts = await Promise.all(levels.map(l => fetchCsvText(`./data/hsk${l}.csv`).catch(() => '')));
   const mergedRows = [];
   for (const t of texts) {
