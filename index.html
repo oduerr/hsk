@@ -13,7 +13,9 @@
         <div class="controls">
           <button id="btnNewRun" class="secondary">New Run</button>
           <button id="btnReplay" class="secondary">Replay…</button>
-          <div class="divider"></div>
+          <button id="btnUndo" class="secondary">Undo</button>
+        </div>
+        <div class="status">
           <label class="toggle">
             <input type="checkbox" id="autoRevealToggle" />
             <span>Auto‑reveal</span>
@@ -23,12 +25,11 @@
             <input type="number" id="autoRevealSeconds" min="1" max="60" value="5" />
             <span>sec</span>
           </label>
-          <button id="btnUndo" class="secondary">Undo</button>
-        </div>
-        <div class="status">
-          <span id="progressText">0 / 0</span>
-          <span> · </span>
-          <span id="mistakesText">Mistakes: 0</span>
+          <div class="status-metrics">
+            <span id="progressText">0 / 0</span>
+            <span> · </span>
+            <span id="mistakesText">Mistakes: 0</span>
+          </div>
           <span id="replayTag" class="tag" hidden></span>
         </div>
       </header>

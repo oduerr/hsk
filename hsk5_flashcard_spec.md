@@ -281,6 +281,10 @@ Agent tasks
 - Make the app a single full-screen flex column.
 - Prevent page scroll (so swipes stay on the card), allow internal panels to scroll if needed.
 
+### Round 4.03 Mobile Friendly (Layout)
+- The layout is as shown in the image. Please implement something that all functionalities shown. Maybe have the buttons in different columns. Later on I will move some buttons anyway.
+
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.

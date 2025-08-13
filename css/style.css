@@ -21,20 +21,13 @@ body {
 
 #app { display: flex; flex-direction: column; min-height: 100vh; }
 
-.topbar, .bottombar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
+.topbar, .bottombar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .bottombar { border-top: 1px solid var(--border); border-bottom: none; }
 
 .brand { font-weight: 600; color: var(--text); }
-.controls { display: flex; align-items: center; gap: 10px; }
-.status { text-align: right; color: var(--muted); }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.status { display: flex; align-items: center; gap: 10px; color: var(--muted); flex-wrap: wrap; justify-content: flex-end; }
+.status-metrics { display: flex; align-items: center; gap: 6px; }
 .status .tag { margin-left: 8px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 999px; color: #a7f3d0; border-color: #065f46; background: rgba(16,185,129,0.1); }
 .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
 
@@ -53,7 +46,7 @@ label.seconds input {
 
 /* Mobile-friendly hit targets */
 @media (max-width: 640px) {
-  .actions { gap: 8px; }
+  .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   button { padding: 12px 16px; font-size: 16px; }
   .english { font-size: clamp(22px, 7vw, 40px); }
   .hanzi { font-size: clamp(30px, 12vw, 64px); }
@@ -91,7 +84,8 @@ label.seconds input {
 .hanzi { font-size: clamp(36px, 8vw, 72px); line-height: 1.25; margin-top: 6px; }
 .pinyin { font-size: clamp(18px, 4vw, 28px); color: var(--muted); margin-top: 8px; }
 
-.actions { display: flex; gap: 10px; justify-content: center; }
+.actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; justify-content: center; width: 100%; max-width: 900px; }
+.actions button { width: 100%; }
 .left, .right { color: var(--muted); font-variant-numeric: tabular-nums; }
 .countdown { color: var(--accent); }
 
