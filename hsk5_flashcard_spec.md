@@ -328,6 +328,57 @@ Desktop
 	•	Allow hiding of Back/Next/Reveal via settings if user wants mobile-like minimal UI.
 
 
+### Round 4.05 HSK Levels 1–6 (Deck Picker)
+	•	Data files
+	•	Expected paths (GitHub Pages or local):
+./data/hsk1.csv … ./data/hsk6.csv
+Schema: hanzi,pinyin,english[,german] (German optional, not yet implemented).
+	•	On load, normalize columns; de-duplicate by (hanzi,pinyin,english).
+	•	Level picker (deck select)
+	•	Provide a Level picker with options: HSK 1 … HSK 6 and Custom.
+	•	Default to the last used level (persist in LocalStorage, key hsk.flash.level).
+	•	When Custom is chosen, show a multi-select to combine levels (e.g., 1+2+3).
+	•	Placement
+	•	Show the Level picker on first app open (no deck loaded yet).
+	•	Also expose it in the ⚙ Gear menu (so it’s hidden during normal use).
+	•	Loading behavior
+	•	Selecting a level immediately fetch()es its CSV (or multiple CSVs for Custom), merges rows, then starts a New Run.
+	•	After a successful load, persist the deck in LocalStorage for offline reuse.
+	•	If fetch fails: fall back to last deck → else offer file picker / paste.
+	•	UI text (compact)
+	•	“Level: HSK 1…6 / Custom” in Gear; current selection shown in the Info panel (with deck size).
+	•	Replay/session compatibility
+	•	Sessions store source.level (e.g., "HSK 4" or "HSK 1+2+3"). Replay uses the session’s own frozen deck, independent of current Level picker.
+	•	Acceptance (short)
+	•	I can select HSK 1–6 (or a Custom combo), the deck loads, and a run starts.
+	•	The chosen level is remembered on reload.
+	•	Replay still works even if I later switch levels.
+	•	Works on Pages and file:// (with file picker fallback).
+
+
+### 4.06 Some UI changes
+
+#### Desktop
+- Up and down key both should turn the card (currently only down works)
+- Shift should toggle mistake state
+
+#### Mobile (see screenshot)
+- HSK-Flashcards should be on the top center of the screen.
+- Tapping on the card should toggle mistake state. If there is any functionaly of double tapping on the card, please remove it. 
+- Add gear menu option: “Outdoor mode (high contrast)” (mobile only).
+- When ON:
+- Solid light or dark background for max contrast.
+- Pure black/white text.
+- Slightly larger font size and bolder UI elements.
+- Persist setting in localStorage.
+- Ignored on desktop. 
+
+#### Both
+- HSK-Level should be Displayed in the Progress. The HSK level should be infered from what is before .csv
+- Add gear menu option: “Audio feedback on mark/unmark” (default = ON for mobile, OFF for desktop).
+- Plays positive tone when changing Mistake → Correct, negative tone for Correct → Mistake.
+- Implement via shared AudioContext unlocked on first gesture; silently skip if unsupported.
+
 
 ### Round 5 – QoL & Safety
 - Undo last action (pop last event; recompute state if feasible) – optional if complex.

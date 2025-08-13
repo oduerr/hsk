@@ -3,6 +3,7 @@ const SESSION_PREFIX = 'hsk.flash.session.';
 const DECK_KEY = 'hsk.flash.deck.hsk5';
 const LAST_CHECKPOINT_KEY = 'hsk.flash.lastCheckpointId';
 const SETTINGS_KEY = 'hsk.flash.settings';
+const LAST_LEVEL_KEY = 'hsk.flash.level';
 
 function readJson(key, fallback) {
   try {
@@ -98,6 +99,14 @@ export function loadSettings() {
 
 export function saveSettings(settings) {
   writeJson(SETTINGS_KEY, settings);
+}
+
+export function saveLastLevel(label) {
+  try { localStorage.setItem(LAST_LEVEL_KEY, label); } catch {}
+}
+
+export function loadLastLevel() {
+  try { return localStorage.getItem(LAST_LEVEL_KEY); } catch { return null; }
 }
 
 /**

@@ -95,6 +95,31 @@
           </div>
           <div class="modal-body">
             <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Level</div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                <select id="levelPicker">
+                  <option value="1">HSK 1</option>
+                  <option value="2">HSK 2</option>
+                  <option value="3">HSK 3</option>
+                  <option value="4">HSK 4</option>
+                  <option value="5">HSK 5</option>
+                  <option value="6">HSK 6</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                <label class="muted" id="levelInfo"></label>
+              </div>
+              <div id="customLevelsRow" style="margin-top:6px; display:none">
+                <label class="muted">Combine:</label>
+                <label><input type="checkbox" value="1" class="lvl" /> 1</label>
+                <label><input type="checkbox" value="2" class="lvl" /> 2</label>
+                <label><input type="checkbox" value="3" class="lvl" /> 3</label>
+                <label><input type="checkbox" value="4" class="lvl" /> 4</label>
+                <label><input type="checkbox" value="5" class="lvl" /> 5</label>
+                <label><input type="checkbox" value="6" class="lvl" /> 6</label>
+                <button id="loadCustomLevels" class="secondary">Load</button>
+              </div>
+            </section>
+            <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Auto‑reveal</div>
               <label class="toggle"><input type="checkbox" id="settingsAutoToggle" /> <span>Enable</span></label>
               <label class="seconds" style="margin-left:8px">

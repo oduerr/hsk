@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings } from './storage.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 
@@ -40,6 +40,10 @@ const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementBy
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
 const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('settingsUndo'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
+const levelPicker = /** @type {HTMLSelectElement} */(document.getElementById('levelPicker'));
+const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('customLevelsRow'));
+const loadCustomLevelsBtn = /** @type {HTMLButtonElement} */(document.getElementById('loadCustomLevels'));
+const levelInfo = /** @type {HTMLElement} */(document.getElementById('levelInfo'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -113,6 +117,12 @@ async function bootstrap() {
     if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
+    // Level picker
+    const last = loadLastLevel();
+    if (levelPicker && last) {
+      if (last === 'custom') levelPicker.value = 'custom';
+      else levelPicker.value = String(last.replace('HSK ', ''));
+    }
   } catch {}
 }
 
@@ -285,6 +295,48 @@ document.addEventListener('touchend', (e) => {
     }
   }
 }, { passive: true });
+
+// ---------- Level Picker ----------
+async function loadLevelsAndStart(levels) {
+  // levels: array of '1'..'6'
+  const texts = await Promise.all(levels.map(l => fetchCsvText(`./data/hsk${l}.csv`).catch(() => '')));
+  const mergedRows = [];
+  for (const t of texts) {
+    if (!t) continue;
+    const rows = parseCsv(t);
+    mergedRows.push(...rows);
+  }
+  const cards = rowsToCards(mergedRows);
+  if (cards.length) {
+    saveDeck(cards);
+    newRun(cards);
+    render();
+    startCountdownIfNeeded();
+    const label = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
+    saveLastLevel(levels.length === 1 ? levels[0] : 'custom');
+    if (levelInfo) levelInfo.textContent = `Loaded ${label} • ${cards.length} cards`;
+  } else {
+    alert('Failed to load selected level(s).');
+  }
+}
+
+levelPicker?.addEventListener('change', async () => {
+  if (levelPicker.value === 'custom') {
+    customLevelsRow.style.display = '';
+  } else {
+    customLevelsRow.style.display = 'none';
+    saveLastLevel(levelPicker.value);
+    await loadLevelsAndStart([levelPicker.value]);
+  }
+});
+
+loadCustomLevelsBtn?.addEventListener('click', async () => {
+  const checkboxes = Array.from(customLevelsRow.querySelectorAll('input.lvl'));
+  const selected = checkboxes.filter(c => c.checked).map(c => c.value);
+  if (!selected.length) { alert('Select at least one level.'); return; }
+  saveLastLevel('custom');
+  await loadLevelsAndStart(selected);
+});
 window.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.hidden = false; });
 window.addEventListener('dragleave', (e) => { if (e.target === document || e.target === document.body) dropOverlay.hidden = true; });
 window.addEventListener('drop', async (e) => {
