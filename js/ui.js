@@ -17,7 +17,8 @@ const el = {
   replayTag: /** @type {HTMLElement} */ (document.getElementById('replayTag')),
   btnReveal: /** @type {HTMLButtonElement} */ (document.getElementById('btnReveal')),
   btnNext: /** @type {HTMLButtonElement} */ (document.getElementById('btnNext')),
-  btnMistake: /** @type {HTMLButtonElement} */ (document.getElementById('btnMistake')),
+  btnMistake: /** @type {HTMLButtonElement} */ (document.getElementById('btnMistakeToggle') || document.getElementById('btnMistake')),
+  btnCardMistakeToggle: /** @type {HTMLButtonElement} */ (document.getElementById('btnCardMistakeToggle')),
 };
 
 /**
@@ -66,9 +67,13 @@ export function render() {
   if (isMistake) {
     el.card.setAttribute('data-mistake', '1');
     el.mistakeBadge.hidden = false;
+    if (el.btnMistake) el.btnMistake.textContent = 'Mark Correct';
+    if (el.btnCardMistakeToggle) { el.btnCardMistakeToggle.textContent = 'Mark Correct'; el.btnCardMistakeToggle.hidden = false; }
   } else {
     el.card.removeAttribute('data-mistake');
     el.mistakeBadge.hidden = true;
+    if (el.btnMistake) el.btnMistake.textContent = 'Mistake';
+    if (el.btnCardMistakeToggle) { el.btnCardMistakeToggle.textContent = 'Mistake'; el.btnCardMistakeToggle.hidden = state.face !== 'back'; }
   }
 
   if (state.session.replayOf) {
@@ -76,6 +81,11 @@ export function render() {
     el.replayTag.textContent = `Replay of ${state.session.replayOf}`;
   } else {
     el.replayTag.hidden = true;
+  }
+
+  // Card small toggle only visible on back face (mobile helper)
+  if (el.btnCardMistakeToggle) {
+    el.btnCardMistakeToggle.hidden = state.face !== 'back';
   }
 }
 

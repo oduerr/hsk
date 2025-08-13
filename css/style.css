@@ -51,6 +51,7 @@ label.seconds input {
   .english { font-size: clamp(22px, 7vw, 40px); }
   .hanzi { font-size: clamp(30px, 12vw, 64px); }
   .pinyin { font-size: clamp(16px, 5vw, 26px); }
+  .nav-only { display: none; }
 }
 
 .message {
@@ -86,6 +87,7 @@ label.seconds input {
 
 .actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; justify-content: center; width: 100%; max-width: 900px; }
 .actions button { width: 100%; }
+.card-toggle { position: absolute; bottom: 12px; right: 12px; padding: 8px 10px; font-size: 14px; border-radius: 999px; display: none; }
 .left, .right { color: var(--muted); font-variant-numeric: tabular-nums; }
 .countdown { color: var(--accent); }
 

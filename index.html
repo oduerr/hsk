@@ -13,18 +13,10 @@
         <div class="controls">
           <button id="btnNewRun" class="secondary">New Run</button>
           <button id="btnReplay" class="secondary">Replay…</button>
-          <button id="btnUndo" class="secondary">Undo</button>
+          <button id="btnSaveProgressTop" class="secondary">Save Progress</button>
+          <button id="btnSettings" class="secondary" aria-label="Settings">⚙️</button>
         </div>
         <div class="status">
-          <label class="toggle">
-            <input type="checkbox" id="autoRevealToggle" />
-            <span>Auto‑reveal</span>
-          </label>
-          <label class="seconds">
-            <span>after</span>
-            <input type="number" id="autoRevealSeconds" min="1" max="60" value="5" />
-            <span>sec</span>
-          </label>
           <div class="status-metrics">
             <span id="progressText">0 / 0</span>
             <span> · </span>
@@ -53,6 +45,7 @@
             <div id="hanziText" class="hanzi">—</div>
             <div id="pinyinText" class="pinyin">—</div>
             <div id="englishSmall" class="english-small">—</div>
+            <button id="btnCardMistakeToggle" class="card-toggle" hidden>Mistake</button>
           </div>
         </section>
       </main>
@@ -62,11 +55,10 @@
           <span id="countdown" class="countdown" hidden>—</span>
         </div>
         <div class="actions">
-          <button id="btnBack" class="secondary">Back</button>
-          <button id="btnReveal" class="primary">Reveal</button>
-          <button id="btnMistake" class="danger">Mistake</button>
-          <button id="btnCorrect" class="secondary">Mark Correct ✅</button>
-          <button id="btnNext" class="primary">Next</button>
+          <button id="btnBack" class="secondary nav-only">Back</button>
+          <button id="btnReveal" class="primary nav-only">Reveal</button>
+          <button id="btnMistakeToggle" class="danger">Mistake</button>
+          <button id="btnNext" class="primary nav-only">Next</button>
           <button id="btnSaveProgress" class="secondary">Save Progress</button>
         </div>
         <div class="right"></div>
@@ -92,6 +84,43 @@
       </div>
       <div id="dropOverlay" class="drop-overlay" hidden>
         <div class="drop-panel">Drop session JSON to import</div>
+      </div>
+      <div id="settingsDialog" class="modal" hidden>
+        <div class="modal-backdrop" data-close="1"></div>
+        <div class="modal-panel">
+          <div class="modal-header">
+            <div class="modal-title">Settings</div>
+            <button class="secondary" id="settingsClose">Close</button>
+          </div>
+          <div class="modal-body">
+            <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Auto‑reveal</div>
+              <label class="toggle"><input type="checkbox" id="settingsAutoToggle" /> <span>Enable</span></label>
+              <label class="seconds" style="margin-left:8px">
+                <span>after</span>
+                <input type="number" id="settingsAutoSeconds" min="1" max="60" value="5" />
+                <span>sec</span>
+              </label>
+            </section>
+            <section style="margin-bottom:12px">
+              <label class="toggle"><input type="checkbox" id="settingsMinimalUI" /> <span>Minimal UI (hide Back/Reveal/Next)</span></label>
+            </section>
+            <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Info</div>
+              <div class="muted">Version: 莉娜老师的版本</div>
+              <div class="muted">Build: <span id="infoBuildAt">—</span></div>
+              <div class="muted">Checkpoint: <span id="infoCheckpointId">—</span></div>
+              <div class="muted">Session: <span id="infoSessionId">—</span> <span id="infoSessionTitle" class="muted"></span></div>
+              <div class="muted">Last save: <span id="infoLastSave">—</span></div>
+            </section>
+            <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+              <button id="settingsExport" class="secondary">Export sessions</button>
+              <button id="settingsImportBtn" class="secondary">Import sessions</button>
+              <input id="settingsImportInput" type="file" accept="application/json" hidden />
+              <button id="settingsUndo" class="secondary">Undo</button>
+            </section>
+          </div>
+        </div>
       </div>
       <div class="buildinfo">
         <span id="buildInfo"></span>

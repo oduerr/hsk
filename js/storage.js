@@ -90,7 +90,10 @@ export function saveCheckpoint(fullSnapshot) {
 }
 
 export function loadSettings() {
-  return readJson(SETTINGS_KEY, { timerEnabled: false, timerSeconds: 5, lastCsvHash: '' });
+  const def = { timerEnabled: false, timerSeconds: 5, lastCsvHash: '', minimalUI: false };
+  const s = readJson(SETTINGS_KEY, def) || def;
+  if (typeof s.minimalUI !== 'boolean') s.minimalUI = false;
+  return s;
 }
 
 export function saveSettings(settings) {

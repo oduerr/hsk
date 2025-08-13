@@ -284,6 +284,49 @@ Agent tasks
 ### Round 4.03 Mobile Friendly (Layout)
 - The layout is as shown in the image. Please implement something that all functionalities shown. Maybe have the buttons in different columns. Later on I will move some buttons anyway.
 
+### Round 4.04 Mobile Friendly (Layout)
+Round 4.04 – Mobile Friendly (Layout)
+
+Gear Menu
+	•	Move Auto-reveal here.
+	•	Also include Info panel with:
+	•	Version label “莉娜老师的版本”
+	•	Build timestamp
+	•	Checkpoint hash
+	•	Session name
+	•	Last save/checkpoint status
+	•	Include Export / Import here.
+	•	Hide by default; open via gear icon.
+
+⸻
+
+Top Bar (compact)
+	•	Keep only: New Run, Replay…
+	•	Remove Undo button from top bar (can be moved to gear if needed).
+	•	Add Save Progress button to top bar (thumb-friendly on mobile, still accessible on desktop).
+
+⸻
+
+Mark Correct / Mistake Toggle
+	•	Merge into a single toggle button.
+	•	Label changes between “Mistake” and “Mark Correct” depending on current state.
+	•	When card is marked as a mistake, toggle shows Mark Correct.
+	•	When card is unmarked, toggle shows Mistake.
+
+⸻
+
+Mobile Card Controls (applies only when mobile layout is active)
+	•	Remove Back, Next, Reveal buttons from the main interface.
+	•	Keep gestures:
+	•	Swipe left/right → previous/next card.
+	•	Double tap → toggle Mistake/Correct state (fix so it works reliably on mobile).
+	•	If double-tap gesture fails (browser/device), show a small contextual toggle button on revealed card for Mistake/Correct.
+	•	Always show minimal status line: current/total mistakes
+
+Desktop
+	•	No change to current full control set by default.
+	•	Allow hiding of Back/Next/Reveal via settings if user wants mobile-like minimal UI.
+
 
 
 ### Round 5 – QoL & Safety

@@ -9,10 +9,11 @@ const PATH = CONFIG.csvRelativePath;
 const $ = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const btnReveal = /** @type {HTMLButtonElement} */($('btnReveal'));
 const btnNext = /** @type {HTMLButtonElement} */($('btnNext'));
-const btnMistake = /** @type {HTMLButtonElement} */($('btnMistake'));
+const btnMistake = /** @type {HTMLButtonElement} */($('btnMistakeToggle') || $('btnMistake'));
 const btnNewRun = /** @type {HTMLButtonElement} */($('btnNewRun'));
 const btnReplay = /** @type {HTMLButtonElement} */($('btnReplay'));
 // Removed top-level import/export buttons; moved to dialog
+// legacy header controls (may be absent after 4.04)
 const autoToggle = /** @type {HTMLInputElement} */($('autoRevealToggle'));
 const autoSeconds = /** @type {HTMLInputElement} */($('autoRevealSeconds'));
 const btnExport = /** @type {HTMLButtonElement} */(document.getElementById('btnExport'));
@@ -22,10 +23,22 @@ const csvFileInput = /** @type {HTMLInputElement} */(document.getElementById('cs
 const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('csvTextArea'));
 const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
 const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
+const btnSaveProgressTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
 const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
 const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
 const btnUndo = /** @type {HTMLButtonElement} */(document.getElementById('btnUndo'));
+const btnSettings = /** @type {HTMLButtonElement} */(document.getElementById('btnSettings'));
+const settingsDialog = /** @type {HTMLElement} */(document.getElementById('settingsDialog'));
+const settingsClose = /** @type {HTMLButtonElement} */(document.getElementById('settingsClose'));
+const settingsAutoToggle = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoToggle'));
+const settingsAutoSeconds = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoSeconds'));
+const settingsMinimalUI = /** @type {HTMLInputElement} */(document.getElementById('settingsMinimalUI'));
+const settingsExport = /** @type {HTMLButtonElement} */(document.getElementById('settingsExport'));
+const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('settingsImportBtn'));
+const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
+const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('settingsUndo'));
+const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -93,9 +106,22 @@ async function bootstrap() {
   // Load settings
   try {
     const s = loadSettings();
-    autoToggle.checked = !!s.timerEnabled;
-    autoSeconds.value = String(s.timerSeconds ?? 5);
-    setAutoReveal(autoToggle.checked, parseInt(autoSeconds.value || '5', 10));
+    // populate settings dialog
+    if (settingsAutoToggle) settingsAutoToggle.checked = !!s.timerEnabled;
+    if (settingsAutoSeconds) settingsAutoSeconds.value = String(s.timerSeconds ?? 5);
+    if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
+    setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
+    applyMinimalUI(!!s.minimalUI);
+  } catch {}
+}
+
+function applyMinimalUI(enabled) {
+  try {
+    const root = document.documentElement;
+    // Toggle class on body/app if we later want additional styles; for now hide nav-only with CSS on mobile only
+    // We store preference in settings
+    const s = loadSettings();
+    saveSettings({ ...s, minimalUI: !!enabled });
   } catch {}
 }
 
@@ -155,10 +181,10 @@ function onNewRun() {
 }
 
 function onAutoToggleChanged() {
-  const enabled = autoToggle.checked;
-  const secs = parseInt(autoSeconds.value || '5', 10);
+  const enabled = (settingsAutoToggle && settingsAutoToggle.checked) || false;
+  const secs = settingsAutoSeconds ? parseInt(settingsAutoSeconds.value || '5', 10) : 5;
   setAutoReveal(enabled, secs);
-  try { saveSettings({ timerEnabled: enabled, timerSeconds: secs, lastCsvHash: '' }); } catch {}
+  try { const s = loadSettings(); saveSettings({ ...s, timerEnabled: enabled, timerSeconds: secs }); } catch {}
   if (enabled && state.face === 'front') {
     startCountdownIfNeeded();
   } else {
@@ -167,9 +193,10 @@ function onAutoToggleChanged() {
 }
 
 function onSecondsChanged() {
-  const secs = parseInt(autoSeconds.value || '5', 10);
-  setAutoReveal(autoToggle.checked, secs);
-  try { saveSettings({ timerEnabled: autoToggle.checked, timerSeconds: secs, lastCsvHash: '' }); } catch {}
+  const secs = settingsAutoSeconds ? parseInt(settingsAutoSeconds.value || '5', 10) : 5;
+  const enabled = (settingsAutoToggle && settingsAutoToggle.checked) || false;
+  setAutoReveal(enabled, secs);
+  try { const s = loadSettings(); saveSettings({ ...s, timerEnabled: enabled, timerSeconds: secs }); } catch {}
   if (state.autoReveal && state.face === 'front') {
     startCountdownIfNeeded();
   }
@@ -210,12 +237,30 @@ function onKeyDown(e) {
 btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
+btnCardMistakeToggle?.addEventListener('click', onMistake);
 btnBack.addEventListener('click', onBack);
-btnCorrect.addEventListener('click', onUnmistake);
+btnCorrect?.addEventListener('click', onUnmistake);
 btnUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); } });
 btnNewRun.addEventListener('click', onNewRun);
-autoToggle.addEventListener('change', onAutoToggleChanged);
-autoSeconds.addEventListener('change', onSecondsChanged);
+settingsAutoToggle?.addEventListener('change', onAutoToggleChanged);
+settingsAutoSeconds?.addEventListener('change', onSecondsChanged);
+btnSettings?.addEventListener('click', () => { settingsDialog.hidden = false; });
+settingsClose?.addEventListener('click', () => { settingsDialog.hidden = true; });
+settingsUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); }});
+settingsExport?.addEventListener('click', () => { try { const snap = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snap); } catch (e) { console.error(e); } });
+settingsImportBtn?.addEventListener('click', () => settingsImportInput?.click());
+settingsImportInput?.addEventListener('change', async () => {
+  const file = settingsImportInput.files && settingsImportInput.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const obj = JSON.parse(text);
+    importSessionsFromObject(obj);
+    alert('Import complete.');
+  } catch (e) { console.error(e); alert('Import failed'); }
+  finally { settingsImportInput.value = ''; }
+});
+btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
 window.addEventListener('keydown', onKeyDown, { passive: false });
 // Touch swipe gestures for mobile
 let touchStartX = 0, touchStartY = 0;
@@ -477,8 +522,7 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"]+/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 }
 
-// Initialize default auto reveal settings in state from UI controls
-setAutoReveal(autoToggle.checked, parseInt(autoSeconds.value || '5', 10));
+// Initialize handled in bootstrap via saved settings
 
 // Kick off
 bootstrap();
