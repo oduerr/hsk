@@ -1,9 +1,10 @@
 import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject } from './storage.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck } from './storage.js';
+import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 
-const PATH = './data/hsk5.csv';
+const PATH = CONFIG.csvRelativePath;
 
 const $ = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const btnReveal = /** @type {HTMLButtonElement} */($('btnReveal'));
@@ -17,6 +18,10 @@ const autoToggle = /** @type {HTMLInputElement} */($('autoRevealToggle'));
 const autoSeconds = /** @type {HTMLInputElement} */($('autoRevealSeconds'));
 const btnExport = /** @type {HTMLButtonElement} */(document.getElementById('btnExport'));
 const dropOverlay = /** @type {HTMLElement} */(document.getElementById('dropOverlay'));
+const fallbackPanel = /** @type {HTMLElement} */(document.getElementById('fallbackPanel'));
+const csvFileInput = /** @type {HTMLInputElement} */(document.getElementById('csvFileInput'));
+const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('csvTextArea'));
+const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
 
 /** @type {number|null} */
 let countdownTimer = null;
@@ -50,21 +55,31 @@ function startCountdownIfNeeded() {
 
 async function bootstrap() {
   try {
-    const csvText = await fetchCsvText(PATH);
+    const versionParam = new URLSearchParams(location.search).get('v');
+    const url = versionParam ? `${PATH}?v=${encodeURIComponent(versionParam)}` : PATH;
+    const csvText = await fetchCsvText(url);
     const rows = parseCsv(csvText);
     const cards = rowsToCards(rows);
     console.log('Parsed cards:', cards.slice(0, 5), `... total=${cards.length}`);
     if (!cards.length) {
       console.error('No cards parsed. Check CSV file.');
     }
+    saveDeck(cards);
     newRun(cards);
     render();
     startCountdownIfNeeded();
   } catch (err) {
-    console.error(err);
-    const msg = $('message');
-    msg.textContent = `Error: ${(err && err.message) || String(err)}`;
-    msg.hidden = false;
+    console.warn('Remote fetch failed, trying LocalStorage deck. Error:', err);
+    const localDeck = loadDeck();
+    if (Array.isArray(localDeck) && localDeck.length) {
+      newRun(localDeck);
+      render();
+      startCountdownIfNeeded();
+    } else {
+      // Show fallback panel for manual selection/paste
+      fallbackPanel.hidden = false;
+      $('card').hidden = true;
+    }
   }
 }
 
@@ -175,6 +190,45 @@ if (btnExport) {
     } catch (e) { console.error(e); }
   });
 }
+// Manual CSV fallbacks
+csvFileInput?.addEventListener('change', async () => {
+  const file = csvFileInput.files && csvFileInput.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    const cards = rowsToCards(rows);
+    if (!cards.length) throw new Error('No rows parsed.');
+    saveDeck(cards);
+    fallbackPanel.hidden = true;
+    $('card').hidden = false;
+    newRun(cards);
+    render();
+    startCountdownIfNeeded();
+  } catch (e) {
+    alert('Failed to parse selected CSV.');
+  } finally {
+    csvFileInput.value = '';
+  }
+});
+
+btnUsePastedCsv?.addEventListener('click', () => {
+  const text = (csvTextArea?.value || '').trim();
+  if (!text) { alert('Paste CSV text first.'); return; }
+  try {
+    const rows = parseCsv(text);
+    const cards = rowsToCards(rows);
+    if (!cards.length) throw new Error('No rows parsed.');
+    saveDeck(cards);
+    fallbackPanel.hidden = true;
+    $('card').hidden = false;
+    newRun(cards);
+    render();
+    startCountdownIfNeeded();
+  } catch (e) {
+    alert('Failed to parse pasted CSV.');
+  }
+});
 
 // Import via file input
 if (btnImport && importInput) {

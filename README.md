@@ -12,6 +12,7 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 
 - Uses `data/hsk5.csv` with columns: `hanzi,pinyin,english`.
 - Parser supports quoted fields and UTF‑8; pinyin spacing is normalized.
+- Data comes from https://github.com/plaktos/hsk_csv/tree/master
 
 ## Current features (Rounds 0 → 3.5)
 

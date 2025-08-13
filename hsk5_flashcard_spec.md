@@ -203,7 +203,16 @@ Agent tasks
 	•	Add/update summaries in localStorage['hsk.flash.sessions'] (no duplicates).
 
 
-
+### Round 3.6 Remote data loading via GitHub
+	•	Primary deck source should be loaded from a CSV hosted in the GitHub Pages root of https://oduerr.github.io/<repo>/data/hsk5.csv.
+	•	Use relative paths (fetch('./data/hsk5.csv')) so that the same code works locally when running under file:// and when hosted on GitHub Pages.
+	•	After loading, parse the CSV and persist it to LocalStorage for offline use.
+	•	If the fetch fails (e.g., offline), fall back to:
+	1.	Last deck stored in LocalStorage.
+	2.	File picker for local CSV.
+	3.	Paste area for manual CSV input.
+	•	Support an optional ?v=<version> query parameter to bypass browser caching when the CSV is updated.
+	•	No hardcoded repo name—read from a config constant so repo renaming doesn’t break loading.
 
 
 ### Round 5 – QoL & Safety

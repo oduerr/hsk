@@ -37,6 +37,14 @@
 
       <main class="stage">
         <div id="message" class="message" hidden></div>
+        <div id="fallbackPanel" class="message" hidden>
+          <div style="margin-bottom:8px">Could not load deck. Choose a local CSV or paste CSV below:</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
+            <input type="file" id="csvFileInput" accept="text/csv" />
+            <button id="usePastedCsv" class="secondary">Use pasted CSV</button>
+          </div>
+          <textarea id="csvTextArea" rows="6" style="width:100%; resize:vertical" placeholder="hanzi,pinyin,english\n唉,āi,interjection or grunt of agreement\n…"></textarea>
+        </div>
         <section id="card" class="card">
           <div id="cardFront" class="face front">
             <div id="englishText" class="english">—</div>

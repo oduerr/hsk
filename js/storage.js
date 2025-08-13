@@ -1,5 +1,6 @@
 const SESSIONS_KEY = 'hsk.flash.sessions';
 const SESSION_PREFIX = 'hsk.flash.session.';
+const DECK_KEY = 'hsk.flash.deck.hsk5';
 
 function readJson(key, fallback) {
   try {
@@ -33,6 +34,14 @@ export function saveSessionSummary(summary) {
   const idx = list.findIndex((s) => s.id === summary.id);
   if (idx >= 0) list[idx] = summary; else list.push(summary);
   writeJson(SESSIONS_KEY, list);
+}
+
+export function saveDeck(cards) {
+  writeJson(DECK_KEY, cards);
+}
+
+export function loadDeck() {
+  return readJson(DECK_KEY, null);
 }
 
 /**
