@@ -180,6 +180,8 @@ async function bootstrap() {
     document.body.classList.toggle('light', !!s.lightMode);
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
+    // Update header controls based on Minimal UI
+    updateHeaderForMinimalUI(!!s.minimalUI);
     // Probe available CSV levels and update picker
     await refreshAvailableLevels();
     // Audio cache setting
@@ -223,6 +225,27 @@ function applyMinimalUI(enabled) {
     // We store preference in settings
     const s = loadSettings();
     saveSettings({ ...s, minimalUI: !!enabled });
+  } catch {}
+}
+
+function updateHeaderForMinimalUI(enabled) {
+  try {
+    const newRunBtn = /** @type {HTMLButtonElement} */(document.getElementById('btnNewRun'));
+    const replayBtn = /** @type {HTMLButtonElement} */(document.getElementById('btnReplay'));
+    const saveBtnTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
+    const mistakeBtnTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
+    if (enabled) {
+      if (newRunBtn) { newRunBtn.textContent = '🆕'; newRunBtn.title = 'New Session'; }
+      if (replayBtn) { replayBtn.textContent = '🔄'; replayBtn.title = 'Replay…'; }
+      if (saveBtnTop) { saveBtnTop.textContent = '💾'; saveBtnTop.title = 'Save Progress'; }
+      if (mistakeBtnTop) mistakeBtnTop.style.display = '';
+    } else {
+      if (newRunBtn) { newRunBtn.textContent = 'New Session'; newRunBtn.title = 'Start a new learning session'; }
+      if (replayBtn) { replayBtn.textContent = 'Replay…'; replayBtn.title = 'Replay a previously saved session'; }
+      if (saveBtnTop) { saveBtnTop.textContent = 'Save Progress'; saveBtnTop.title = 'Save your progress in the current session'; }
+      // When minimal UI is off, remove the Mistake button per spec
+      if (mistakeBtnTop) mistakeBtnTop.style.display = 'none';
+    }
   } catch {}
 }
 
@@ -365,6 +388,7 @@ btnCorrect?.addEventListener('click', onUnmistake);
 btnNewRun.addEventListener('click', onNewRun);
 settingsAutoToggle?.addEventListener('change', onAutoToggleChanged);
 settingsAutoSeconds?.addEventListener('change', onSecondsChanged);
+settingsMinimalUI?.addEventListener('change', () => { try { updateHeaderForMinimalUI(!!settingsMinimalUI.checked); } catch {} });
 btnSettings?.addEventListener('click', () => { settingsDialog.hidden = false; });
 settingsClose?.addEventListener('click', () => { settingsDialog.hidden = true; });
 // Hide/show media row alongside settings visibility

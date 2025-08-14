@@ -1247,3 +1247,11 @@ Update the version to 4.92
 implement Last Save
 
 Update the version to 4.92.a
+
+##### 4.92.b Minimal UI and Hamburger Menu
+- Rename the New Run to "New Session"
+- Add a Hamburger Menu to the top right of the screen which replaces the gear panel
+- The Minimal UI is currently not working. 
+- Have it ticked on by default
+- When ticked off Remove the "Mistake" button
+- When ticked on Replace the "New Run" with "🆕" the Replay with "🔄" and the "Save Progress" with "💾"
