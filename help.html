@@ -20,19 +20,42 @@
       <section>
         <h2>Session Controls</h2>
         <ul>
-          <li><strong>New Run</strong> – Starts a fresh session using the chosen vocabulary list.</li>
-          <li><strong>Replay…</strong> – Loads and replays a previously saved session.</li>
-          <li><strong>Save Progress</strong> – Saves your current learning progress for later continuation.</li>
+          <li><strong>New Run</strong> – Start a fresh session on the currently selected level.</li>
+          <li><strong>Replay…</strong> – List your recorded sessions, replay only mistaken cards, resume checkpoints.</li>
+          <li><strong>Save Progress</strong> – Create a checkpoint you can resume later.</li>
         </ul>
       </section>
 
       <section>
-        <h2>Philosophy</h2>
-        <p>
-          This tool is designed for active recall and spaced repetition. You can rename a session,
-          replay it later, and track mistakes over time. The goal is to encourage focused,
-          distraction‑free practice while allowing flexibility to pause and resume learning at your own pace.
-        </p>
+        <h2>Settings (Gear)</h2>
+        <ul>
+          <li><strong>Level</strong> – Pick HSK 0–6 or combine custom levels. Levels are discovered automatically from <code>data/hsk*.csv</code>.</li>
+          <li><strong>Auto‑reveal</strong> – Enable and set seconds; a countdown shows at the bottom.</li>
+          <li><strong>Minimal UI</strong> – Hide Back/Reveal/Next (use gestures/keys).</li>
+          <li><strong>Outdoor</strong> – High‑contrast theme; <strong>Light mode</strong> is also available.</li>
+          <li><strong>Audio feedback</strong> – Beeps when marking/unmarking mistakes.</li>
+          <li><strong>Voice</strong> – Browser TTS or OpenAI TTS (model, voice, speed, cache). Test and compare quickly.</li>
+          <li><strong>Info</strong> – Version, build time, checkpoint/session info; Export/Import/Undo.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Gestures & Shortcuts</h2>
+        <ul>
+          <li>Swipe left/right: Next/Back</li>
+          <li>Tap Mistake button; on mobile, tap anywhere on the card to toggle mistake</li>
+          <li>Space / ↑ / ↓: Reveal / Unreveal</li>
+          <li>Enter / →: Next; ←: Back; M: Mistake; R: Replay</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Tone Visualizer</h2>
+        <ul>
+          <li>Open with the mic (🎙️) button above the card.</li>
+          <li>See live pitch, a final smoothed contour, and a recorded spectrogram.</li>
+          <li>Use Re‑record / Stop / Replay controls in the dialog header.</li>
+        </ul>
       </section>
 
       <section>

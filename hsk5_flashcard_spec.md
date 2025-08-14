@@ -1129,4 +1129,11 @@ Update the version to 4.40 — 莉娜老师的版本
 
 
 
+#### 4.60 External Tone Visualizer (Test Tool)
+	•	Create a standalone page/tool (separate from main app).
+	•	User can record speech via microphone and visualize tone contour in real-time.
+	•	User can load and play an MP3 or WAV file and visualize its tone contour.
+	•	No changes to main app; purely for testing.
+
+
 
