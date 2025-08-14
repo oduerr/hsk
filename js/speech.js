@@ -110,9 +110,10 @@ async function playArrayBuffer(buf) {
 
 export async function speak(text, lang='zh-CN') {
   if (!text) return;
+  text = text + "。 " // Add a period to the end of the text
   stop();
   try {
-    console.info('[tts] speak', { engine: settings.engine, fallback: settings.fallback });
+    console.info('[tts] speak', { engine: settings.engine, fallback: settings.fallback, text: text });
     if (settings.engine === 'openai') {
       try { await speakWithOpenAI(text, lang); return; } catch (e) { console.warn('[tts] openai failed; fallback?', settings.fallback, e); if (!settings.fallback) throw e; }
     }
