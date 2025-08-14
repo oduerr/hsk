@@ -97,4 +97,21 @@ export function rowsToCards(rows) {
   return deduped;
 }
 
+/**
+ * Discover available CSV levels by probing known filenames.
+ * Directory listing is typically unavailable on static hosts, so we use HEAD requests.
+ * @returns {Promise<string[]>} array like ['0','1','2','3','4','5','6'] that exist
+ */
+export async function discoverAvailableLevels() {
+  const candidates = ['0','1','2','3','4','5','6'];
+  const found = [];
+  await Promise.all(candidates.map(async (lvl) => {
+    try {
+      const resp = await fetch(`./data/hsk${lvl}.csv`, { method: 'HEAD' });
+      if (resp.ok) found.push(lvl);
+    } catch {}
+  }));
+  return found.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+}
+
 

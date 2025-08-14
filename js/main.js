@@ -1,4 +1,4 @@
-import { fetchCsvText, parseCsv, rowsToCards } from './data.js';
+import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, testOpenAITts, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
@@ -55,6 +55,8 @@ const ttsOpenAIVoice = /** @type {HTMLSelectElement} */(document.getElementById(
 const ttsTestPhrase = /** @type {HTMLInputElement} */(document.getElementById('ttsTestPhrase'));
 const ttsCacheToggle = /** @type {HTMLInputElement} */(document.getElementById('ttsCacheToggle'));
 const ttsClearCache = /** @type {HTMLButtonElement} */(document.getElementById('ttsClearCache'));
+const ttsRate = /** @type {HTMLInputElement} */(document.getElementById('ttsRate'));
+const ttsRateValue = /** @type {HTMLElement} */(document.getElementById('ttsRateValue'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
@@ -92,6 +94,31 @@ function startCountdownIfNeeded() {
     }
     updateCountdown(countdownRemaining);
   }, 1000);
+}
+
+async function refreshAvailableLevels() {
+  try {
+    const levels = await discoverAvailableLevels();
+    const have = new Set(levels);
+    const options = Array.from(levelPicker?.options || []);
+    let mutated = false;
+    for (const opt of options) {
+      const v = opt.value;
+      if (/^[0-6]$/.test(v)) {
+        if (!have.has(v)) { levelPicker.removeChild(opt); mutated = true; }
+      }
+    }
+    for (const v of levels) {
+      if (![...options].some(o => o.value === v)) {
+        const o = document.createElement('option'); o.value = v; o.textContent = `HSK ${v}`; levelPicker.insertBefore(o, levelPicker.querySelector('option[value="custom"]')); mutated = true;
+      }
+    }
+    if (mutated) {
+      // ensure HSK 0 test remains first if present
+      const zero = levelPicker.querySelector('option[value="0"]');
+      if (zero) levelPicker.insertBefore(zero, levelPicker.firstChild);
+    }
+  } catch {}
 }
 
 async function bootstrap() {
@@ -151,6 +178,8 @@ async function bootstrap() {
     document.body.classList.toggle('light', !!s.lightMode);
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
+    // Probe available CSV levels and update picker
+    await refreshAvailableLevels();
     // TTS engine (persist choice in localStorage under speech settings module)
     try {
       const ttsSaved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
@@ -161,6 +190,8 @@ async function bootstrap() {
       if (ttsModel) ttsModel.value = ttsSaved.model || 'tts-1';
       if (ttsOpenAIVoice) ttsOpenAIVoice.value = ttsSaved.openaiVoice || 'alloy';
       if (typeof ttsSaved.cache === 'boolean' && ttsCacheToggle) ttsCacheToggle.checked = !!ttsSaved.cache; else if (ttsCacheToggle) ttsCacheToggle.checked = true;
+      if (ttsRate) { const r = Number(ttsSaved.rate || 0.95); ttsRate.value = String(r); }
+      if (ttsRateValue) { ttsRateValue.textContent = `${(Number(ttsRate?.value||0.95)).toFixed(2)}×`; }
     } catch {}
     // Level picker
     const last = loadLastLevel();
@@ -396,6 +427,18 @@ ttsOpenAIVoice?.addEventListener('change', () => {
     const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
     localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, openaiVoice: ttsOpenAIVoice.value }));
     try { setTtsSettings({ openaiVoice: ttsOpenAIVoice.value }); } catch {}
+  } catch {}
+});
+ttsRate?.addEventListener('input', () => {
+  const r = Number(ttsRate.value || '0.95');
+  if (ttsRateValue) ttsRateValue.textContent = `${r.toFixed(2)}×`;
+});
+ttsRate?.addEventListener('change', () => {
+  try {
+    const r = Number(ttsRate.value || '0.95');
+    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, rate: r }));
+    try { setTtsSettings({ rate: r }); } catch {}
   } catch {}
 });
 ttsClearCache?.addEventListener('click', () => {
