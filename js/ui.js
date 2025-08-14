@@ -48,6 +48,7 @@ export function render() {
   }
 
   clearMessage();
+  setCardHidden(false);
   setActionsDisabled(false);
   setProgress(state.index + 1, state.order.length);
   setMistakes(state.mistakes.size);

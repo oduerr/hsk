@@ -1,7 +1,7 @@
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -28,6 +28,13 @@ const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById
 const btnSaveProgressTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
 const btnMistakeTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
+const infoVersionTxt = /** @type {HTMLElement} */(document.getElementById('infoVersionTxt'));
+const infoAudioCacheSize = /** @type {HTMLElement} */(document.getElementById('infoAudioCacheSize'));
+const infoSessionsSize = /** @type {HTMLElement} */(document.getElementById('infoSessionsSize'));
+const infoCheckpointId = /** @type {HTMLElement} */(document.getElementById('infoCheckpointId'));
+const infoSessionId = /** @type {HTMLElement} */(document.getElementById('infoSessionId'));
+const infoSessionTitle = /** @type {HTMLElement} */(document.getElementById('infoSessionTitle'));
+const infoLastSave = /** @type {HTMLElement} */(document.getElementById('infoLastSave'));
 const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
 const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
 const btnUndo = /** @type {HTMLButtonElement} */(document.getElementById('btnUndo'));
@@ -154,6 +161,8 @@ async function bootstrap() {
       // Do not show version in the main header brand; keep static brand text
     } catch {}
     buildInfo.textContent = `${versionLabel} • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
+    if (infoVersionTxt) infoVersionTxt.textContent = versionLabel;
+    if (infoCheckpointId) infoCheckpointId.textContent = lastId || '—';
   } catch {}
   // Load settings
   try {
@@ -189,11 +198,21 @@ async function bootstrap() {
       if (last && last !== '5') {
         await loadLevelsAndStart([last]);
       } else {
-        // Default retains current deck (hsk5.csv) but set label so it's visible
         state.levelLabel = 'HSK 5';
         render();
       }
     } catch {}
+  } catch {}
+
+  // Populate Version (from VERSION.TXT) already set above, now sizes
+  try {
+    const mod = await import('./speech.js');
+    const bytes = await mod.getAudioCacheBytes();
+    if (infoAudioCacheSize) infoAudioCacheSize.textContent = formatBytes(bytes);
+  } catch {}
+  try {
+    const total = computeSessionsSizeBytes();
+    if (infoSessionsSize) infoSessionsSize.textContent = formatBytes(total);
   } catch {}
 }
 
@@ -218,18 +237,6 @@ function onNext() {
   nextCard();
   render();
   startCountdownIfNeeded();
-  // 4.90 Autosave: save checkpoint on every Next
-  try {
-    const enabled = !!(settingsAutosave && settingsAutosave.checked);
-    if (enabled) {
-      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot);
-      const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const ms = Math.round(t1 - t0);
-      console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-    }
-  } catch (e) { console.error('[autosave] failed', e); }
   const finalized = finalizeIfFinished();
   if (finalized) {
     try {
@@ -254,6 +261,18 @@ function onMistake() {
     playMarkAudio(false);
   }
   render();
+  // Autosave on mark/unmark per 4.92
+  try {
+    const enabled = !!(settingsAutosave && settingsAutosave.checked);
+    if (enabled) {
+      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const snapshot = getFullSessionSnapshot();
+      saveCheckpoint(snapshot);
+      const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const ms = Math.round(t1 - t0);
+      console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+    }
+  } catch (e) { console.error('[autosave] failed', e); }
 }
 
 function onUnmistake() {
@@ -343,7 +362,6 @@ btnSpeak?.addEventListener('click', () => {
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
-btnUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); } });
 btnNewRun.addEventListener('click', onNewRun);
 settingsAutoToggle?.addEventListener('change', onAutoToggleChanged);
 settingsAutoSeconds?.addEventListener('change', onSecondsChanged);
@@ -352,7 +370,6 @@ settingsClose?.addEventListener('click', () => { settingsDialog.hidden = true; }
 // Hide/show media row alongside settings visibility
 if (btnSettings) btnSettings.addEventListener('click', () => { if (mediaRow) mediaRow.classList.add('hidden'); });
 if (settingsClose) settingsClose.addEventListener('click', () => { if (mediaRow) mediaRow.classList.remove('hidden'); });
-settingsUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); }});
 settingsExport?.addEventListener('click', () => { try { const snap = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snap); } catch (e) { console.error(e); } });
 settingsImportBtn?.addEventListener('click', () => settingsImportInput?.click());
 // Outdoor/Audio/Light listeners
@@ -458,6 +475,32 @@ function playMarkAudio(isUnmark) {
     console.log('[audio] correct->mark');
     playBeep(220, 160);
   }
+}
+
+function formatBytes(bytes) {
+  try {
+    if (!Number.isFinite(bytes)) return '—';
+    const units = ['B','KB','MB','GB'];
+    let b = Math.max(0, bytes);
+    let u = 0;
+    while (b >= 1024 && u < units.length - 1) { b /= 1024; u++; }
+    return `${b.toFixed(u === 0 ? 0 : 1)} ${units[u]}`;
+  } catch { return '—'; }
+}
+
+function computeSessionsSizeBytes() {
+  try {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (/^hsk\.flash\.(session\.|sessions$|lastCheckpointId$)/.test(key)) {
+        const val = localStorage.getItem(key) || '';
+        total += val.length;
+      }
+    }
+    return total;
+  } catch { return 0; }
 }
 
 // ---------- Level Picker ----------

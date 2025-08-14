@@ -1,6 +1,6 @@
 const SESSIONS_KEY = 'hsk.flash.sessions';
 const SESSION_PREFIX = 'hsk.flash.session.';
-const DECK_KEY = 'hsk.flash.deck.hsk5';
+const DECK_KEY_PREFIX = 'hsk.flash.deck.';
 const LAST_CHECKPOINT_KEY = 'hsk.flash.lastCheckpointId';
 const SETTINGS_KEY = 'hsk.flash.settings';
 const LAST_LEVEL_KEY = 'hsk.flash.level';
@@ -54,12 +54,14 @@ export function deleteSession(id) {
   try { localStorage.removeItem(SESSION_PREFIX + id); } catch {}
 }
 
-export function saveDeck(cards) {
-  writeJson(DECK_KEY, cards);
+export function saveDeck(cards, levelLabel = 'hsk5') {
+  const key = DECK_KEY_PREFIX + String(levelLabel).toLowerCase();
+  writeJson(key, cards);
 }
 
-export function loadDeck() {
-  return readJson(DECK_KEY, null);
+export function loadDeck(levelLabel = 'hsk5') {
+  const key = DECK_KEY_PREFIX + String(levelLabel).toLowerCase();
+  return readJson(key, null);
 }
 
 export function saveLastCheckpointId(id) {

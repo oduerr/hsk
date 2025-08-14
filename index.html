@@ -70,12 +70,11 @@
         <div class="left">
           <span id="countdown" class="countdown" hidden>—</span>
         </div>
-        <div class="actions">
+          <div class="actions">
           <button id="btnBack" class="secondary nav-only">Back</button>
           <button id="btnReveal" class="primary nav-only">Reveal</button>
           <button id="btnMistakeToggle" class="danger">Mistake</button>
           <button id="btnNext" class="primary nav-only">Next</button>
-          <button id="btnSaveProgress" class="secondary">Save Progress</button>
         </div>
         <div class="right"></div>
       </footer>
@@ -148,7 +147,7 @@
             </section>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Saving</div>
-              <label class="toggle"><input type="checkbox" id="settingsAutosave" checked /> <span>Autosave on Next</span></label>
+              <label class="toggle"><input type="checkbox" id="settingsAutosave" checked /> <span>Autosave on Mark/Unmark</span></label>
             </section>
             <section style="margin-bottom:12px">
               <label class="toggle"><input type="checkbox" id="settingsMinimalUI" /> <span>Minimal UI (hide Back/Reveal/Next)</span></label>
@@ -175,17 +174,18 @@
             <div class="section-divider"></div>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Info</div>
-              <div class="muted">Version: 莉娜老师的版本</div>
-              <div class="muted">Build: <span id="infoBuildAt">—</span></div>
+              <div class="muted">BUILD: 莉娜老师的版本</div>
+              <div class="muted">Version: <span id="infoVersionTxt">—</span></div>
               <div class="muted">Checkpoint: <span id="infoCheckpointId">—</span></div>
               <div class="muted">Session: <span id="infoSessionId">—</span> <span id="infoSessionTitle" class="muted"></span></div>
               <div class="muted">Last save: <span id="infoLastSave">—</span></div>
+              <div class="muted">Audio cache: <span id="infoAudioCacheSize">—</span></div>
+              <div class="muted">Sessions size: <span id="infoSessionsSize">—</span></div>
             </section>
             <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
               <button id="settingsExport" class="secondary">Export sessions</button>
               <button id="settingsImportBtn" class="secondary">Import sessions</button>
               <input id="settingsImportInput" type="file" accept="application/json" hidden />
-              <button id="settingsUndo" class="secondary">Undo</button>
               <a href="./help.html" target="_blank" class="secondary" style="text-decoration:none; padding:10px 14px; border:1px solid var(--border); border-radius:10px">Help</a>
               <a href="./tone-lab.html" target="_blank" class="secondary" style="text-decoration:none; padding:10px 14px; border:1px solid var(--border); border-radius:10px">Tone Lab</a>
             </section>

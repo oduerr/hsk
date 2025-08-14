@@ -1221,6 +1221,29 @@ Acceptance
 - Each time the user goes to the next card, the current state is saved. Like pressing the "save" button.
 - Record the timeing of the saving in the console.log
 
-#### 4.91 Bug Fixes and minior UI Polishing
--  
-	
+
+#### 4.92  Bug Fixes and minior UI Polishing
+- **Autosave timing and storage contention**: Autosave mode only if the state of the card changes. This means marking it correct or incorrect.
+
+- **WAV filename encoding**: Audio lookup uses `encodeURIComponent(hanzi)`. Some filesystems or deploy pipelines might alter unicode normalization (NFC/NFD), causing misses, and certain punctuation may be renamed. Consider a deterministic slug (e.g., `fnv1a(hanzi).wav`) plus a mapping JSON.
+
+-- Remove Undo (Buttons and any possible implementation)
+
+-- **Deck key naming**: `DECK_KEY` is hardcoded to `hsk.flash.deck.hsk5`. When other levels load, they overwrite the same key. Consider keying by level label (e.g., `hsk.flash.deck.hsk5`, `...hsk7`, `...custom`).
+
+-- Remove the "Mark Correct" and "Save Progress" buttons at the bottom of the card
+
+-- In the info box of the gear panel do:
+Rename Version to BUILD and include the Chinese Text
+Add new Version: which include the info given in the version.txt file
+If Possible add the size of the Audiocache and the side of the JSON storing the session
+
+Update the version to 4.92
+
+##### 4.92.a Bug Fixes
+- Auto Save only when the state of the card changes. This means marking it correct or incorrect. Not when switching to next card.
+- When you reached the last card going back does not show any card anymore (see screenshot)
+- In the Info box of the gear panel remove "Build time", Implement checkpoint (show the name of the session) 
+implement Last Save
+
+Update the version to 4.92.a

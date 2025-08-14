@@ -1,2 +1,2 @@
-4.90 — Autosave mode
+4.92 — Autosave on Mark/Unmark, Info metrics, cleanup
 

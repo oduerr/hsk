@@ -43,6 +43,7 @@ const AUDIO_CACHE_NAME = 'hsk-audio-v1';
 async function getAudioCache() { try { return await caches.open(AUDIO_CACHE_NAME); } catch { return null; } }
 export async function clearAudioCache() { try { await caches.delete(AUDIO_CACHE_NAME); console.info('[audio] cache cleared'); } catch {} }
 export async function getAudioCacheCount() { try { const c = await getAudioCache(); if (!c) return 0; const ks = await c.keys(); return ks.length; } catch { return 0; } }
+export async function getAudioCacheBytes() { try { const c = await getAudioCache(); if (!c) return 0; const ks = await c.keys(); let total = 0; for (const req of ks) { const resp = await c.match(req); if (resp) { const buf = await resp.arrayBuffer(); total += buf.byteLength || 0; } } return total; } catch { return 0; } }
 
 function pickBrowserVoice() {
   if (!('speechSynthesis' in window)) return null;
