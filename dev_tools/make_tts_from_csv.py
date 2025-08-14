@@ -59,6 +59,10 @@ def synthesize_wav(api_key: str, text: str, model: str, voice: str) -> bytes:
         raise RuntimeError(f"TTS failed ({r.status_code}): {r.text[:300]}...")
     return r.content
 
+
+## Examples: 
+# python dev_tools/make_tts_from_csv.py hsk0 --out dev_tools/audio_hsk0 --voice alloy --model gpt-4o-mini-tts --before "" --after "。"
+# python dev_tools/make_tts_from_csv.py hsk5 --out dev_tools/audio_hsk5 --voice alloy --model gpt-4o-mini-tts --before "" --after "。" --skip-existing
 def main():
     load_dotenv()
     parser = argparse.ArgumentParser(description="Generate WAVs from HSK CSV via OpenAI TTS.")

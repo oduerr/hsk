@@ -1177,3 +1177,40 @@ Acceptance
 	•	With Request OpenAI OFF and cache ON: first play downloads once; subsequent plays are offline from cache.
 	•	Clearing cache forces re-download on next play.
 	•	With Request OpenAI ON, audio plays from OpenAI; if “cache synthesized” is enabled, later plays can use cached audio even with the toggle OFF.
+
+
+### 4.8 Simplify Audio: Pre-recorded WAV Only
+
+Goal
+Remove cloud TTS and keys. Play only bundled WAVs (one per card), with a tiny cache.
+
+What to remove
+	•	Gear menu items: API key field, “Request sounds from OpenAI”, engine/model/voice pickers, TTS test.
+	•	All OpenAI/browser-TTS code paths.
+
+Playback logic (single path)
+	1.	Resolve path: /data/<level>/<hanzi>.wav (UTF-8 filenames).
+	2.	Try Cache Storage (hsk-audio-v1) → if hit, play.
+	3.	If miss, fetch the WAV → on 200, optionally store in cache (toggle “Cache audio” ON by default) → play.
+	4.	If 404 or fetch error: show small toast “No audio for ”.
+
+Settings (Gear)
+	•	Cache audio: ON/OFF (default ON).
+	•	Clear audio cache button (deletes hsk-audio-v1, confirms).
+
+File convention
+	•	One WAV per card, named exactly by the Chinese term:
+/data/hsk0/中国人.wav, /data/hsk1/朋友.wav, etc.
+	•	Short clips (≤1s), 16-bit PCM mono, 16 kHz or 22.05 kHz.
+
+UI
+	•	Keep the speaker button; disable it if fetch failed once for that card (until level reload).
+
+Edge cases
+	•	Make sure filenames are URL-safe when requested (encode before fetch).
+
+Acceptance
+	•	No references to OpenAI or WebSpeech remain.
+	•	First play downloads, subsequent plays read from cache (when enabled).
+	•	“Clear cache” forces re-download next time.
+	•	Missing audio shows a non-blocking toast and the app continues.

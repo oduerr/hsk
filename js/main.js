@@ -1,6 +1,6 @@
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
-import { initSpeech, speak, testOpenAITts, setSettings as setTtsSettings } from './speech.js';
+import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, undoLast } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
@@ -44,19 +44,10 @@ const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('s
 const settingsOutdoor = /** @type {HTMLInputElement} */(document.getElementById('settingsOutdoor'));
 const settingsAudio = /** @type {HTMLInputElement} */(document.getElementById('settingsAudio'));
 const settingsLightMode = /** @type {HTMLInputElement} */(document.getElementById('settingsLightMode'));
-// TTS (4.20)
-const ttsEngineRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="ttsEngine"]'));
-const ttsOpenAIKey = /** @type {HTMLInputElement} */(document.getElementById('ttsOpenAIKey'));
-const ttsTestOpenAI = /** @type {HTMLButtonElement} */(document.getElementById('ttsTestOpenAI'));
-const ttsCompareBrowser = /** @type {HTMLButtonElement} */(document.getElementById('ttsCompareBrowser'));
-const ttsStatus = /** @type {HTMLElement} */(document.getElementById('ttsStatus'));
-const ttsModel = /** @type {HTMLSelectElement} */(document.getElementById('ttsModel'));
-const ttsOpenAIVoice = /** @type {HTMLSelectElement} */(document.getElementById('ttsOpenAIVoice'));
-const ttsTestPhrase = /** @type {HTMLInputElement} */(document.getElementById('ttsTestPhrase'));
-const ttsCacheToggle = /** @type {HTMLInputElement} */(document.getElementById('ttsCacheToggle'));
-const ttsClearCache = /** @type {HTMLButtonElement} */(document.getElementById('ttsClearCache'));
-const ttsRate = /** @type {HTMLInputElement} */(document.getElementById('ttsRate'));
-const ttsRateValue = /** @type {HTMLElement} */(document.getElementById('ttsRateValue'));
+// Audio (4.8)
+const audioCacheToggle = /** @type {HTMLInputElement} */(document.getElementById('audioCacheToggle'));
+const audioCacheClear = /** @type {HTMLButtonElement} */(document.getElementById('audioCacheClear'));
+const audioCacheStatus = /** @type {HTMLElement} */(document.getElementById('audioCacheStatus'));
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
@@ -180,18 +171,10 @@ async function bootstrap() {
     applyMinimalUI(!!s.minimalUI);
     // Probe available CSV levels and update picker
     await refreshAvailableLevels();
-    // TTS engine (persist choice in localStorage under speech settings module)
+    // Audio cache setting
     try {
-      const ttsSaved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-      const engine = ttsSaved.engine || 'browser';
-      ttsEngineRadios.forEach(r => { r.checked = r.value === engine; });
-      const keySaved = localStorage.getItem('hsk.tts.openai.key') || '';
-      if (ttsOpenAIKey) ttsOpenAIKey.value = keySaved;
-      if (ttsModel) ttsModel.value = ttsSaved.model || 'tts-1';
-      if (ttsOpenAIVoice) ttsOpenAIVoice.value = ttsSaved.openaiVoice || 'alloy';
-      if (typeof ttsSaved.cache === 'boolean' && ttsCacheToggle) ttsCacheToggle.checked = !!ttsSaved.cache; else if (ttsCacheToggle) ttsCacheToggle.checked = true;
-      if (ttsRate) { const r = Number(ttsSaved.rate || 0.95); ttsRate.value = String(r); }
-      if (ttsRateValue) { ttsRateValue.textContent = `${(Number(ttsRate?.value||0.95)).toFixed(2)}×`; }
+      const saved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+      if (audioCacheToggle) audioCacheToggle.checked = saved.audioCache !== false;
     } catch {}
     // Level picker
     const last = loadLastLevel();
@@ -341,7 +324,7 @@ btnSpeak?.addEventListener('click', () => {
   const idx = state.order[state.index];
   const card = state.deck[idx];
   if (!card) return;
-  try { speak(card.hanzi || card.pinyin || '', 'zh-CN'); } catch {}
+  try { const level = state.levelLabel || ''; speak(card.hanzi || card.pinyin || '', 'zh-CN', { level }); } catch {}
 });
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnBack.addEventListener('click', onBack);
@@ -382,71 +365,13 @@ settingsImportInput?.addEventListener('change', async () => {
 btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
 btnMistakeTop?.addEventListener('click', onMistake);
 
-// TTS handlers
-ttsEngineRadios.forEach(r => r?.addEventListener('change', () => {
-  try {
-    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-    const engine = Array.from(ttsEngineRadios).find(x => x.checked)?.value || 'browser';
-    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, engine }));
-    try { setTtsSettings({ engine }); } catch {}
-  } catch {}
-}));
-ttsOpenAIKey?.addEventListener('change', () => { try { localStorage.setItem('hsk.tts.openai.key', ttsOpenAIKey.value || ''); } catch {} });
-ttsTestOpenAI?.addEventListener('click', async () => {
-  ttsStatus && (ttsStatus.textContent = 'Testing OpenAI TTS…');
-  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '莉娜老师的版本';
-  const res = await testOpenAITts(phrase, 'zh-CN');
-  if (res.ok) {
-    const ts = new Date().toLocaleTimeString();
-    ttsStatus.textContent = `✅ OpenAI TTS OK • Latency: ${res.latencyMs} ms • Model: ${res.model} • Voice: ${res.voice} • ${ts}`;
-  } else {
-    ttsStatus.textContent = `❌ OpenAI TTS failed • ${res.reason || 'Unknown error'}` + (res.detail ? ` • ${res.detail}` : '');
-  }
+// Audio handlers
+audioCacheToggle?.addEventListener('change', () => {
+  try { const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}'); const val = !!audioCacheToggle.checked; localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, audioCache: val })); try { setTtsSettings({ audioCache: val }); } catch {} } catch {}
 });
-ttsCompareBrowser?.addEventListener('click', async () => {
-  ttsStatus && (ttsStatus.textContent = 'Browser TTS comparison…');
-  const phrase = (ttsTestPhrase && ttsTestPhrase.value.trim()) || '莉娜老师的版本';
-  try { await speak(phrase, 'zh-CN'); ttsStatus && (ttsStatus.textContent = 'Browser TTS played.'); } catch (e) { ttsStatus && (ttsStatus.textContent = 'Browser TTS unavailable.'); }
-});
-ttsModel?.addEventListener('change', () => {
-  try {
-    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, model: ttsModel.value }));
-    try { setTtsSettings({ model: ttsModel.value }); } catch {}
-  } catch {}
-});
-ttsCacheToggle?.addEventListener('change', () => {
-  try {
-    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, cache: !!ttsCacheToggle.checked }));
-    try { setTtsSettings({ cache: !!ttsCacheToggle.checked }); } catch {}
-  } catch {}
-});
-ttsOpenAIVoice?.addEventListener('change', () => {
-  try {
-    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, openaiVoice: ttsOpenAIVoice.value }));
-    try { setTtsSettings({ openaiVoice: ttsOpenAIVoice.value }); } catch {}
-  } catch {}
-});
-ttsRate?.addEventListener('input', () => {
-  const r = Number(ttsRate.value || '0.95');
-  if (ttsRateValue) ttsRateValue.textContent = `${r.toFixed(2)}×`;
-});
-ttsRate?.addEventListener('change', () => {
-  try {
-    const r = Number(ttsRate.value || '0.95');
-    const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
-    localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, rate: r }));
-    try { setTtsSettings({ rate: r }); } catch {}
-  } catch {}
-});
-ttsClearCache?.addEventListener('click', () => {
-  if (!confirm('Clear all cached TTS audio?')) return;
-  try {
-    // lazy import to avoid circular
-    import('./speech.js').then(m => { m.clearTtsCache && m.clearTtsCache(); ttsStatus && (ttsStatus.textContent = 'TTS cache cleared.'); });
-  } catch {}
+audioCacheClear?.addEventListener('click', async () => {
+  if (!confirm('Clear downloaded audio cache?')) return;
+  try { const mod = await import('./speech.js'); await mod.clearAudioCache(); if (audioCacheStatus) { const n = await mod.getAudioCacheCount(); audioCacheStatus.textContent = `Cache entries: ${n}`; } } catch {}
 });
 window.addEventListener('keydown', onKeyDown, { passive: false });
 // Touch swipe gestures for mobile

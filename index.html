@@ -157,39 +157,13 @@
             </section>
             <div class="section-divider"></div>
             <section style="margin-bottom:12px">
-              <div style="font-weight:600; margin-bottom:6px">Voice</div>
-              <div class="muted" style="margin-bottom:6px">Configure speech synthesis. API keys are stored only on this device.</div>
+              <div style="font-weight:600; margin-bottom:6px">Audio</div>
+              <div class="muted" style="margin-bottom:6px">Plays pre‑recorded WAVs bundled in <code>data/hsk*/</code>. No cloud TTS.</div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
-                <label class="toggle"><input type="radio" name="ttsEngine" value="browser" checked /> <span>Browser TTS</span></label>
-                <label class="toggle"><input type="radio" name="ttsEngine" value="openai" /> <span>OpenAI TTS</span></label>
-                <input id="ttsOpenAIKey" type="password" placeholder="OpenAI API key" style="min-width:240px" />
-                <button id="ttsTestOpenAI" class="secondary" title="Run a real cloud TTS call and play the result">Test OpenAI TTS</button>
-                <button id="ttsCompareBrowser" class="secondary" title="Play with browser voice for comparison">Compare with Browser TTS</button>
-                <select id="ttsModel" title="Choose OpenAI model">
-                  <option value="tts-1" selected>Speed (tts-1)</option>
-                  <option value="tts-1-hd">Quality (tts-1-hd)</option>
-                </select>
-                <select id="ttsOpenAIVoice" title="OpenAI voice">
-                  <option value="nova">nova</option>
-                  <option value="shimmer">shimmer</option>
-                  <option value="echo">echo</option>
-                  <option value="onyx">onyx</option>
-                  <option value="fable">fable</option>
-                  <option value="alloy">alloy</option>
-                  <option value="ash">ash</option>
-                  <option value="sage">sage</option>
-                  <option value="coral">coral</option>
-                </select>
-                 <label class="muted" style="display:flex; align-items:center; gap:6px">
-                   <span>Voice speed</span>
-                   <input id="ttsRate" type="range" min="0.5" max="1.5" step="0.05" value="0.95" style="width:160px" />
-                   <span id="ttsRateValue" class="muted">0.95×</span>
-                 </label>
-                <input id="ttsTestPhrase" type="text" placeholder="Test phrase (默认: 学习中文真好！)" style="min-width:220px" />
-                <label class="toggle"><input id="ttsCacheToggle" type="checkbox" checked /> <span>Cache synthesized audio</span></label>
-                <button id="ttsClearCache" class="secondary" title="Clear cached TTS audio">Clear TTS cache</button>
+                <label class="toggle"><input id="audioCacheToggle" type="checkbox" checked /> <span>Cache .wav audio</span></label>
+                <button id="audioCacheClear" class="secondary" title="Clear cached audio files">Clear audio cache</button>
+                <span id="audioCacheStatus" class="muted"></span>
               </div>
-              <div id="ttsStatus" class="muted" style="margin-top:6px"></div>
             </section>
             <div class="section-divider"></div>
             <section style="margin-bottom:12px">

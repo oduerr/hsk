@@ -40,5 +40,6 @@ def main():
         else:
             print(f"Missing: {char}")
 
+## python transfer.py data/hsk0.csv wav_input wav_clean
 if __name__ == "__main__":
     main()

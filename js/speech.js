@@ -1,11 +1,11 @@
-// Speech synthesis module (4.20)
-// Provides: initSpeech, speak, stop, setSettings
+// Speech synthesis module (4.20) + Audio source order & caching (4.70)
+// Provides: initSpeech, speak, stop, setSettings, getTtsCacheStats, clearTtsCache, clearAudioCache, getAudioCacheCount
 
 const KEY_SETTINGS = 'hsk.tts.settings';
 const KEY_OPENAI = 'hsk.tts.openai.key';
 
-/** @type {{ engine: 'openai'|'browser', model?: 'tts-1'|'tts-1-hd', rate: number, pitch: number, openaiVoice?: string, browserVoice?: string, cache: boolean, fallback: boolean, preferredLangs: string[] }} */
-let settings = { engine: 'browser', model: 'tts-1', rate: 0.95, pitch: 1.0, openaiVoice: 'alloy', browserVoice: '', cache: true, fallback: true, preferredLangs: ['zh-CN','zh','cmn-Hans-CN'] };
+/** @type {{ engine: 'openai'|'browser', model?: 'tts-1'|'tts-1-hd', rate: number, pitch: number, openaiVoice?: string, browserVoice?: string, cache: boolean, fallback: boolean, preferredLangs: string[], requestOpenAI?: boolean, audioCache?: boolean }} */
+let settings = { engine: 'browser', model: 'tts-1', rate: 0.95, pitch: 1.0, openaiVoice: 'alloy', browserVoice: '', cache: true, fallback: true, preferredLangs: ['zh-CN','zh','cmn-Hans-CN'], requestOpenAI: false, audioCache: true };
 
 /** @type {Map<string, ArrayBuffer>} */
 const ttsCache = new Map();
@@ -37,6 +37,12 @@ export function setSettings(partial) {
 export function stop() {
   try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); console.info('[tts] stop'); } catch {}
 }
+
+// 4.70 audio cache helpers (Cache Storage)
+const AUDIO_CACHE_NAME = 'hsk-audio-v1';
+async function getAudioCache() { try { return await caches.open(AUDIO_CACHE_NAME); } catch { return null; } }
+export async function clearAudioCache() { try { await caches.delete(AUDIO_CACHE_NAME); console.info('[audio] cache cleared'); } catch {} }
+export async function getAudioCacheCount() { try { const c = await getAudioCache(); if (!c) return 0; const ks = await c.keys(); return ks.length; } catch { return 0; } }
 
 function pickBrowserVoice() {
   if (!('speechSynthesis' in window)) return null;
@@ -108,19 +114,57 @@ async function playArrayBuffer(buf) {
   return new Promise((resolve) => { src.onended = () => { try { ctx.close(); } catch {} console.info('[tts] finished buffer'); resolve(); }; });
 }
 
-export async function speak(text, lang='zh-CN') {
+export async function speak(text, lang='zh-CN', opts = {}) {
   if (!text) return;
-  text = text + "。 " // Add a period to the end of the text
   stop();
   try {
-    console.info('[tts] speak', { engine: settings.engine, fallback: settings.fallback, text: text });
-    if (settings.engine === 'openai') {
-      try { await speakWithOpenAI(text, lang); return; } catch (e) { console.warn('[tts] openai failed; fallback?', settings.fallback, e); if (!settings.fallback) throw e; }
-    }
-    await speakWithBrowser(text, lang);
+    const preferredLevel = typeof opts?.level === 'string' ? opts.level : null;
+    console.info('[tts] speak', { text, preferredLevel });
+    const played = await tryPlayCachedOrRemoteWav(text, preferredLevel);
+    if (played) return;
+    console.warn('[audio] no wav available');
   } catch (e) {
-    console.warn('Speech not available:', e);
+    console.warn('Audio not available:', e);
   }
+}
+
+function extractLevelDigit(label) {
+  if (!label) return null;
+  const m = String(label).match(/(\d+)/);
+  return m ? m[1] : null;
+}
+
+async function tryPlayCachedOrRemoteWav(hanzi, preferredLevelLabel = null) {
+  try {
+    const fname = encodeURIComponent(hanzi) + '.wav';
+    const preferred = extractLevelDigit(preferredLevelLabel);
+    const levels = preferred ? [preferred] : ['0','1','2','3','4','5','6','7'];
+    for (const lvl of levels) {
+      const base = location.origin + location.pathname.replace(/\/?[^/]*$/, '/');
+      const url = new URL(`./data/hsk${lvl}/${fname}`, base).toString();
+      const cache = await getAudioCache();
+      if (cache) {
+        const hit = await cache.match(url);
+        if (hit) {
+          console.info('[audio] source=cache', { url });
+          const buf = await hit.arrayBuffer();
+          await playArrayBuffer(buf);
+          return true;
+        }
+      }
+      const resp = await fetch(url, { cache: settings.audioCache ? 'default' : 'reload' });
+      if (resp.ok && (resp.headers.get('content-type')||'').includes('audio')) {
+        const buf = await resp.arrayBuffer();
+        console.info('[audio] source=remote', { url });
+        if (settings.audioCache && cache) {
+          try { await cache.put(url, new Response(buf)); console.info('[audio] cache store ok'); } catch {}
+        }
+        await playArrayBuffer(buf);
+        return true;
+      }
+    }
+  } catch (e) { console.warn('[audio] wav failed', e); }
+  return false;
 }
 
 // Explicit OpenAI connectivity test (4.21)
