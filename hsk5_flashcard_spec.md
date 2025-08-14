@@ -1214,3 +1214,13 @@ Acceptance
 	•	First play downloads, subsequent plays read from cache (when enabled).
 	•	“Clear cache” forces re-download next time.
 	•	Missing audio shows a non-blocking toast and the app continues.
+
+
+
+### 4.90 Autosave mode:
+- Each time the user goes to the next card, the current state is saved. Like pressing the "save" button.
+- Record the timeing of the saving in the console.log
+
+#### 4.91 Bug Fixes and minior UI Polishing
+-  
+	

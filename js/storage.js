@@ -91,7 +91,7 @@ export function saveCheckpoint(fullSnapshot) {
 }
 
 export function loadSettings() {
-  const def = { timerEnabled: false, timerSeconds: 5, lastCsvHash: '', minimalUI: false, outdoorMode: false, audioFeedback: null };
+  const def = { timerEnabled: false, timerSeconds: 5, lastCsvHash: '', minimalUI: false, outdoorMode: false, audioFeedback: null, autosave: true };
   const s = readJson(SETTINGS_KEY, def) || def;
   if (typeof s.minimalUI !== 'boolean') s.minimalUI = false;
   if (typeof s.outdoorMode !== 'boolean') s.outdoorMode = false;
@@ -100,6 +100,7 @@ export function loadSettings() {
     const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     s.audioFeedback = !!isMobile;
   }
+  if (typeof s.autosave !== 'boolean') s.autosave = true;
   return s;
 }
 

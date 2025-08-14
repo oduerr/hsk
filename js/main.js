@@ -37,6 +37,7 @@ const settingsClose = /** @type {HTMLButtonElement} */(document.getElementById('
 const settingsAutoToggle = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoToggle'));
 const settingsAutoSeconds = /** @type {HTMLInputElement} */(document.getElementById('settingsAutoSeconds'));
 const settingsMinimalUI = /** @type {HTMLInputElement} */(document.getElementById('settingsMinimalUI'));
+const settingsAutosave = /** @type {HTMLInputElement} */(document.getElementById('settingsAutosave'));
 const settingsExport = /** @type {HTMLButtonElement} */(document.getElementById('settingsExport'));
 const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('settingsImportBtn'));
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
@@ -161,6 +162,7 @@ async function bootstrap() {
     if (settingsAutoToggle) settingsAutoToggle.checked = !!s.timerEnabled;
     if (settingsAutoSeconds) settingsAutoSeconds.value = String(s.timerSeconds ?? 5);
     if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
+    if (settingsAutosave) settingsAutosave.checked = s.autosave !== false;
     // new theme/audio/outdoor
     if (settingsOutdoor) settingsOutdoor.checked = !!s.outdoorMode;
     if (settingsAudio) settingsAudio.checked = !!s.audioFeedback;
@@ -216,6 +218,18 @@ function onNext() {
   nextCard();
   render();
   startCountdownIfNeeded();
+  // 4.90 Autosave: save checkpoint on every Next
+  try {
+    const enabled = !!(settingsAutosave && settingsAutosave.checked);
+    if (enabled) {
+      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const snapshot = getFullSessionSnapshot();
+      saveCheckpoint(snapshot);
+      const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const ms = Math.round(t1 - t0);
+      console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+    }
+  } catch (e) { console.error('[autosave] failed', e); }
   const finalized = finalizeIfFinished();
   if (finalized) {
     try {
@@ -350,6 +364,9 @@ settingsAudio?.addEventListener('change', () => {
 });
 settingsLightMode?.addEventListener('change', () => {
   try { const s = loadSettings(); const enabled = !!settingsLightMode.checked; saveSettings({ ...s, lightMode: enabled }); document.body.classList.toggle('light', enabled); } catch {}
+});
+settingsAutosave?.addEventListener('change', () => {
+  try { const s = loadSettings(); const enabled = !!settingsAutosave.checked; saveSettings({ ...s, autosave: enabled }); } catch {}
 });
 settingsImportInput?.addEventListener('change', async () => {
   const file = settingsImportInput.files && settingsImportInput.files[0];
