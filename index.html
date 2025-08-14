@@ -33,6 +33,13 @@
       </header>
 
       <main class="stage" ontouchstart="" ontouchmove="event.preventDefault()">
+        <div id="mediaRow" class="media-row">
+          <div class="media-spacer"></div>
+          <div class="media-actions">
+            <button id="btnTone" class="tone-btn" aria-label="Tone visualizer" title="Tone visualizer">🎙️</button>
+            <button id="btnSpeak" class="speak-btn" aria-label="Speak Chinese">🔊</button>
+          </div>
+        </div>
         <div id="message" class="message" hidden></div>
         <div id="fallbackPanel" class="message" hidden>
           <div style="margin-bottom:8px">Could not load deck. Choose a local CSV or paste CSV below:</div>
@@ -44,8 +51,6 @@
         </div>
         <section id="card" class="card">
           <div id="mistakeBadge" class="mistake-badge" hidden>Marked mistake</div>
-          <button id="btnSpeak" class="speak-btn" aria-label="Speak Chinese">🔊</button>
-          <button id="btnTone" class="tone-btn" aria-label="Tone visualizer" title="Tone visualizer">🎙️</button>
           <div id="cardFront" class="face front">
             <div id="englishText" class="english">—</div>
           </div>
@@ -127,6 +132,7 @@
                 <button id="loadCustomLevels" class="secondary">Load</button>
               </div>
             </section>
+            <div class="section-divider"></div>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Auto‑reveal</div>
               <label class="toggle"><input type="checkbox" id="settingsAutoToggle" /> <span>Enable</span></label>
@@ -144,6 +150,11 @@
               <label class="toggle"><input type="checkbox" id="settingsOutdoor" /> <span>Outdoor mode (high contrast)</span></label>
               <label class="toggle" style="margin-left:12px"><input type="checkbox" id="settingsAudio" /> <span>Audio feedback on mark/unmark</span></label>
             </section>
+            <section style="margin-bottom:12px">
+              <div style="font-weight:600; margin-bottom:6px">Theme</div>
+              <label class="toggle"><input type="checkbox" id="settingsLightMode" /> <span>Light mode</span></label>
+            </section>
+            <div class="section-divider"></div>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Voice</div>
               <div class="muted" style="margin-bottom:6px">Configure speech synthesis. API keys are stored only on this device.</div>
@@ -174,6 +185,7 @@
               </div>
               <div id="ttsStatus" class="muted" style="margin-top:6px"></div>
             </section>
+            <div class="section-divider"></div>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Info</div>
               <div class="muted">Version: 莉娜老师的版本</div>
@@ -197,12 +209,19 @@
         <div class="modal-panel">
           <div class="modal-header">
             <div class="modal-title">Tone visualizer</div>
-            <button class="secondary" id="toneClose">Close</button>
+            <div style="display:flex; gap:8px; align-items:center">
+              <button id="toneRerecordTop" class="secondary" title="Re-record">Re-record</button>
+              <button id="toneStopTop" class="primary" aria-label="Stop recording">Stop</button>
+              <button id="toneReplayTop" class="secondary" aria-label="Replay recording" disabled>Replay</button>
+              <button class="secondary" id="toneClose">Close</button>
+            </div>
           </div>
           <div class="modal-body">
             <div id="toneInfo" class="muted" style="margin-bottom:8px">—</div>
             <div class="muted" style="margin-bottom:6px">Legend: ideal (gray), live (light blue), final (blue)</div>
             <canvas id="toneCanvas" width="640" height="240" style="width:100%; height:240px; background:#0b1220; border:1px solid var(--border); border-radius:8px"></canvas>
+            <div class="muted" style="margin:8px 0 4px">Recorded spectrogram</div>
+            <canvas id="toneSpectroRecorded" width="640" height="120" style="width:100%; height:120px; background:#0b1220; border:1px solid var(--border); border-radius:8px"></canvas>
             <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
               <button id="toneStop" class="primary" aria-label="Stop recording">Stop</button>
               <button id="toneReplay" class="secondary" aria-label="Replay recording" disabled>Replay</button>

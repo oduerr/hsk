@@ -41,6 +41,9 @@ const settingsExport = /** @type {HTMLButtonElement} */(document.getElementById(
 const settingsImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('settingsImportBtn'));
 const settingsImportInput = /** @type {HTMLInputElement} */(document.getElementById('settingsImportInput'));
 const settingsUndo = /** @type {HTMLButtonElement} */(document.getElementById('settingsUndo'));
+const settingsOutdoor = /** @type {HTMLInputElement} */(document.getElementById('settingsOutdoor'));
+const settingsAudio = /** @type {HTMLInputElement} */(document.getElementById('settingsAudio'));
+const settingsLightMode = /** @type {HTMLInputElement} */(document.getElementById('settingsLightMode'));
 // TTS (4.20)
 const ttsEngineRadios = /** @type {NodeListOf<HTMLInputElement>} */(document.querySelectorAll('input[name="ttsEngine"]'));
 const ttsOpenAIKey = /** @type {HTMLInputElement} */(document.getElementById('ttsOpenAIKey'));
@@ -55,6 +58,7 @@ const ttsClearCache = /** @type {HTMLButtonElement} */(document.getElementById('
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
+const mediaRow = /** @type {HTMLElement} */(document.getElementById('mediaRow'));
 const levelPicker = /** @type {HTMLSelectElement} */(document.getElementById('levelPicker'));
 const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('customLevelsRow'));
 const loadCustomLevelsBtn = /** @type {HTMLButtonElement} */(document.getElementById('loadCustomLevels'));
@@ -139,6 +143,12 @@ async function bootstrap() {
     if (settingsAutoToggle) settingsAutoToggle.checked = !!s.timerEnabled;
     if (settingsAutoSeconds) settingsAutoSeconds.value = String(s.timerSeconds ?? 5);
     if (settingsMinimalUI) settingsMinimalUI.checked = !!s.minimalUI;
+    // new theme/audio/outdoor
+    if (settingsOutdoor) settingsOutdoor.checked = !!s.outdoorMode;
+    if (settingsAudio) settingsAudio.checked = !!s.audioFeedback;
+    if (settingsLightMode) settingsLightMode.checked = !!s.lightMode;
+    document.body.classList.toggle('outdoor', !!s.outdoorMode);
+    document.body.classList.toggle('light', !!s.lightMode);
     setAutoReveal(!!s.timerEnabled, Number(s.timerSeconds || 5));
     applyMinimalUI(!!s.minimalUI);
     // TTS engine (persist choice in localStorage under speech settings module)
@@ -158,6 +168,16 @@ async function bootstrap() {
       if (last === 'custom') levelPicker.value = 'custom';
       else levelPicker.value = String(last.replace('HSK ', ''));
     }
+    // If a last level exists and differs from default CSV (5), load it
+    try {
+      if (last && last !== '5') {
+        await loadLevelsAndStart([last]);
+      } else {
+        // Default retains current deck (hsk5.csv) but set label so it's visible
+        state.levelLabel = 'HSK 5';
+        render();
+      }
+    } catch {}
   } catch {}
 }
 
@@ -301,9 +321,22 @@ settingsAutoToggle?.addEventListener('change', onAutoToggleChanged);
 settingsAutoSeconds?.addEventListener('change', onSecondsChanged);
 btnSettings?.addEventListener('click', () => { settingsDialog.hidden = false; });
 settingsClose?.addEventListener('click', () => { settingsDialog.hidden = true; });
+// Hide/show media row alongside settings visibility
+if (btnSettings) btnSettings.addEventListener('click', () => { if (mediaRow) mediaRow.classList.add('hidden'); });
+if (settingsClose) settingsClose.addEventListener('click', () => { if (mediaRow) mediaRow.classList.remove('hidden'); });
 settingsUndo?.addEventListener('click', () => { if (undoLast()) { render(); startCountdownIfNeeded(); }});
 settingsExport?.addEventListener('click', () => { try { const snap = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snap); } catch (e) { console.error(e); } });
 settingsImportBtn?.addEventListener('click', () => settingsImportInput?.click());
+// Outdoor/Audio/Light listeners
+settingsOutdoor?.addEventListener('change', () => {
+  try { const s = loadSettings(); const enabled = !!settingsOutdoor.checked; saveSettings({ ...s, outdoorMode: enabled }); document.body.classList.toggle('outdoor', enabled); } catch {}
+});
+settingsAudio?.addEventListener('change', () => {
+  try { const s = loadSettings(); const enabled = !!settingsAudio.checked; saveSettings({ ...s, audioFeedback: enabled }); } catch {}
+});
+settingsLightMode?.addEventListener('change', () => {
+  try { const s = loadSettings(); const enabled = !!settingsLightMode.checked; saveSettings({ ...s, lightMode: enabled }); document.body.classList.toggle('light', enabled); } catch {}
+});
 settingsImportInput?.addEventListener('change', async () => {
   const file = settingsImportInput.files && settingsImportInput.files[0];
   if (!file) return;

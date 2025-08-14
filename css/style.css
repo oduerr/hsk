@@ -49,6 +49,11 @@ label.seconds input {
 .stage { display: flex; align-items: center; justify-content: center; padding: 16px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .modal-panel { -webkit-overflow-scrolling: touch; }
 
+/* Media row (Speak/Tone) above card */
+.media-row { display: flex; align-items: center; justify-content: flex-end; width: min(900px, 92vw); margin: 6px auto 4px; padding: 0 4px; }
+.media-row .media-actions { display: flex; gap: 8px; }
+.media-row.hidden { display: none; }
+
 /* Mobile-friendly hit targets */
 @media (max-width: 640px) {
   .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -83,26 +88,8 @@ label.seconds input {
 }
 [data-mistake="1"].card { border-color: var(--danger); }
 .mistake-badge { position: absolute; top: 12px; left: 12px; color: #fecaca; border: 1px solid #7f1d1d; padding: 2px 6px; border-radius: 999px; font-size: 12px; background: rgba(127,29,29,0.2); }
-.speak-btn {
-  position: absolute;
-  top: 12px; /* >= 12px safe distance from edges */
-  right: 12px; /* right-handed reachability */
-  left: auto;
-  border-radius: 999px;
-  padding: 8px 10px; /* larger hit area, distinct */
-  font-size: 14px;
-  z-index: 2; /* above card so it captures clicks */
-  pointer-events: auto;
-}
-.tone-btn {
-  position: absolute;
-  top: 12px;
-  right: 56px; /* just left of speaker */
-  border-radius: 999px;
-  padding: 8px 10px;
-  font-size: 14px;
-  z-index: 2;
-}
+.speak-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; }
+.tone-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; }
 
 .face { width: 100%; }
 .english { font-size: clamp(24px, 5vw, 44px); line-height: 1.25; }
@@ -156,6 +143,9 @@ button.danger { border-color: #7f1d1d; color: #fecaca; }
 .drop-overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(2,6,23,0.7); backdrop-filter: blur(2px); z-index: 20; }
 .drop-panel { padding: 24px 28px; border: 2px dashed #475569; border-radius: 14px; color: #e2e8f0; background: rgba(15,23,42,0.8); font-weight: 600; }
 
+/* Section divider in settings */
+.section-divider { height: 1px; background: var(--border); margin: 8px 0; opacity: 0.8; }
+
 /* Build info */
 .buildinfo { position: fixed; bottom: 6px; right: 8px; color: #64748b; font-size: 12px; }
 
@@ -172,6 +162,18 @@ button.danger { border-color: #7f1d1d; color: #fecaca; }
 body.outdoor .card { background: #000; border-color: #334155; }
 body.outdoor .english, body.outdoor .hanzi, body.outdoor .pinyin { color: #ffffff; }
 body.outdoor button { font-weight: 700; }
+
+/* Light mode */
+body.light {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --text: #0b1220;
+  --muted: #4b5563;
+  --accent: #2563eb;
+  --danger: #b91c1c;
+  --border: #e5e7eb;
+}
+body.light .card { background: #ffffff; }
 
 @keyframes shake {
   0% { transform: translateX(0); }

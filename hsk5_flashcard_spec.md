@@ -1086,22 +1086,47 @@ Acceptance
 ### 4.40 Bug Fixes and UI Ploshing
 
 #### In the Gear Panel and settings in panel
-- Outdoor mode not funtional
-One can choose the Auto mode in the gear settings but it has no effect.
-Expected behavior as is if the auto mode is unchecked. A high contrast version if the auto mode is checked.
+- Outdoor mode not functional
+One can choose the Outdoor mode in the gear settings but it has no effect.
+Expected behavior as is if the auto mode is unchecked. A high contrast version if the auto mode is checked, all font are bold and increase the font size by factor of 2 
 
 - Audio feedback does not change when checked or being unchecked.
-When unchecked, no sounds are played during the transition from a wrong card to a correct card. If it's checked, the beeps are played.
+When unchecked, no sounds must be played during the transition from a wrong card to a correct card. If it's checked, the beeps are played (as it is now)
 
-- Sections in the gear panel after the level, before voice, before info.
+- Sections in the gear panel after the level, before voice, before info (e.g. with small lines)
 
 - When starting the HsK level is not displayed and set 
 
 - Add a dark / light mode toggle in the gear panel. 
+
 - The default should be dark mode add a light mode in the app
 
+- Also implement the dark / light mode in the app
+
+#### Playback and Recording
+- The playback and recording are currently in top of all elements. They should move to one row about the card and displayed not displayed then the "gear" card is shown.
+
 #### In the Audio Recoring 
-- Allow for new recoding
-- Show  recording and playback button top right
-- 
+- Show  recording and playback button top right ()
+- Allow for new recoding / rerecord add that right to the Replay button
+- Add the Spectrogram Recorded in the line below 
+
+Update the version to 4.40 — 莉娜老师的版本 
+
+
+### 4.50 Minor Changes
+
+#### Make adding a new level easier
+- It should be very easy to add a new level.
+- It should check the data directory on the server if there is a new card. If so, it should download it and integrate it. The order should be alphabetic order. This could also be English (but that should no be a problem).
+
+#### Make Playback Speed adjustable
+- Add a “Voice speed” slider in the gear menu, range e.g. 0.5–1.5.
+
+#### UI
+- Mic and Loudspeaker must be in a row above the card on the rigth side (see image)
+- Button in light mode hardly visible (see image)
+
+
+
 

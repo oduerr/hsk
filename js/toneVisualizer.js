@@ -6,6 +6,7 @@ let isRecording = false;
 let liveSemitoneBuffer = [];
 const LIVE_MAX_FRAMES = 180; // ~3s at 60fps
 let spectrogramEnabled = false;
+let toneRerecordTop, toneStopTop, toneReplayTop, toneSpectroRecorded;
 
 function byId(id) { return /** @type {any} */(document.getElementById(id)); }
 
@@ -166,6 +167,7 @@ async function startRecording() {
     // auto-stop after 3s
     setTimeout(() => { if (isRecording) stopRecording(chunks, recorder); }, 3000);
     toneStopBtn.onclick = () => stopRecording(chunks, recorder);
+    if (toneStopTop) toneStopTop.onclick = () => stopRecording(chunks, recorder);
   } catch (e) {
     console.error('tone start failed', e);
     toneStatus.textContent = 'Cannot access microphone.';
@@ -187,10 +189,12 @@ function stopRecording(chunks, recorder) {
   recordedBuffer = ctx.createBuffer(1, flat.length, ctx.sampleRate);
   recordedBuffer.copyToChannel(flat, 0, 0);
   toneStatus.textContent = 'Recorded.';
-  toneReplayBtn.disabled = false;
+  toneReplayBtn.disabled = false; if (toneReplayTop) toneReplayTop.disabled = false;
   // draw final contour
   drawFinalContour(flat, ctx.sampleRate);
   if (toneHint) toneHint.textContent = computeHint(flat, ctx.sampleRate);
+  // draw recorded spectrogram
+  if (toneSpectroRecorded) drawRecordedSpectrogram(flat, ctx.sampleRate, toneSpectroRecorded);
 }
 
 function flattenChunks(chunks) {
@@ -266,16 +270,20 @@ function replay() {
 export function openToneVisualizer() {
   toneDialog = byId('toneDialog'); toneClose = byId('toneClose'); toneCanvas = byId('toneCanvas');
   toneInfo = byId('toneInfo'); toneStopBtn = byId('toneStop'); toneReplayBtn = byId('toneReplay'); toneStatus = byId('toneStatus'); toneHint = byId('toneHint'); toneSpectro = byId('toneSpectro');
+  toneRerecordTop = byId('toneRerecordTop'); toneStopTop = byId('toneStopTop'); toneReplayTop = byId('toneReplayTop'); toneSpectroRecorded = byId('toneSpectroRecorded');
   if (!toneDialog) return;
   const p = byId('pinyinText')?.textContent || '';
   if (toneInfo) toneInfo.textContent = p ? `Pinyin: ${p}` : '—';
-  toneReplayBtn.disabled = true;
+  toneReplayBtn.disabled = true; if (toneReplayTop) toneReplayTop.disabled = true;
   toneDialog.hidden = false;
   toneClose.onclick = () => closeToneVisualizer();
   spectrogramEnabled = !!(toneSpectro && toneSpectro.checked);
   if (toneSpectro) toneSpectro.onchange = () => { spectrogramEnabled = !!toneSpectro.checked; };
   startRecording();
   toneReplayBtn.onclick = () => replay();
+  if (toneReplayTop) toneReplayTop.onclick = () => replay();
+  if (toneStopTop) toneStopTop.onclick = () => { /* will be bound in startRecording too */ };
+  if (toneRerecordTop) toneRerecordTop.onclick = () => { try { closeToneVisualizer(); } finally { openToneVisualizer(); } };
 }
 
 export function closeToneVisualizer() {
@@ -302,6 +310,40 @@ function trimSilence(samples, sr, windowSec, thresholdDb) {
     if (rmsDbfs(samples.slice(i - w, i)) > thresholdDb) { end = i; break; }
   }
   return samples.slice(start, end);
+}
+
+function drawRecordedSpectrogram(samples, sr, canvas) {
+  const ctx2d = canvas.getContext('2d'); if (!ctx2d) return;
+  const w = canvas.width, h = canvas.height;
+  const frame = 1024, hop = 256;
+  ctx2d.fillStyle = '#0b1220'; ctx2d.fillRect(0, 0, w, h);
+  let x = 0;
+  for (let i = 0; i + frame <= samples.length; i += hop) {
+    const seg = samples.slice(i, i + frame);
+    const spec = magnitudeSpectrum(seg);
+    for (let y = 0; y < h; y++) {
+      const idx = Math.floor((y / h) * spec.length);
+      const v = spec[idx];
+      const lum = Math.max(0, Math.min(1, v));
+      ctx2d.fillStyle = `hsl(220,80%,${15 + lum*55}%)`;
+      ctx2d.fillRect(x, h - 1 - y, 1, 1);
+    }
+    x = Math.min(w - 1, x + 1);
+    if (x >= w - 1) break;
+  }
+}
+function magnitudeSpectrum(seg) {
+  // simple DFT magnitude (slow but ok for small)
+  const n = seg.length; const out = new Float32Array(n/2);
+  for (let k = 0; k < out.length; k++) {
+    let re = 0, im = 0;
+    for (let t = 0; t < n; t++) {
+      const phi = -2 * Math.PI * k * t / n; const v = seg[t];
+      re += v * Math.cos(phi); im += v * Math.sin(phi);
+    }
+    out[k] = Math.sqrt(re*re + im*im) / n;
+  }
+  return out;
 }
 
 
