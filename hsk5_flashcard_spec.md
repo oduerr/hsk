@@ -1041,3 +1041,67 @@ Details:
 - If i swipe down or press the down arrow the card should flip to the front like a physical card in the other direction
 - The animation should be smooth and not jumpy 
 
+
+##### 4.30.c Card Flip Animation (Refinement)
+4.30.c Card Flip Animation (Gesture-Driven Refinement)
+
+Goal: Flip follows the user’s vertical gesture and works in both directions.
+
+Behavior
+	•	Gesture tracking (mobile + desktop drag):
+	•	When the user drags vertically on the card, map dy to rotateX in real time (clamp ~±90°).
+	•	Transform origin: top center when flipping up; bottom center when flipping down (or keep top and invert sign—consistent either way).
+	•	Direction logic:
+	•	From front → back: upward drag commits reveal; downward drag cancels/snap-back.
+	•	From back → front: downward drag commits hide; upward drag cancels/snap-back.
+	•	Release rules:
+	•	Commit flip if |angle| ≥ 45° or vertical velocity exceeds threshold; otherwise snap back.
+	•	On commit/cancel, finish with a short tween (200–280 ms, ease-in-out).
+
+Coexistence & guards
+	•	Disambiguate swipes: Start vertical flip only when |dy| > |dx| + hysteresis (e.g., 12px); otherwise let horizontal swipe handle prev/next.
+	•	Block scroll while actively dragging the card vertically.
+	•	Safe zones: Taps on Speak/Tone buttons must not start a flip.
+	•	Keyboard: ↑/↓ and Space still trigger programmatic flips with the same animation.
+
+Visual polish (optional)
+	•	Subtle backface fade near 90° (front fades out/back fades in).
+	•	Soft shadow intensity tied to |angle| for depth cue.
+
+Settings
+	•	Extend Gear with “Gesture-driven flip” (default ON on mobile, OFF on desktop).
+	•	Respect “Enable flip animation” and prefers-reduced-motion: if disabled/reduced, gesture still changes state but without animation.
+
+Performance
+	•	Use only transform/opacity; target 60 fps on mid-range phones.
+	•	Cancel animation cleanly if a new gesture starts (no half-flips).
+
+Acceptance
+	•	While dragging, the card follows the finger smoothly; releasing above threshold commits the flip, else snaps back.
+	•	Works up and down (front↔back) with correct direction.
+	•	No interference with horizontal swipe navigation or tap targets.
+	•	Toggles in Gear take effect immediately and persist.
+
+
+### 4.40 Bug Fixes and UI Ploshing
+
+#### In the Gear Panel and settings in panel
+- Outdoor mode not funtional
+One can choose the Auto mode in the gear settings but it has no effect.
+Expected behavior as is if the auto mode is unchecked. A high contrast version if the auto mode is checked.
+
+- Audio feedback does not change when checked or being unchecked.
+When unchecked, no sounds are played during the transition from a wrong card to a correct card. If it's checked, the beeps are played.
+
+- Sections in the gear panel after the level, before voice, before info.
+
+- When starting the HsK level is not displayed and set 
+
+- Add a dark / light mode toggle in the gear panel. 
+- The default should be dark mode add a light mode in the app
+
+#### In the Audio Recoring 
+- Allow for new recoding
+- Show  recording and playback button top right
+- 
+
