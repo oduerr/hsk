@@ -1136,4 +1136,44 @@ Update the version to 4.40 — 莉娜老师的版本
 	•	No changes to main app; purely for testing.
 
 
+Got it. Here’s a concise spec that adds download caching on top of your play logic.
 
+⸻
+
+### 4.70 Audio Source Order + Caching
+
+UI (Gear → Voice)
+	•	Checkbox: Request sounds from OpenAI (default OFF).
+	•	Toggle: Cache downloaded .wav (default ON).
+	•	Button: Clear audio cache (shows count, confirm).
+
+Playback decision order (per card)
+	1.	If Request OpenAI ON and API key present → synthesize via OpenAI TTS and play.
+	    write returned audio to cache as <hanzi>.wav for future reuse.
+	2.	Else try pre-recorded .wav:
+	•	Look up cache first (Cache Storage or IndexedDB) for key audio/<level>/<hanzi>.wav.
+	•	If not cached, fetch from GitHub (/data/<level>/<hanzi>.wav).
+		Example: /data/hsk0/中国人.wav or /data/hsk1/你好.wav
+	•	On 200 OK and Cache ON → store in cache and play.
+	3.	Else fallback to Browser TTS (web.tts) and play immediately (do not cache).
+
+Caching details
+	•	Use Cache Storage API (preferred for simple GET caching).
+	•	Cache name: hsk-audio-v1. Key: full request URL.
+	•	Persist per-level to avoid collisions (/data/hsk0/中国人.wav).
+	•	Clear audio cache deletes hsk-audio-v1.
+	•	Respect Cache ON/OFF setting: when OFF, always bypass cache (use cache: 'reload') and don’t store.
+	•	Add lightweight versioning: if you ever change files, bump cache name to hsk-audio-v2 to invalidate.
+
+Failure handling
+	•	If fetch 404/5xx or network error → skip to Browser TTS.
+	•	If OpenAI fails → try cached/file .wav → then Browser TTS.
+
+Telemetry (dev-only, console)
+	•	Log source: [audio] source=openai|cache|remote|browser.
+	•	Log cache result: hit/miss.
+
+Acceptance
+	•	With Request OpenAI OFF and cache ON: first play downloads once; subsequent plays are offline from cache.
+	•	Clearing cache forces re-download on next play.
+	•	With Request OpenAI ON, audio plays from OpenAI; if “cache synthesized” is enabled, later plays can use cached audio even with the toggle OFF.

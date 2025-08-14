@@ -80,7 +80,7 @@ def main():
     csv_path = Path(args.csv)
     if csv_path.suffix.lower() != ".csv":
         # Allow shorthand "hsk0" -> "data/hsk0.csv" or "./hsk0.csv" if present
-        candidate1 = Path("../data") / f"{csv_path.name}.csv"
+        candidate1 = Path("data") / f"{csv_path.name}.csv"
         candidate2 = Path(f"{csv_path.name}.csv")
         if candidate1.exists():
             csv_path = candidate1
