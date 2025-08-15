@@ -90,6 +90,21 @@ export function render() {
   if (el.btnCardMistakeToggle) {
     el.btnCardMistakeToggle.hidden = state.face !== 'back';
   }
+
+  // Update annotation button state
+  const btnAnnotation = document.getElementById('btnAnnotation');
+  if (btnAnnotation && card) {
+    const hasAnnotation = state.session.annotation.some(a => a.cardId === card.id);
+    btnAnnotation.classList.toggle('has-annotation', hasAnnotation);
+    
+    if (hasAnnotation) {
+      btnAnnotation.textContent = '📝+';
+      btnAnnotation.title = 'Edit annotation';
+    } else {
+      btnAnnotation.textContent = '📝';
+      btnAnnotation.title = 'Add annotation';
+    }
+  }
 }
 
 export function showMessage(text) {

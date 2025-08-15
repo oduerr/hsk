@@ -1,7 +1,7 @@
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -218,6 +218,13 @@ async function bootstrap() {
     if (infoSessionsSize) infoSessionsSize.textContent = formatBytes(total);
   } catch {}
 
+  // Check Trix editor availability
+  if (typeof Trix === 'undefined') {
+    console.warn('Trix editor not loaded - annotation feature will not work');
+  } else {
+    console.log('Trix editor loaded successfully');
+  }
+
   // 5.00: Populate session name in gear panel
   if (infoSessionTitle) {
     infoSessionTitle.textContent = state.session.name || '—';
@@ -347,6 +354,13 @@ function onSecondsChanged() {
 }
 
 function onKeyDown(e) {
+  // Check if annotation editor is open - if so, don't handle global shortcuts
+  const annotationEditor = document.getElementById('annotationEditor');
+  if (annotationEditor && !annotationEditor.hidden) {
+    // Editor is open, let it handle its own keyboard events
+    return;
+  }
+
   const key = e.key.toLowerCase();
   if (key === ' ') {
     e.preventDefault();
@@ -390,25 +404,7 @@ btnSpeak?.addEventListener('click', () => {
 });
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnAnnotation?.addEventListener('click', () => {
-  const idx = state.order[state.index];
-  const card = state.deck[idx];
-  if (!card) return;
-  const note = prompt('Add annotation (optional):', '') || '';
-  markAnnotation(note);
-  // Autosave after adding annotation
-  try {
-    const enabled = !!(settingsAutosave && settingsAutosave.checked);
-    if (enabled) {
-      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot);
-      const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const ms = Math.round(t1 - t0);
-      console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-      if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
-      if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
-    }
-  } catch (e) { console.error('[autosave] failed', e); }
+  openAnnotationEditor();
 });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
@@ -450,6 +446,26 @@ settingsImportInput?.addEventListener('change', async () => {
 btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
 btnMistakeTop?.addEventListener('click', onMistake);
 
+// Annotation Editor Event Listeners
+document.getElementById('annotationEditorClose')?.addEventListener('click', closeAnnotationEditor);
+document.getElementById('annotationEditorSave')?.addEventListener('click', saveAnnotation);
+document.getElementById('annotationEditorClear')?.addEventListener('click', clearAnnotation);
+
+// Add keyboard shortcuts for annotation editor
+document.addEventListener('keydown', (e) => {
+  const annotationEditor = document.getElementById('annotationEditor');
+  if (!annotationEditor || annotationEditor.hidden) return;
+
+  // Only handle shortcuts when annotation editor is open
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeAnnotationEditor();
+  } else if (e.key === 'Enter' && e.ctrlKey) {
+    e.preventDefault();
+    saveAnnotation();
+  }
+});
+
 // Audio handlers
 audioCacheToggle?.addEventListener('change', () => {
   try { const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}'); const val = !!audioCacheToggle.checked; localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, audioCache: val })); try { setTtsSettings({ audioCache: val }); } catch {} } catch {}
@@ -467,6 +483,12 @@ document.addEventListener('touchstart', (e) => {
   touchStartX = t.clientX; touchStartY = t.clientY;
 }, { passive: true });
 document.addEventListener('touchend', (e) => {
+  // Check if annotation editor is open - if so, don't handle swipe gestures
+  const annotationEditor = document.getElementById('annotationEditor');
+  if (annotationEditor && !annotationEditor.hidden) {
+    return;
+  }
+
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStartX;
   const dy = t.clientY - touchStartY;
@@ -870,6 +892,110 @@ function deleteSummary(summary) {
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"]+/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+}
+
+// Annotation Editor Functions
+function openAnnotationEditor() {
+  const card = currentCard();
+  if (!card) return;
+
+  const editor = document.getElementById('annotationEditor');
+  const trixEditor = document.getElementById('annotationTrixEditor');
+  const textarea = document.getElementById('annotationTextarea');
+
+  // Determine which editor to use
+  const useTrix = typeof Trix !== 'undefined';
+  const activeEditor = useTrix ? trixEditor : textarea;
+  const inactiveEditor = useTrix ? textarea : trixEditor;
+
+  // Show/hide appropriate editor
+  if (useTrix) {
+    trixEditor.style.display = 'block';
+    textarea.style.display = 'none';
+  } else {
+    textarea.style.display = 'block';
+    trixEditor.style.display = 'none';
+  }
+
+  // Load existing annotation if it exists
+  const existingAnnotation = state.session.annotation.find(a => a.cardId === card.id);
+  if (existingAnnotation) {
+    activeEditor.value = existingAnnotation.note || '';
+  } else {
+    activeEditor.value = '';
+  }
+
+  editor.hidden = false;
+  
+  // Focus the active editor
+  setTimeout(() => {
+    activeEditor.focus();
+    if (useTrix && trixEditor.editor) {
+      trixEditor.editor.loadHTML(activeEditor.value || '');
+    }
+  }, 100);
+}
+
+function closeAnnotationEditor() {
+  const editor = document.getElementById('annotationEditor');
+  editor.hidden = true;
+}
+
+function saveAnnotation() {
+  const card = currentCard();
+  if (!card) return;
+
+  const trixEditor = document.getElementById('annotationTrixEditor');
+  const textarea = document.getElementById('annotationTextarea');
+  const useTrix = typeof Trix !== 'undefined';
+  const activeEditor = useTrix ? trixEditor : textarea;
+  
+  const note = activeEditor.value.trim();
+
+  if (note) {
+    // Add or update annotation
+    markAnnotation(note);
+  } else {
+    // Remove annotation if empty
+    removeAnnotation(card.id);
+  }
+
+  closeAnnotationEditor();
+  render();
+  
+  // Autosave after annotation change
+  try {
+    const enabled = !!(settingsAutosave && settingsAutosave.checked);
+    if (enabled) {
+      const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const snapshot = getFullSessionSnapshot();
+      saveCheckpoint(snapshot);
+      const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const ms = Math.round(t1 - t0);
+      console.log(`[autosave] ${ms}ms • annotation checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+      if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
+      if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
+    }
+  } catch (e) { console.error('[autosave] failed', e); }
+}
+
+function clearAnnotation() {
+  const trixEditor = document.getElementById('annotationTrixEditor');
+  const textarea = document.getElementById('annotationTextarea');
+  const useTrix = typeof Trix !== 'undefined';
+  const activeEditor = useTrix ? trixEditor : textarea;
+  
+  activeEditor.value = '';
+}
+
+function removeAnnotation(cardId) {
+  // Remove annotation from state
+  state.session.annotation = state.session.annotation.filter(a => a.cardId !== cardId);
+  
+  // Remove annotation event from events
+  state.session.events = state.session.events.filter(e => 
+    !(e.type === 'annotation' && e.cardId === cardId)
+  );
 }
 
 // Initialize handled in bootstrap via saved settings

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>HSK5 Flashcards</title>
     <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.css" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="shortcut icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./favicon.svg" />
@@ -221,12 +222,35 @@
           </div>
         </div>
       </div>
+      <div id="annotationEditor" class="annotation-editor" hidden>
+        <div class="backdrop" data-close="1"></div>
+        <div class="panel">
+          <div class="header">
+            <div class="title">编辑注释 / Edit Annotation</div>
+            <button class="secondary" id="annotationEditorClose">✕</button>
+          </div>
+          <div class="body">
+            <trix-editor id="annotationTrixEditor" placeholder="添加注释... (Add annotation...)" style="display: none;"></trix-editor>
+            <textarea id="annotationTextarea" placeholder="添加注释... (Add annotation...)" style="display: none; width: 100%; min-height: 150px; max-height: 300px; resize: vertical; border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5;"></textarea>
+          </div>
+          <div class="footer">
+            <div class="shortcuts">
+              <span class="muted">⌘+Enter: Save • Esc: Close</span>
+            </div>
+            <div class="actions">
+              <button class="secondary" id="annotationEditorClear">清除 / Clear</button>
+              <button class="primary" id="annotationEditorSave">保存 / Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="buildinfo">
         <span id="buildInfo"></span>
       </div>
     </div>
 
     <script type="module" src="./js/main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/trix/1.3.1/trix.umd.min.js"></script>
   </body>
   </html>
 

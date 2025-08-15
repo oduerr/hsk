@@ -143,6 +143,98 @@ button.danger { border-color: #7f1d1d; color: #fecaca; }
 .modal-title { font-weight: 600; }
 .modal-body { padding: 12px 14px; }
 .muted { color: var(--muted); }
+
+/* Annotation Editor */
+.annotation-editor {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+.annotation-editor .backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.annotation-editor .panel {
+  position: relative;
+  width: min(600px, 90vw);
+  max-height: 80vh;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.annotation-editor .header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.annotation-editor .title {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.annotation-editor .body {
+  padding: 20px;
+}
+
+.annotation-editor .footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.annotation-editor .shortcuts {
+  font-size: 12px;
+}
+
+.annotation-editor .actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Trix editor styling */
+trix-editor {
+  min-height: 150px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Annotation button states */
+.annotation-btn.has-annotation {
+  /* Bigger button when annotation exists */
+  padding: 10px 14px;
+  font-size: 16px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  /* Add a subtle glow effect */
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.annotation-btn.has-annotation:hover {
+  background: #2563eb;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
 .session-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .session-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
 .session-list .sid { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
