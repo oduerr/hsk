@@ -135,34 +135,33 @@ function extractLevelDigit(label) {
   return m ? m[1] : null;
 }
 
+// NEW: Simple, direct audio lookup
 async function tryPlayCachedOrRemoteWav(hanzi, preferredLevelLabel = null) {
   try {
     const fname = encodeURIComponent(hanzi) + '.wav';
-    const preferred = extractLevelDigit(preferredLevelLabel);
-    const levels = preferred ? [preferred] : ['0','1','2','3','4','5','6','7'];
-    for (const lvl of levels) {
-      const base = location.origin + location.pathname.replace(/\/?[^/]*$/, '/');
-      const url = new URL(`./data/hsk${lvl}/${fname}`, base).toString();
-      const cache = await getAudioCache();
-      if (cache) {
-        const hit = await cache.match(url);
-        if (hit) {
-          console.info('[audio] source=cache', { url });
-          const buf = await hit.arrayBuffer();
-          await playArrayBuffer(buf);
-          return true;
-        }
-      }
-      const resp = await fetch(url, { cache: settings.audioCache ? 'default' : 'reload' });
-      if (resp.ok && (resp.headers.get('content-type')||'').includes('audio')) {
-        const buf = await resp.arrayBuffer();
-        console.info('[audio] source=remote', { url });
-        if (settings.audioCache && cache) {
-          try { await cache.put(url, new Response(buf)); console.info('[audio] cache store ok'); } catch {}
-        }
+    const base = location.origin + location.pathname.replace(/\/?[^/]*$/, '/');
+    const url = new URL(`./data/recordings/${fname}`, base).toString();
+    
+    const cache = await getAudioCache();
+    if (cache) {
+      const hit = await cache.match(url);
+      if (hit) {
+        console.info('[audio] source=cache', { url });
+        const buf = await hit.arrayBuffer();
         await playArrayBuffer(buf);
         return true;
       }
+    }
+    
+    const resp = await fetch(url, { cache: settings.audioCache ? 'default' : 'reload' });
+    if (resp.ok && (resp.headers.get('content-type')||'').includes('audio')) {
+      const buf = await resp.arrayBuffer();
+      console.info('[audio] source=remote', { url });
+      if (settings.audioCache && cache) {
+        try { await cache.put(url, new Response(buf)); console.info('[audio] cache store ok'); } catch {}
+      }
+      await playArrayBuffer(buf);
+      return true;
     }
   } catch (e) { console.warn('[audio] wav failed', e); }
   return false;

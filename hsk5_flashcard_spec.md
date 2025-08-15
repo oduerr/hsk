@@ -1286,3 +1286,12 @@ Maintain the current event-driven architecture but consider adding event validat
 - Implement card removal from sessions with proper order array management
 - Fix index adjustment logic when removing cards to maintain session consistency
 - Ensure all event indices are properly updated after card removal
+
+### 5.03 Audio File Reorganization
+- Reorganize audio files from level-based subdirectories to flat structure
+- Move all WAV files from `data/hsk*/` to `data/recordings/` for future-proof organization
+- Remove HSK level constraints for audio file access
+- Support user-generated content without level restrictions
+- Simplify audio lookup logic to single path `data/recordings/汉字.wav`
+- Maintain 1499 unique audio files with best quality versions (higher levels override lower)
+- Update code references from `data/hsk${level}/` to `data/recordings/`
