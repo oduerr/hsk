@@ -1273,3 +1273,11 @@ Update the version to 4.95
 
 **Recommendation:**
 Maintain the current event-driven architecture but consider adding event validation and schema versioning for future extensibility.
+
+#### 5.00 Session Management
+- Show the name of the session in the main menu instead of the "HSK-" Level
+- If the session has a title show it in the main menu instead of the "HSK-" Level. If not show the session id
+- Show the session name in gear panel under "Session"
+
+### 5.0101 Session Management 2
+- Import Sessions, should replace all session information currently in the application and should open a selection menue and let the user choose a session from the imported Sessions or let it cancel the import.

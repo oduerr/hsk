@@ -111,10 +111,19 @@ function setActionsDisabled(disabled) {
 }
 
 function setProgress(current, total) {
-  const prefix = state.levelLabel ? `${state.levelLabel} · ` : '';
+  // 5.00: Show session name instead of level label
+  let sessionDisplay = '';
+  if (state.session.name) {
+    sessionDisplay = state.session.name;
+  } else if (state.session.id) {
+    sessionDisplay = state.session.id;
+  } else if (state.levelLabel) {
+    sessionDisplay = state.levelLabel;
+  }
+  const prefix = sessionDisplay ? `${sessionDisplay} · ` : '';
   el.progressText.textContent = `${prefix}${current} / ${total}`;
   if (el.topInfo) {
-    el.topInfo.textContent = `${state.levelLabel || ''}  |  ${current} / ${total}  |  Mistakes: ${state.mistakes.size}`.trim();
+    el.topInfo.textContent = `${sessionDisplay || ''}  |  ${current} / ${total}  |  Mistakes: ${state.mistakes.size}`.trim();
   }
   if (el.progressFill && total > 0) {
     const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));

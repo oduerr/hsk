@@ -217,6 +217,11 @@ async function bootstrap() {
     const total = computeSessionsSizeBytes();
     if (infoSessionsSize) infoSessionsSize.textContent = formatBytes(total);
   } catch {}
+
+  // 5.00: Populate session name in gear panel
+  if (infoSessionTitle) {
+    infoSessionTitle.textContent = state.session.name || '—';
+  }
 }
 
 function applyMinimalUI(enabled) {
@@ -439,6 +444,7 @@ settingsImportInput?.addEventListener('change', async () => {
     const obj = JSON.parse(text);
     importSessionsFromObject(obj);
     alert('Import complete.');
+    openReplayDialog();
   } catch (e) { console.error(e); alert('Import failed'); }
   finally { settingsImportInput.value = ''; }
 });
@@ -640,7 +646,8 @@ window.addEventListener('drop', async (e) => {
     const obj = JSON.parse(text);
     const res = importSessionsFromObject(obj);
     console.log('Imported via drop:', res);
-    alert('Import complete. Open Replay… to view sessions.');
+    alert('Import complete. Opening replay menu...');
+    openReplayDialog();
   } catch (err) {
     console.error('Drop import failed:', err);
     alert('Import failed. Check console.');
