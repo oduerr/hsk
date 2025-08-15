@@ -111,15 +111,29 @@ function setActionsDisabled(disabled) {
 }
 
 function setProgress(current, total) {
-  // 5.00: Show session name instead of level label
+  // Get session name from summary instead of state
   let sessionDisplay = '';
-  if (state.session.name) {
-    sessionDisplay = state.session.name;
-  } else if (state.session.id) {
-    sessionDisplay = state.session.id;
-  } else if (state.levelLabel) {
-    sessionDisplay = state.levelLabel;
+  
+  // Try to get name from session summary first
+  try {
+    const summaries = loadSessionSummaries();
+    const currentSummary = summaries.find(s => s.id === state.session.id);
+    if (currentSummary && currentSummary.name) {
+      sessionDisplay = currentSummary.name;
+    } else if (state.session.id) {
+      sessionDisplay = state.session.id;
+    } else if (state.levelLabel) {
+      sessionDisplay = state.levelLabel;
+    }
+  } catch (e) {
+    // Fallback to session ID or level label
+    if (state.session.id) {
+      sessionDisplay = state.session.id;
+    } else if (state.levelLabel) {
+      sessionDisplay = state.levelLabel;
+    }
   }
+  
   const prefix = sessionDisplay ? `${sessionDisplay} · ` : '';
   el.progressText.textContent = `${prefix}${current} / ${total}`;
   if (el.topInfo) {

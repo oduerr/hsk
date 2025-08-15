@@ -443,7 +443,6 @@ settingsImportInput?.addEventListener('change', async () => {
     const text = await file.text();
     const obj = JSON.parse(text);
     importSessionsFromObject(obj);
-    alert('Import complete.');
     openReplayDialog();
   } catch (e) { console.error(e); alert('Import failed'); }
   finally { settingsImportInput.value = ''; }
@@ -646,7 +645,6 @@ window.addEventListener('drop', async (e) => {
     const obj = JSON.parse(text);
     const res = importSessionsFromObject(obj);
     console.log('Imported via drop:', res);
-    alert('Import complete. Opening replay menu...');
     openReplayDialog();
   } catch (err) {
     console.error('Drop import failed:', err);
@@ -772,7 +770,7 @@ function openReplayDialog() {
       const status = s.finishedAt ? 'complete' : 'incomplete';
       const title = s.title ? ` — ${escapeHtml(s.title)}` : '';
       left.innerHTML = `<div><strong>${ymdhm}</strong>${title}</div>` +
-        `<div class="sid">${s.id}</div>`;
+        `<div class="sid">${s.name ? escapeHtml(s.name) : s.id}</div>`;
       right.className = 'counts';
       right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes • status: ${status}`;
       const disabledReplay = (s.mistakeIds?.length ?? 0) === 0;

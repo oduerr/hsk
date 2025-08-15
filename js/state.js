@@ -40,7 +40,6 @@ export let state = {
     events: [],
     replayOf: null,
     wrongTone: [],
-    name: '', // 5.00: Add name field
   },
 };
 
@@ -65,7 +64,6 @@ export function newRun(cards, opts = { replayOf: null }) {
     ],
     replayOf: opts?.replayOf || null,
     wrongTone: [],
-    name: '', // 5.00: Initialize name field
   };
 }
 
@@ -174,7 +172,6 @@ export function finalizeIfFinished() {
     events: state.session.events,
     mistakeIds,
     wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
-    name: state.session.name, // 5.00: Include name in full session
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   const summary = {
@@ -183,7 +180,6 @@ export function finalizeIfFinished() {
     finishedAt,
     mistakeIds,
     wrongToneCount: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.length : 0,
-    name: state.session.name, // 5.00: Include name in summary
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   return { full, summary };
@@ -203,7 +199,6 @@ export function getFullSessionSnapshot() {
     events: state.session.events.slice(),
     mistakeIds,
     wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
-    name: state.session.name, // 5.00: Include name in snapshot
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
 }
@@ -231,7 +226,6 @@ export function resumeRun(full, opts = {}) {
     events: Array.isArray(full?.events) ? full.events.slice() : [{ type: 'start', at: startedAt, index: 0 }],
     replayOf: opts?.replayOf || null,
     wrongTone: Array.isArray(full?.wrongTone) ? full.wrongTone.slice() : [],
-    name: full?.name || '', // 5.00: Resume name from saved session
   };
 }
 

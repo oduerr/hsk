@@ -87,6 +87,7 @@ export function saveCheckpoint(fullSnapshot) {
     mistakeIds: fullSnapshot.mistakeIds || [],
     counts: fullSnapshot.counts || { total: fullSnapshot.order?.length || 0, mistakes: fullSnapshot.mistakeIds?.length || 0 },
     inProgress: !fullSnapshot.finishedAt,
+    // Note: name is not included here - it should be set separately via renameSession
   };
   saveSessionSummary(summary);
   saveLastCheckpointId(fullSnapshot.id);
