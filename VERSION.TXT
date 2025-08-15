@@ -1,2 +1,2 @@
-4.92 — Autosave on Mark/Unmark, Info metrics, cleanup
+4.95 — Wrong Tone reports, minimal UI & hamburger tweaks
 

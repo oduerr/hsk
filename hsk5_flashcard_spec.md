@@ -1255,3 +1255,21 @@ Update the version to 4.92.a
 - Have it ticked on by default
 - When ticked off Remove the "Mistake" button
 - When ticked on Replace the "New Run" with "🆕" the Replay with "🔄" and the "Save Progress" with "💾"
+
+Update the version to 4.92.b
+
+
+##### 4.95 Mistakes
+- Right now we store 'mistakeIds' add a new field 'wrongTone'. For that add a extra button left to the microphone button, if the uses clicks on that button the id of the card is added to the 'wrongTone' field and user is promted an free text input field where he can give feedback on the wrongness of the tone.
+
+Update the version to 4.95
+
+
+##### 4.99 Session Management
+- List where events "events" are needed in the session management, add you assertion at the end of this file.
+- **State persistence**: Every user action that changes session state is logged
+- **Resume functionality**: Position and state can be accurately restored
+- **Session analysis**: Complete learning session audit trail
+
+**Recommendation:**
+Maintain the current event-driven architecture but consider adding event validation and schema versioning for future extensibility.

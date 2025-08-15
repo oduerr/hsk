@@ -39,6 +39,7 @@ export let state = {
     finishedAt: null,
     events: [],
     replayOf: null,
+    wrongTone: [],
   },
 };
 
@@ -62,6 +63,7 @@ export function newRun(cards, opts = { replayOf: null }) {
       { type: 'start', at: startedAt, index: 0 },
     ],
     replayOf: opts?.replayOf || null,
+    wrongTone: [],
   };
 }
 
@@ -133,6 +135,23 @@ function logEvent(type, cardId) {
 }
 
 /**
+ * Mark current card as wrong tone with optional note.
+ * @param {string} [note]
+ */
+export function markWrongTone(note = '') {
+  const c = currentCard();
+  if (!c) return;
+  const at = new Date().toISOString();
+  // Keep one entry per card id; update note/time if exists
+  const arr = Array.isArray(state.session.wrongTone) ? state.session.wrongTone : (state.session.wrongTone = []);
+  const idx = arr.findIndex((x) => x && x.cardId === c.id);
+  const entry = { cardId: c.id, at, note: String(note || '') };
+  if (idx >= 0) arr[idx] = entry; else arr.push(entry);
+  // Log event
+  state.session.events.push({ type: 'wrongTone', at, index: state.index, cardId: c.id, note: String(note || '') });
+}
+
+/**
  * If finished and not yet finalized, finalize and return { full, summary }.
  * Otherwise returns null.
  */
@@ -152,6 +171,7 @@ export function finalizeIfFinished() {
     order: state.order,
     events: state.session.events,
     mistakeIds,
+    wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   const summary = {
@@ -159,6 +179,7 @@ export function finalizeIfFinished() {
     startedAt: state.session.startedAt,
     finishedAt,
     mistakeIds,
+    wrongToneCount: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.length : 0,
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   return { full, summary };
@@ -177,6 +198,7 @@ export function getFullSessionSnapshot() {
     order: state.order,
     events: state.session.events.slice(),
     mistakeIds,
+    wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
 }
@@ -195,6 +217,7 @@ export function resumeRun(full, opts = {}) {
   state.index = Math.min(progressed, state.order.length);
   state.face = 'front';
   state.mistakes = new Set(Array.isArray(full?.mistakeIds) ? full.mistakeIds : []);
+  state.session.wrongTone = Array.isArray(full?.wrongTone) ? full.wrongTone.slice() : [];
   const startedAt = full?.startedAt || new Date().toISOString();
   state.session = {
     id: full?.id || fnv1a32(`${startedAt}|${state.deck.length}|resume`),
@@ -202,48 +225,10 @@ export function resumeRun(full, opts = {}) {
     finishedAt: null,
     events: Array.isArray(full?.events) ? full.events.slice() : [{ type: 'start', at: startedAt, index: 0 }],
     replayOf: opts?.replayOf || null,
+    wrongTone: Array.isArray(full?.wrongTone) ? full.wrongTone.slice() : [],
   };
 }
 
-/**
- * Undo last user action if possible by popping last event and recomputing state.
- * Supports: next, reveal, unreveal, mistake, unmistake.
- */
-export function undoLast() {
-  if (!state.session.events.length) return false;
-  // remove last user event; keep start intact
-  let removed = null;
-  for (let i = state.session.events.length - 1; i >= 0; i--) {
-    const ev = state.session.events[i];
-    if (ev.type !== 'start') { removed = state.session.events.splice(i, 1)[0]; break; }
-  }
-  if (!removed) return false;
-  // Rebuild state from scratch based on events
-  const base = state;
-  base.index = 0;
-  base.face = 'front';
-  base.mistakes = new Set();
-  for (const ev of base.session.events) {
-    switch (ev.type) {
-      case 'reveal': base.face = 'back'; break;
-      case 'unreveal': base.face = 'front'; break;
-      case 'mistake': {
-        const idx = base.order[base.index];
-        const card = base.deck[idx];
-        if (card) base.mistakes.add(card.id);
-        break;
-      }
-      case 'unmistake': {
-        const idx = base.order[base.index];
-        const card = base.deck[idx];
-        if (card) base.mistakes.delete(card.id);
-        break;
-      }
-      case 'next': base.index = Math.min(base.index + 1, base.order.length); base.face = 'front'; break;
-      default: break;
-    }
-  }
-  return true;
-}
+
 
 
