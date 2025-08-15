@@ -17,6 +17,7 @@
         <div class="topinfo-line"><div id="topInfo">—</div></div>
         <div class="progressbar"><div id="progressFill" class="fill"></div></div>
         <div class="controls btnrow">
+          <button id="btnVocabularyManager" class="primary" title="Import HSK vocabulary files" aria-label="Import HSK files">📚</button>
           <button id="btnNewRun" class="secondary" title="Start a new learning session">New Session</button>
           <button id="btnReplay" class="secondary" title="Replay a previously saved session">Replay…</button>
           <button id="btnSaveProgressTop" class="secondary" title="Save your progress in the current session">Save Progress</button>
@@ -242,6 +243,57 @@
               <button class="secondary" id="annotationEditorClear">清除 / Clear</button>
               <button class="primary" id="annotationEditorSave">保存 / Save</button>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="hskImportDialog" class="modal" hidden>
+        <div class="modal-backdrop" data-close="1"></div>
+        <div class="modal-panel">
+          <div class="modal-header">
+            <div class="modal-title">Import HSK Files</div>
+            <button class="secondary" id="hskImportClose">Close</button>
+          </div>
+          <div class="modal-body">
+            <section style="margin-bottom:16px">
+              <div style="font-weight:600; margin-bottom:8px">Available Levels</div>
+              <div id="hskImportLevels" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px">
+                <!-- Levels will be populated dynamically -->
+              </div>
+              <div id="hskImportCustomRow" style="margin-top:8px; display:none">
+                <label class="muted">Combine levels:</label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px">
+                  <label><input type="checkbox" value="1" class="hsk-level" /> HSK 1</label>
+                  <label><input type="checkbox" value="2" class="hsk-level" /> HSK 2</label>
+                  <label><input type="checkbox" value="3" class="hsk-level" /> HSK 3</label>
+                  <label><input type="checkbox" value="4" class="hsk-level" /> HSK 4</label>
+                  <label><input type="checkbox" value="5" class="hsk-level" /> HSK 5</label>
+                  <label><input type="checkbox" value="6" class="hsk-level" /> HSK 6</label>
+                </div>
+              </div>
+            </section>
+            
+            <section style="margin-bottom:16px">
+              <div style="font-weight:600; margin-bottom:8px">Session Configuration</div>
+              <div style="margin-bottom:8px">
+                <label for="hskImportSessionName">Session Name:</label>
+                <input type="text" id="hskImportSessionName" placeholder="Enter session name (optional)" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);" />
+              </div>
+              <div style="margin-bottom:8px">
+                <label for="hskImportSessionId">Session ID:</label>
+                <input type="text" id="hskImportSessionId" placeholder="Auto-generated session ID" style="width:100%; margin-top:4px; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);" readonly />
+              </div>
+            </section>
+            
+            <div class="section-divider"></div>
+            
+            <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between">
+              <div id="hskImportStatus" class="muted"></div>
+              <div style="display:flex; gap:8px">
+                <button id="hskImportCancel" class="secondary">Cancel</button>
+                <button id="hskImportStart" class="primary" disabled>Start Session</button>
+              </div>
+            </section>
           </div>
         </div>
       </div>

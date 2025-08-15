@@ -1295,3 +1295,29 @@ Maintain the current event-driven architecture but consider adding event validat
 - Simplify audio lookup logic to single path `data/recordings/汉字.wav`
 - Maintain 1499 unique audio files with best quality versions (higher levels override lower)
 - Update code references from `data/hsk${level}/` to `data/recordings/`
+
+### 5.04 Import (HSK) files ✅ COMPLETED
+Extract the vocabulary list reading and session management functionality into a single, reusable component.
+Specifically:
+- Take the existing code that discovers available HSK levels from the directory
+- Combine it with the session naming and ID generation functionality
+- Package it all into one reusable component that can be imported and used elsewhere
+- Keep the same functionality but make it modular and clean
+- The goal is to have a single component that handles:
+-- Discovering available vocabulary files
+-- Loading and parsing CSV data
+-- Managing session names and IDs
+-- Starting new study sessions
+- Add a new button to the gear panel to import (HSK) files and open the component
+This would make the code more organized and allow you to reuse this vocabulary management logic in other parts of your application or even in other projects.
+
+**Implementation Details:**
+- Created `js/vocabularyManager.js` - A reusable component that handles vocabulary discovery, loading, and session management
+- Added "Import HSK files" button to the main menu (📚) prominently positioned to the left of the "New Session" button
+- Created a new modal dialog (`hskImportDialog`) for HSK file import functionality
+- Integrated the vocabulary manager with the existing application flow
+- Added support for individual level selection and custom level combinations
+- Implemented session naming and ID generation capabilities
+- Added proper error handling and user feedback
+- Maintained all existing functionality while making it more modular and reusable
+- Moved functionality out of the gear menu for better accessibility and prominence

@@ -5,6 +5,7 @@ import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIf
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
+import { createVocabularyManager } from './vocabularyManager.js';
 
 const PATH = CONFIG.csvRelativePath;
 
@@ -66,10 +67,45 @@ const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('cust
 const loadCustomLevelsBtn = /** @type {HTMLButtonElement} */(document.getElementById('loadCustomLevels'));
 const levelInfo = /** @type {HTMLElement} */(document.getElementById('levelInfo'));
 
+// HSK Import Dialog elements
+const hskImportDialog = /** @type {HTMLElement} */(document.getElementById('hskImportDialog'));
+const hskImportClose = /** @type {HTMLButtonElement} */(document.getElementById('hskImportClose'));
+const hskImportLevels = /** @type {HTMLElement} */(document.getElementById('hskImportLevels'));
+const hskImportCustomRow = /** @type {HTMLElement} */(document.getElementById('hskImportCustomRow'));
+const hskImportSessionName = /** @type {HTMLInputElement} */(document.getElementById('hskImportSessionName'));
+const hskImportSessionId = /** @type {HTMLInputElement} */(document.getElementById('hskImportSessionId'));
+const hskImportStatus = /** @type {HTMLElement} */(document.getElementById('hskImportStatus'));
+const hskImportCancel = /** @type {HTMLButtonElement} */(document.getElementById('hskImportCancel'));
+const hskImportStart = /** @type {HTMLButtonElement} */(document.getElementById('hskImportStart'));
+const btnVocabularyManager = /** @type {HTMLButtonElement} */(document.getElementById('btnVocabularyManager'));
+
 /** @type {number|null} */
 let countdownTimer = null;
 /** @type {number} */
 let countdownRemaining = 0;
+
+// Create vocabulary manager instance
+const vocabularyManager = createVocabularyManager({
+  onLevelsDiscovered: (levels) => {
+    console.log('Discovered levels:', levels);
+    updateHskImportLevels(levels);
+  },
+  onLevelsLoaded: (data) => {
+    console.log('Loaded vocabulary:', data);
+    if (levelInfo) {
+      levelInfo.textContent = `Loaded ${data.levelLabel} • ${data.cardCount} cards`;
+    }
+  },
+  onSessionStarted: (sessionInfo) => {
+    console.log('Session started:', sessionInfo);
+    render();
+    startCountdownIfNeeded();
+  },
+  onError: (message, error) => {
+    console.error(message, error);
+    alert(message);
+  }
+});
 
 function resetCountdown() {
   if (countdownTimer !== null) {
@@ -119,6 +155,161 @@ async function refreshAvailableLevels() {
       if (zero) levelPicker.insertBefore(zero, levelPicker.firstChild);
     }
   } catch {}
+}
+
+// HSK Import Functions
+function updateHskImportLevels(levels) {
+  if (!hskImportLevels) return;
+  
+  hskImportLevels.innerHTML = '';
+  
+  // Add individual level buttons
+  levels.forEach(level => {
+    const btn = document.createElement('button');
+    btn.className = 'secondary';
+    btn.textContent = `HSK ${level}`;
+    btn.dataset.level = level;
+    btn.addEventListener('click', () => selectHskLevel(level));
+    hskImportLevels.appendChild(btn);
+  });
+  
+  // Add custom combination option
+  if (levels.length > 1) {
+    const customBtn = document.createElement('button');
+    customBtn.className = 'secondary';
+    customBtn.textContent = 'Custom Combination';
+    customBtn.addEventListener('click', () => showCustomLevelSelection());
+    hskImportLevels.appendChild(customBtn);
+  }
+}
+
+function selectHskLevel(level) {
+  // Clear any previous selection
+  hskImportLevels.querySelectorAll('button').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  
+  // Mark selected button
+  const selectedBtn = hskImportLevels.querySelector(`[data-level="${level}"]`);
+  if (selectedBtn) {
+    selectedBtn.classList.add('selected');
+  }
+  
+  // Hide custom row
+  hskImportCustomRow.style.display = 'none';
+  
+  // Update session info
+  updateHskImportSessionInfo([level]);
+  
+  // Enable start button
+  hskImportStart.disabled = false;
+}
+
+function showCustomLevelSelection() {
+  // Clear any previous selection
+  hskImportLevels.querySelectorAll('button').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  
+  // Show custom row
+  hskImportCustomRow.style.display = 'block';
+  
+  // Update session info
+  updateHskImportSessionInfo([]);
+  
+  // Disable start button until levels are selected
+  hskImportStart.disabled = true;
+}
+
+function updateHskImportSessionInfo(levels) {
+  if (levels.length === 0) {
+    // Custom combination - check checkboxes
+    const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-level:checked');
+    levels = Array.from(checkboxes).map(cb => cb.value);
+  }
+  
+  if (levels.length === 0) {
+    hskImportSessionId.value = '';
+    hskImportStatus.textContent = 'Select levels to continue';
+    return;
+  }
+  
+  // Generate session ID
+  const sessionId = `hsk_${levels.join('_')}_${Date.now()}`;
+  hskImportSessionId.value = sessionId;
+  
+  // Update status
+  const levelLabel = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
+  hskImportStatus.textContent = `Ready to load: ${levelLabel}`;
+}
+
+function openHskImportDialog() {
+  // Reset dialog state
+  hskImportSessionName.value = '';
+  hskImportSessionId.value = '';
+  hskImportStatus.textContent = 'Discovering available levels...';
+  hskImportStart.disabled = true;
+  
+  // Clear selections
+  hskImportLevels.querySelectorAll('button').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  hskImportCustomRow.style.display = 'none';
+  hskImportCustomRow.querySelectorAll('input.hsk-level').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  // Show dialog
+  hskImportDialog.hidden = false;
+  
+  // Discover levels
+  vocabularyManager.discoverAvailableLevels();
+}
+
+function closeHskImportDialog() {
+  hskImportDialog.hidden = true;
+}
+
+async function startHskImportSession() {
+  try {
+    hskImportStart.disabled = true;
+    hskImportStatus.textContent = 'Loading vocabulary...';
+    
+    // Get selected levels
+    let levels = [];
+    const selectedBtn = hskImportLevels.querySelector('button.selected');
+    if (selectedBtn && selectedBtn.dataset.level) {
+      levels = [selectedBtn.dataset.level];
+    } else {
+      // Custom combination
+      const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-level:checked');
+      levels = Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    if (levels.length === 0) {
+      hskImportStatus.textContent = 'Please select levels to import';
+      hskImportStart.disabled = false;
+      return;
+    }
+    
+    // Configure vocabulary manager
+    vocabularyManager.updateSessionName(hskImportSessionName.value || '');
+    vocabularyManager.updateSessionId(hskImportSessionId.value);
+    
+    // Load and start session
+    const result = await vocabularyManager.discoverLoadAndStart(levels);
+    
+    hskImportStatus.textContent = `Successfully loaded ${result.cardCount} cards from ${result.levelLabel}`;
+    
+    // Close dialog after a short delay
+    setTimeout(() => {
+      closeHskImportDialog();
+    }, 1500);
+    
+  } catch (error) {
+    hskImportStatus.textContent = `Error: ${error.message}`;
+    hskImportStart.disabled = false;
+  }
 }
 
 async function bootstrap() {
@@ -498,6 +689,7 @@ if (btnSettings) btnSettings.addEventListener('click', () => { if (mediaRow) med
 if (settingsClose) settingsClose.addEventListener('click', () => { if (mediaRow) mediaRow.classList.remove('hidden'); });
 settingsExport?.addEventListener('click', () => { try { const snap = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snap); } catch (e) { console.error(e); } });
 settingsImportBtn?.addEventListener('click', () => settingsImportInput?.click());
+btnVocabularyManager?.addEventListener('click', openHskImportDialog);
 // Outdoor/Audio/Light listeners
 settingsOutdoor?.addEventListener('change', () => {
   try { const s = loadSettings(); const enabled = !!settingsOutdoor.checked; saveSettings({ ...s, outdoorMode: enabled }); document.body.classList.toggle('outdoor', enabled); } catch {}
@@ -1079,6 +1271,25 @@ function removeAnnotation(cardId) {
 }
 
 // Initialize handled in bootstrap via saved settings
+
+// HSK Import Dialog Event Listeners
+hskImportClose?.addEventListener('click', closeHskImportDialog);
+hskImportCancel?.addEventListener('click', closeHskImportDialog);
+hskImportStart?.addEventListener('click', startHskImportSession);
+
+// Add change listeners for custom level checkboxes
+document.addEventListener('DOMContentLoaded', () => {
+  const customLevelCheckboxes = document.querySelectorAll('input.hsk-level');
+  customLevelCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selectedLevels = Array.from(customLevelCheckboxes)
+        .filter(c => c.checked)
+        .map(c => c.value);
+      updateHskImportSessionInfo(selectedLevels);
+      hskImportStart.disabled = selectedLevels.length === 0;
+    });
+  });
+});
 
 // Kick off
 bootstrap();
