@@ -1,5 +1,6 @@
 import { formatSeconds } from './util.js';
 import { state, currentCard, isFinished } from './state.js';
+import { loadSessionSummaries } from './storage.js';
 
 const el = {
   message: /** @type {HTMLElement} */ (document.getElementById('message')),
@@ -152,7 +153,9 @@ function setProgress(current, total) {
   const prefix = sessionDisplay ? `${sessionDisplay} · ` : '';
   el.progressText.textContent = `${prefix}${current} / ${total}`;
   if (el.topInfo) {
-    el.topInfo.textContent = `${sessionDisplay || ''}  |  ${current} / ${total}  |  Mistakes: ${state.mistakes.size}`.trim();
+    const removedCount = state.session.events.filter(e => e.type === 'remove').length;
+    const removedText = removedCount > 0 ? ` | Removed: ${removedCount}` : '';
+    el.topInfo.textContent = `${sessionDisplay || ''}  |  ${current} / ${total}  |  Mistakes: ${state.mistakes.size}${removedText}`.trim();
   }
   if (el.progressFill && total > 0) {
     const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));

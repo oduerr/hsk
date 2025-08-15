@@ -1,7 +1,7 @@
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -380,6 +380,46 @@ function onKeyDown(e) {
   } else if (key === 'r') {
     e.preventDefault();
     openReplayDialog();
+  } else if (key === 'delete' || key === 'backspace') {
+    e.preventDefault();
+    // Only allow delete/backspace for card removal when not in annotation editor
+    const annotationEditor = document.getElementById('annotationEditor');
+    if (!annotationEditor || annotationEditor.hidden) {
+          const remainingCards = state.order.length - 1;
+    const confirmMessage = remainingCards > 0 
+      ? `Remove this card from the session? ${remainingCards} cards will remain. This cannot be undone.`
+      : 'Remove this card? This will remove the last card from the session. This cannot be undone.';
+      
+    if (confirm(confirmMessage)) {
+      const removed = removeCard();
+        if (removed) {
+          // Autosave after removing card
+          try {
+            const enabled = !!(settingsAutosave && settingsAutosave.checked);
+            if (enabled) {
+              const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+              const snapshot = getFullSessionSnapshot();
+              saveCheckpoint(snapshot);
+              const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+              const ms = Math.round(t1 - t0);
+              console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+              if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
+              if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
+            }
+          } catch (e) { console.error('[autosave] failed', e); }
+          
+          // Update UI
+          render();
+          
+          // Show feedback
+          if (state.order.length === 0) {
+            showMessage('All cards removed from session.');
+          } else {
+            showMessage(`Card removed. ${state.order.length} cards remaining.`);
+          }
+        }
+      }
+    }
   } else if (key === 'arrowright') {
     e.preventDefault();
     onNext();
@@ -405,6 +445,45 @@ btnSpeak?.addEventListener('click', () => {
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnAnnotation?.addEventListener('click', () => {
   openAnnotationEditor();
+});
+
+// Remove card button
+const btnRemoveCard = /** @type {HTMLButtonElement} */(document.getElementById('btnRemoveCard'));
+btnRemoveCard?.addEventListener('click', () => {
+  const remainingCards = state.order.length - 1;
+  const confirmMessage = remainingCards > 0 
+    ? `Remove this card from the session? ${remainingCards} cards will remain. This cannot be undone.`
+    : 'Remove this card? This will remove the last card from the session. This cannot be undone.';
+    
+  if (confirm(confirmMessage)) {
+    const removed = removeCard();
+    if (removed) {
+      // Autosave after removing card
+      try {
+        const enabled = !!(settingsAutosave && settingsAutosave.checked);
+        if (enabled) {
+          const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          const snapshot = getFullSessionSnapshot();
+          saveCheckpoint(snapshot);
+          const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          const ms = Math.round(t1 - t0);
+          console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+          if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
+          if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
+        }
+      } catch (e) { console.error('[autosave] failed', e); }
+      
+      // Update UI
+      render();
+      
+      // Show feedback
+      if (state.order.length === 0) {
+        showMessage('All cards removed from session.');
+      } else {
+        showMessage(`Card removed. ${state.order.length} cards remaining.`);
+      }
+    }
+  }
 });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
@@ -794,7 +873,8 @@ function openReplayDialog() {
       left.innerHTML = `<div><strong>${ymdhm}</strong>${title}</div>` +
         `<div class="sid">${s.name ? escapeHtml(s.name) : s.id}</div>`;
       right.className = 'counts';
-      right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes • status: ${status}`;
+      const removedText = (s.counts?.removed ?? 0) > 0 ? ` • ${s.counts.removed} removed` : '';
+      right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes${removedText} • status: ${status}`;
       const disabledReplay = (s.mistakeIds?.length ?? 0) === 0;
       const actions = document.createElement('div');
       actions.className = 'actions';

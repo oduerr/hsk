@@ -100,6 +100,8 @@ label.seconds input {
 .speak-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; }
 .tone-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; }
 .annotation-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; }
+.remove-btn { border-radius: 999px; padding: 8px 10px; font-size: 14px; border-color: #dc2626; color: #fecaca; }
+.remove-btn:hover { border-color: #b91c1c; background: rgba(220, 38, 38, 0.1); }
 
 .face { width: 100%; }
 .english { font-size: clamp(24px, 5vw, 44px); line-height: 1.25; }

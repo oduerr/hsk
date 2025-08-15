@@ -152,6 +152,87 @@ export function markAnnotation(note = '') {
 }
 
 /**
+ * Remove the current card from the session.
+ * This will clean up all references to the card and adjust the session state.
+ * @returns {boolean} true if card was removed, false if no card to remove
+ */
+export function removeCard() {
+  const c = currentCard();
+  if (!c) return false;
+  
+  const at = new Date().toISOString();
+  const cardId = c.id;
+  
+  // Log the removal event
+  state.session.events.push({ 
+    type: 'remove', 
+    at, 
+    index: state.index, 
+    cardId: cardId 
+  });
+  
+  // Remove from mistakes set
+  state.mistakes.delete(cardId);
+  
+  // Remove annotations
+  if (Array.isArray(state.session.annotation)) {
+    state.session.annotation = state.session.annotation.filter(a => a.cardId !== cardId);
+  }
+  
+  // Find the card's position in the deck
+  const deckIndex = state.deck.findIndex(card => card.id === cardId);
+  if (deckIndex !== -1) {
+    // Remove the card from the deck
+    state.deck.splice(deckIndex, 1);
+    
+    // Find and remove the corresponding entry from the order array
+    // The order array contains indices that reference deck positions
+    const orderIndex = state.order.findIndex(orderIndex => orderIndex === deckIndex);
+    if (orderIndex !== -1) {
+      state.order.splice(orderIndex, 1);
+      
+      // Adjust all remaining order indices to account for the deck shift
+      // Since we removed an element from the deck, all indices after deckIndex need to be decremented
+      state.order.forEach((orderIndex, i) => {
+        if (orderIndex > deckIndex) {
+          state.order[i] = orderIndex - 1;
+        }
+      });
+      
+      // Adjust all events that reference indices after the removed card
+      state.session.events.forEach(event => {
+        if (event.index > orderIndex) {
+          event.index--;
+        }
+      });
+      
+      // Adjust current index if needed
+      if (state.index >= orderIndex) {
+        if (state.index > 0) {
+          state.index--;
+        } else if (state.order.length > 0) {
+          state.index = 0;
+        } else {
+          state.index = -1; // No more cards
+        }
+      }
+    }
+  }
+  
+  // Reset face to front if we're now at a new card
+  state.face = 'front';
+  
+  // Ensure index is valid
+  if (state.order.length === 0) {
+    state.index = -1; // No more cards
+  } else if (state.index >= state.order.length) {
+    state.index = state.order.length - 1; // Adjust to last card
+  }
+  
+  return true;
+}
+
+/**
  * If finished and not yet finalized, finalize and return { full, summary }.
  * Otherwise returns null.
  */
@@ -163,6 +244,7 @@ export function finalizeIfFinished() {
   state.session.events.push({ type: 'finish', at: finishedAt, index: state.index });
 
   const mistakeIds = Array.from(state.mistakes);
+  const removedCount = state.session.events.filter(e => e.type === 'remove').length;
   const full = {
     id: state.session.id,
     startedAt: state.session.startedAt,
@@ -172,7 +254,11 @@ export function finalizeIfFinished() {
     events: state.session.events,
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
-    counts: { total: state.order.length, mistakes: mistakeIds.length },
+    counts: { 
+      total: state.order.length, 
+      mistakes: mistakeIds.length,
+      removed: removedCount
+    },
   };
   const summary = {
     id: state.session.id,
@@ -180,7 +266,11 @@ export function finalizeIfFinished() {
     finishedAt,
     mistakeIds,
     annotationCount: Array.isArray(state.session.annotation) ? state.session.annotation.length : 0,
-    counts: { total: state.order.length, mistakes: mistakeIds.length },
+    counts: { 
+      total: state.order.length, 
+      mistakes: mistakeIds.length,
+      removed: removedCount
+    },
   };
   return { full, summary };
 }
@@ -190,6 +280,7 @@ export function finalizeIfFinished() {
  */
 export function getFullSessionSnapshot() {
   const mistakeIds = Array.from(state.mistakes);
+  const removedCount = state.session.events.filter(e => e.type === 'remove').length;
   return {
     id: state.session.id,
     startedAt: state.session.startedAt,
@@ -199,7 +290,11 @@ export function getFullSessionSnapshot() {
     events: state.session.events.slice(),
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
-    counts: { total: state.order.length, mistakes: mistakeIds.length },
+    counts: { 
+      total: state.order.length, 
+      mistakes: mistakeIds.length,
+      removed: removedCount
+    },
   };
 }
 

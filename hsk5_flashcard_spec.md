@@ -1281,3 +1281,8 @@ Maintain the current event-driven architecture but consider adding event validat
 
 ### 5.0101 Session Management 2
 - Import Sessions, should replace all session information currently in the application and should open a selection menue and let the user choose a session from the imported Sessions or let it cancel the import.
+
+### 5.02 Card Removal Functionality
+- Implement card removal from sessions with proper order array management
+- Fix index adjustment logic when removing cards to maintain session consistency
+- Ensure all event indices are properly updated after card removal
