@@ -11,13 +11,44 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 ## Data & levels
 
 - CSV format: `hanzi,pinyin,english` (UTF‑8, quoted fields supported; pinyin spacing normalized).
-- Levels live in `data/` as `hsk0.csv … hsk6.csv`.
-- On startup the app probes which `hsk*.csv` files exist and populates the Level picker automatically. To add a new level, just drop a new CSV in `data/` (e.g. `hsk6.csv`) and reload.
+- Vocabulary files live in `data/` directory.
+- The app automatically discovers available vocabulary files using a smart discovery system.
+
+## File Loading
+
+### Primary Method: `vocab.csv` Index
+The app primarily discovers vocabulary files by reading `data/vocab.csv`, which serves as a central index:
+
+```csv
+filename,display_name,description
+hsk1.csv,HSK 1,Basic Chinese vocabulary (150 words)
+hsk2.csv,HSK 2,Elementary Chinese vocabulary (300 words)
+eng_oliver.csv,Oliver's English,Personal English vocabulary collection
+```
+
+**To add new vocabulary files:**
+1. Place your CSV file in the `data/` folder
+2. Add a row to `data/vocab.csv` with:
+   - `filename`: The actual CSV filename
+   - `display_name`: User-friendly name shown in the interface
+   - `description`: Optional description of the content
+3. Reload the page - the file will automatically appear in the vocabulary manager
+
+### Fallback Discovery
+If `vocab.csv` is not available, the app falls back to pattern-based discovery, automatically detecting common filename patterns like `hsk*.csv`, `vocabulary.csv`, etc.
+
+### Benefits of `vocab.csv` Approach
+- **User control**: You decide what files are available
+- **Rich metadata**: Display names and descriptions for better UX
+- **Easy maintenance**: No code changes needed for new files
+- **Flexible naming**: Use any filename you want
+- **Future-proof**: Works with any vocabulary format
 
 ## Features (v4.50)
 
 - Core flashcard flow: Reveal / Next / Mistake, progress indicator, live mistake count
 - Sessions: full event log; save checkpoints; export/import to JSON; replay only mistaken cards
+- Vocabulary management: 📚 button for importing HSK files and custom vocabulary sets
 - Mobile‑friendly layout; single‑tap mistake toggle on mobile; swipe left/right for next/back
 - Settings (gear):
   - Auto‑reveal + seconds and countdown
@@ -31,7 +62,7 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 
 ## UI and controls
 
-- Top bar: New Run, Replay…, Save Progress, Mistake, Gear
+- Top bar: 📚 Vocabulary Manager, New Run, Replay…, Save Progress, Mistake, Gear
 - Above card (right): 🎙️ Tone visualizer, 🔊 Speak
 - Bottom bar: Back, Reveal, Mistake, Next, Save Progress
 - Keyboard:
@@ -63,7 +94,9 @@ js/
   speech.js  // TTS (browser/OpenAI)
   toneVisualizer.js // mic + pitch visualization
 data/
-  hsk*.csv
+  vocab.csv          # Vocabulary file index
+  hsk*.csv           # HSK vocabulary files
+  *.csv              # Other vocabulary files
 ```
 
 ## Privacy
@@ -73,5 +106,5 @@ data/
 ## Troubleshooting
 
 - Browser blocks CSV on `file://`: run `python3 -m http.server` and open the local URL.
-- No levels showing: ensure CSVs exist in `data/` (e.g., `hsk1.csv`); the picker is populated automatically on reload.
+- No vocabulary files showing: ensure `data/vocab.csv` exists and contains valid entries, or check that CSV files exist in `data/` directory; the vocabulary manager will populate automatically on reload.
 - Exported file seems empty: finish a run or mark some mistakes; in‑progress runs are also exported.

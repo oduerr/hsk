@@ -1,2 +1,2 @@
-5.01 — Import Sessions with selection dialog, auto-open replay menu, rename wrongTone to annotation
+5.05 — Dynamic CSV Discovery with vocab.csv index file, user-controlled vocabulary management, rich metadata support
 

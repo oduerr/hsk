@@ -1,4 +1,4 @@
-import { discoverAvailableLevels } from './data.js';
+import { discoverAvailableCsvFiles } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard } from './state.js';
@@ -21,10 +21,8 @@ const autoToggle = /** @type {HTMLInputElement} */($('autoRevealToggle'));
 const autoSeconds = /** @type {HTMLInputElement} */($('autoRevealSeconds'));
 const btnExport = /** @type {HTMLButtonElement} */(document.getElementById('btnExport'));
 const dropOverlay = /** @type {HTMLElement} */(document.getElementById('dropOverlay'));
-const fallbackPanel = /** @type {HTMLElement} */(document.getElementById('fallbackPanel'));
-const csvFileInput = /** @type {HTMLInputElement} */(document.getElementById('csvFileInput'));
-const csvTextArea = /** @type {HTMLTextAreaElement} */(document.getElementById('csvTextArea'));
-const btnUsePastedCsv = /** @type {HTMLButtonElement} */(document.getElementById('usePastedCsv'));
+
+
 const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
 const btnSaveProgressTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
 const btnMistakeTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
@@ -62,10 +60,8 @@ const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSp
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
 const btnAnnotation = /** @type {HTMLButtonElement} */(document.getElementById('btnAnnotation'));
 const mediaRow = /** @type {HTMLElement} */(document.getElementById('mediaRow'));
-const levelPicker = /** @type {HTMLSelectElement} */(document.getElementById('levelPicker'));
-const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('customLevelsRow'));
-const loadCustomLevelsBtn = /** @type {HTMLButtonElement} */(document.getElementById('loadCustomLevels'));
-const levelInfo = /** @type {HTMLElement} */(document.getElementById('levelInfo'));
+
+
 
 // HSK Import Dialog elements
 const hskImportDialog = /** @type {HTMLElement} */(document.getElementById('hskImportDialog'));
@@ -86,15 +82,14 @@ let countdownRemaining = 0;
 
 // Create vocabulary manager instance
 const vocabularyManager = createVocabularyManager({
-  onLevelsDiscovered: (levels) => {
-    console.log('Discovered levels:', levels);
-    updateHskImportLevels(levels);
+  onLevelsDiscovered: (files) => {
+    console.log('Discovered CSV files:', files);
+    updateHskImportLevels(files);
   },
   onLevelsLoaded: (data) => {
     console.log('Loaded vocabulary:', data);
-    if (levelInfo) {
-      levelInfo.textContent = `Loaded ${data.levelLabel} • ${data.cardCount} cards`;
-    }
+    // Note: levelInfo element was removed in the refactoring
+    // Vocabulary loading status is now handled in the UI elsewhere
   },
   onSessionStarted: (sessionInfo) => {
     console.log('Session started:', sessionInfo);
@@ -133,39 +128,51 @@ function startCountdownIfNeeded() {
 }
 
 // HSK Import Functions
-function updateHskImportLevels(levels) {
+function updateHskImportLevels(files) {
   if (!hskImportLevels) return;
   
   hskImportLevels.innerHTML = '';
   
-  // Add individual level buttons
-  levels.forEach(level => {
+  // Add individual file buttons with descriptions
+  files.forEach(file => {
     const btn = document.createElement('button');
     btn.className = 'secondary';
-    btn.textContent = `HSK ${level}`;
-    btn.dataset.level = level;
-    btn.addEventListener('click', () => selectHskLevel(level));
+    btn.textContent = file.displayName;
+    btn.title = file.description || file.displayName; // Show description on hover
+    btn.dataset.filename = file.filename;
+    btn.addEventListener('click', () => selectHskFile(file.filename));
     hskImportLevels.appendChild(btn);
+    
+    // Add description below button if available
+    if (file.description) {
+      const desc = document.createElement('div');
+      desc.className = 'muted';
+      desc.style.fontSize = '12px';
+      desc.style.marginTop = '4px';
+      desc.style.marginBottom = '8px';
+      desc.textContent = file.description;
+      hskImportLevels.appendChild(desc);
+    }
   });
   
   // Add custom combination option
-  if (levels.length > 1) {
+  if (files.length > 1) {
     const customBtn = document.createElement('button');
     customBtn.className = 'secondary';
     customBtn.textContent = 'Custom Combination';
-    customBtn.addEventListener('click', () => showCustomLevelSelection());
+    customBtn.addEventListener('click', () => showCustomFileSelection(files));
     hskImportLevels.appendChild(customBtn);
   }
 }
 
-function selectHskLevel(level) {
+function selectHskFile(filename) {
   // Clear any previous selection
   hskImportLevels.querySelectorAll('button').forEach(btn => {
     btn.classList.remove('selected');
   });
   
   // Mark selected button
-  const selectedBtn = hskImportLevels.querySelector(`[data-level="${level}"]`);
+  const selectedBtn = hskImportLevels.querySelector(`[data-filename="${filename}"]`);
   if (selectedBtn) {
     selectedBtn.classList.add('selected');
   }
@@ -174,13 +181,13 @@ function selectHskLevel(level) {
   hskImportCustomRow.style.display = 'none';
   
   // Update session info
-  updateHskImportSessionInfo([level]);
+  updateHskImportSessionInfo([filename]);
   
   // Enable start button
   hskImportStart.disabled = false;
 }
 
-function showCustomLevelSelection() {
+function showCustomFileSelection(files) {
   // Clear any previous selection
   hskImportLevels.querySelectorAll('button').forEach(btn => {
     btn.classList.remove('selected');
@@ -189,32 +196,70 @@ function showCustomLevelSelection() {
   // Show custom row
   hskImportCustomRow.style.display = 'block';
   
+  // Clear existing checkboxes and add new ones
+  const checkboxContainer = hskImportCustomRow.querySelector('.checkbox-container') || hskImportCustomRow;
+  checkboxContainer.innerHTML = '<label class="muted">Combine files:</label>';
+  
+  files.forEach(file => {
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '8px';
+    label.style.marginBottom = '8px';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = file.filename;
+    checkbox.className = 'hsk-file';
+    
+    const text = document.createElement('span');
+    text.textContent = file.displayName;
+    
+    label.appendChild(checkbox);
+    label.appendChild(text);
+    
+    // Add description if available
+    if (file.description) {
+      const desc = document.createElement('div');
+      desc.className = 'muted';
+      desc.style.fontSize = '11px';
+      desc.style.marginLeft = '24px';
+      desc.style.marginTop = '2px';
+      desc.textContent = file.description;
+      label.appendChild(desc);
+    }
+    
+    checkboxContainer.appendChild(label);
+  });
+  
   // Update session info
   updateHskImportSessionInfo([]);
   
-  // Disable start button until levels are selected
+  // Disable start button until files are selected
   hskImportStart.disabled = true;
 }
 
-function updateHskImportSessionInfo(levels) {
-  if (levels.length === 0) {
+function updateHskImportSessionInfo(filenames) {
+  if (filenames.length === 0) {
     // Custom combination - check checkboxes
-    const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-level:checked');
-    levels = Array.from(checkboxes).map(cb => cb.value);
+    const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-file:checked');
+    filenames = Array.from(checkboxes).map(cb => cb.value);
   }
   
-  if (levels.length === 0) {
+  if (filenames.length === 0) {
     hskImportSessionId.value = '';
-    hskImportStatus.textContent = 'Select levels to continue';
+    hskImportStatus.textContent = 'Select files to continue';
     return;
   }
   
   // Generate session ID
-  const sessionId = `hsk_${levels.join('_')}_${Date.now()}`;
+  const sessionId = `vocab_${filenames.join('_').replace(/\.csv/g, '')}_${Date.now()}`;
   hskImportSessionId.value = sessionId;
   
   // Update status
-  const levelLabel = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
+  const levelLabel = filenames.length === 1 
+    ? vocabularyManager.getDisplayNameFromFilename(filenames[0])
+    : `${filenames.length} Files Combined`;
   hskImportStatus.textContent = `Ready to load: ${levelLabel}`;
 }
 
@@ -222,7 +267,7 @@ function openHskImportDialog() {
   // Reset dialog state
   hskImportSessionName.value = '';
   hskImportSessionId.value = '';
-  hskImportStatus.textContent = 'Discovering available levels...';
+  hskImportStatus.textContent = 'Discovering available files...';
   hskImportStart.disabled = true;
   
   // Clear selections
@@ -230,15 +275,15 @@ function openHskImportDialog() {
     btn.classList.remove('selected');
   });
   hskImportCustomRow.style.display = 'none';
-  hskImportCustomRow.querySelectorAll('input.hsk-level').forEach(cb => {
+  hskImportCustomRow.querySelectorAll('input.hsk-file').forEach(cb => {
     cb.checked = false;
   });
   
   // Show dialog
   hskImportDialog.hidden = false;
   
-  // Discover levels
-  vocabularyManager.discoverAvailableLevels();
+  // Discover files
+  vocabularyManager.discoverAvailableCsvFiles();
 }
 
 function closeHskImportDialog() {
@@ -250,19 +295,19 @@ async function startHskImportSession() {
     hskImportStart.disabled = true;
     hskImportStatus.textContent = 'Loading vocabulary...';
     
-    // Get selected levels
-    let levels = [];
+    // Get selected files
+    let filenames = [];
     const selectedBtn = hskImportLevels.querySelector('button.selected');
-    if (selectedBtn && selectedBtn.dataset.level) {
-      levels = [selectedBtn.dataset.level];
+    if (selectedBtn && selectedBtn.dataset.filename) {
+      filenames = [selectedBtn.dataset.filename];
     } else {
       // Custom combination
-      const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-level:checked');
-      levels = Array.from(checkboxes).map(cb => cb.value);
+      const checkboxes = hskImportCustomRow.querySelectorAll('input.hsk-file:checked');
+      filenames = Array.from(checkboxes).map(cb => cb.value);
     }
     
-    if (levels.length === 0) {
-      hskImportStatus.textContent = 'Please select levels to import';
+    if (filenames.length === 0) {
+      hskImportStatus.textContent = 'Please select files to import';
       hskImportStart.disabled = false;
       return;
     }
@@ -272,7 +317,7 @@ async function startHskImportSession() {
     vocabularyManager.updateSessionId(hskImportSessionId.value);
     
     // Load and start session
-    const result = await vocabularyManager.discoverLoadAndStart(levels);
+    const result = await vocabularyManager.discoverLoadAndStart(filenames);
     
     hskImportStatus.textContent = `Successfully loaded ${result.cardCount} cards from ${result.levelLabel}`;
     
@@ -310,9 +355,10 @@ async function bootstrap() {
       render();
       startCountdownIfNeeded();
     } else {
-      // Show fallback panel for manual selection/paste
-      fallbackPanel.hidden = false;
-      $('card').hidden = true;
+      // No deck available - show empty state and let user use vocabulary manager
+      console.log('No deck available. User can use the vocabulary manager button to import HSK files.');
+      // Don't show fallback panel - let the main interface handle this
+      render();
     }
   }
   // Initialize speech (4.20)
@@ -354,21 +400,6 @@ async function bootstrap() {
     try {
       const saved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
       if (audioCacheToggle) audioCacheToggle.checked = saved.audioCache !== false;
-    } catch {}
-    // Level picker
-    const last = loadLastLevel();
-    if (levelPicker && last) {
-      if (last === 'custom') levelPicker.value = 'custom';
-      else levelPicker.value = String(last.replace('HSK ', ''));
-    }
-    // If a last level exists and differs from default CSV (5), load it
-    try {
-      if (last && last !== '5') {
-        await loadLevelsAndStart([last]);
-      } else {
-        state.levelLabel = 'HSK 5';
-        render();
-      }
     } catch {}
   } catch {}
 
@@ -821,29 +852,7 @@ function computeSessionsSizeBytes() {
   } catch { return 0; }
 }
 
-// ---------- Level Picker ----------
-async function loadLevelsAndStart(levels) {
-  // levels: array of '0'..'6'
-  const texts = await Promise.all(levels.map(l => fetchCsvText(`./data/hsk${l}.csv`).catch(() => '')));
-  const mergedRows = [];
-  for (const t of texts) {
-    if (!t) continue;
-    const rows = parseCsv(t);
-    mergedRows.push(...rows);
-  }
-  const cards = rowsToCards(mergedRows);
-  if (cards.length) {
-    saveDeck(cards);
-    newRun(cards);
-    state.levelLabel = levels.length === 1 ? `HSK ${levels[0]}` : `HSK ${levels.join('+')}`;
-    render();
-    startCountdownIfNeeded();
-    saveLastLevel(levels.length === 1 ? levels[0] : 'custom');
-    if (levelInfo) levelInfo.textContent = `Loaded ${state.levelLabel} • ${cards.length} cards`;
-  } else {
-    alert('Failed to load selected level(s).');
-  }
-}
+
 
 // Web Speech – Speak Chinese
 let cachedVoices = [];
@@ -883,13 +892,7 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => { cachedVoices = window.speechSynthesis.getVoices(); };
 }
 
-loadCustomLevelsBtn?.addEventListener('click', async () => {
-  const checkboxes = Array.from(customLevelsRow.querySelectorAll('input.lvl'));
-  const selected = checkboxes.filter(c => c.checked).map(c => c.value);
-  if (!selected.length) { alert('Select at least one level.'); return; }
-  saveLastLevel('custom');
-  await loadLevelsAndStart(selected);
-});
+
 window.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.hidden = false; });
 window.addEventListener('dragleave', (e) => { if (e.target === document || e.target === document.body) dropOverlay.hidden = true; });
 window.addEventListener('drop', async (e) => {
@@ -929,45 +932,7 @@ btnSaveProgress?.addEventListener('click', () => {
     alert('Save failed.');
   }
 });
-// Manual CSV fallbacks
-csvFileInput?.addEventListener('change', async () => {
-  const file = csvFileInput.files && csvFileInput.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const rows = parseCsv(text);
-    const cards = rowsToCards(rows);
-    if (!cards.length) throw new Error('No rows parsed.');
-    saveDeck(cards);
-    fallbackPanel.hidden = true;
-    $('card').hidden = false;
-    newRun(cards);
-    render();
-    startCountdownIfNeeded();
-  } catch (e) {
-    alert('Failed to parse selected CSV.');
-  } finally {
-    csvFileInput.value = '';
-  }
-});
 
-btnUsePastedCsv?.addEventListener('click', () => {
-  const text = (csvTextArea?.value || '').trim();
-  if (!text) { alert('Paste CSV text first.'); return; }
-  try {
-    const rows = parseCsv(text);
-    const cards = rowsToCards(rows);
-    if (!cards.length) throw new Error('No rows parsed.');
-    saveDeck(cards);
-    fallbackPanel.hidden = true;
-    $('card').hidden = false;
-    newRun(cards);
-    render();
-    startCountdownIfNeeded();
-  } catch (e) {
-    alert('Failed to parse pasted CSV.');
-  }
-});
 
 // Dialog import/export controls
 const dlgExport = /** @type {HTMLButtonElement} */(document.getElementById('dlgExport'));
@@ -1241,17 +1206,20 @@ hskImportClose?.addEventListener('click', closeHskImportDialog);
 hskImportCancel?.addEventListener('click', closeHskImportDialog);
 hskImportStart?.addEventListener('click', startHskImportSession);
 
-// Add change listeners for custom level checkboxes
+// Add change listeners for custom file checkboxes
 document.addEventListener('DOMContentLoaded', () => {
-  const customLevelCheckboxes = document.querySelectorAll('input.hsk-level');
-  customLevelCheckboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-      const selectedLevels = Array.from(customLevelCheckboxes)
+  // Listen for dynamically added hsk-file checkboxes
+  document.addEventListener('change', (event) => {
+    if (event.target.classList.contains('hsk-file')) {
+      const customFileCheckboxes = document.querySelectorAll('input.hsk-file');
+      const selectedFiles = Array.from(customFileCheckboxes)
         .filter(c => c.checked)
         .map(c => c.value);
-      updateHskImportSessionInfo(selectedLevels);
-      hskImportStart.disabled = selectedLevels.length === 0;
-    });
+      updateHskImportSessionInfo(selectedFiles);
+      if (hskImportStart) {
+        hskImportStart.disabled = selectedFiles.length === 0;
+      }
+    }
   });
 });
 

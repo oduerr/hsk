@@ -1,0 +1,8 @@
+filename,display_name,description
+hsk1.csv,HSK 1,Basic Chinese vocabulary (150 words)
+hsk2.csv,HSK 2,Elementary Chinese vocabulary (300 words)
+hsk3.csv,HSK 3,Intermediate Chinese vocabulary (600 words)
+hsk4.csv,HSK 4,Upper-intermediate Chinese vocabulary (1200 words)
+hsk5.csv,HSK 5,Advanced Chinese vocabulary (2500 words)
+hsk6.csv,HSK 6,Proficient Chinese vocabulary (5000 words)
+eng_oliver.csv,Oliver's English,Personal English vocabulary collection

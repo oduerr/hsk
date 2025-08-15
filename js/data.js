@@ -98,20 +98,55 @@ export function rowsToCards(rows) {
 }
 
 /**
- * Discover available CSV levels by probing known filenames.
- * Directory listing is typically unavailable on static hosts, so we use HEAD requests.
- * @returns {Promise<string[]>} array like ['0','1','2','3','4','5','6'] that exist
+ * Discover available CSV files by reading a vocabulary index file.
+ * This provides a clean, user-controlled way to manage available vocabulary files.
+ * @returns {Promise<Array<{filename: string, displayName: string, description: string, path: string}>>} Array of discovered CSV files
+ */
+export async function discoverAvailableCsvFiles() {
+  try {
+    // Try to read the vocabulary index file first
+    const response = await fetch('./data/vocab.csv');
+    if (response.ok) {
+      const csvText = await response.text();
+      const rows = parseCsv(csvText);
+      
+      // Parse the index file (skip header row)
+      const discovered = [];
+      for (const row of rows.slice(1)) {
+        if (row.length >= 2) {
+          discovered.push({
+            filename: row[0],
+            displayName: row[1],
+            description: row[2] || '',
+            path: `./data/${row[0]}`
+          });
+        }
+      }
+      
+      if (discovered.length > 0) {
+        console.log('Discovered vocabulary files from vocab.csv:', discovered);
+        return discovered.sort((a, b) => a.displayName.localeCompare(b.displayName, 'en', { numeric: true }));
+      }
+    }
+  } catch (error) {
+    console.warn('Could not read vocab.csv, falling back to pattern discovery:', error);
+  }
+  
+  alert('Could not load vocabulary list.');
+  return []
+}
+
+/**
+ * Legacy function for backward compatibility.
+ * @deprecated Use discoverAvailableCsvFiles() instead
+ * @returns {Promise<string[]>} Array of HSK level numbers
  */
 export async function discoverAvailableLevels() {
-  const candidates = ['0','1','2','3','4','5','6'];
-  const found = [];
-  await Promise.all(candidates.map(async (lvl) => {
-    try {
-      const resp = await fetch(`./data/hsk${lvl}.csv`, { method: 'HEAD' });
-      if (resp.ok) found.push(lvl);
-    } catch {}
-  }));
-  return found.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  console.warn('discoverAvailableLevels() is deprecated. Use discoverAvailableCsvFiles() instead.');
+  const files = await discoverAvailableCsvFiles();
+  return files
+    .filter(f => f.filename.match(/^hsk\d+\.csv$/))
+    .map(f => f.filename.match(/^hsk(\d+)\.csv$/)[1]);
 }
 
 

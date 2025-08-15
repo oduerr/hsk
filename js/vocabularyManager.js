@@ -3,7 +3,7 @@
  * Extracts functionality from main.js for reusability
  */
 
-import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
+import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableCsvFiles } from './data.js';
 import { state, newRun } from './state.js';
 import { saveDeck, saveLastLevel } from './storage.js';
 
@@ -34,30 +34,30 @@ export class VocabularyManager {
   }
 
   /**
-   * Discover available vocabulary levels from directory
-   * @returns {Promise<string[]>} Array of available level numbers
+   * Discover available vocabulary files from directory
+   * @returns {Promise<Array<{filename: string, displayName: string, description: string, path: string}>>} Array of discovered files
    */
-  async discoverAvailableLevels() {
+  async discoverAvailableCsvFiles() {
     try {
-      const levels = await discoverAvailableLevels();
-      this.onLevelsDiscovered(levels);
-      return levels;
+      const files = await discoverAvailableCsvFiles();
+      this.onLevelsDiscovered(files);
+      return files;
     } catch (error) {
-      this.onError('Failed to discover vocabulary levels', error);
+      this.onError('Failed to discover vocabulary files', error);
       return [];
     }
   }
 
   /**
-   * Load vocabulary from specified levels
-   * @param {string[]} levels - Array of level numbers to load
+   * Load vocabulary from specified files
+   * @param {string[]} filenames - Array of CSV filenames to load
    * @returns {Promise<Object>} Loaded vocabulary data
    */
-  async loadLevels(levels) {
+  async loadLevels(filenames) {
     try {
-      // Fetch CSV texts from all specified levels
+      // Fetch CSV texts from all specified files
       const texts = await Promise.all(
-        levels.map(l => fetchCsvText(`./data/hsk${l}.csv`).catch(() => ''))
+        filenames.map(filename => fetchCsvText(`./data/${filename}`).catch(() => ''))
       );
 
       // Parse and merge all CSV data
@@ -72,18 +72,18 @@ export class VocabularyManager {
       const cards = rowsToCards(mergedRows);
       
       if (cards.length === 0) {
-        throw new Error('No vocabulary cards found in selected levels');
+        throw new Error('No vocabulary cards found in selected files');
       }
 
-      // Generate level label
-      const levelLabel = levels.length === 1 
-        ? `HSK ${levels[0]}` 
-        : `HSK ${levels.join('+')}`;
+      // Generate level label from filenames
+      const levelLabel = filenames.length === 1 
+        ? this.getDisplayNameFromFilename(filenames[0])
+        : `${filenames.length} Files Combined`;
 
       const result = {
         cards,
         levelLabel,
-        levels,
+        filenames,
         cardCount: cards.length,
         sessionName: this.sessionName || levelLabel,
         sessionId: this.sessionId
@@ -93,9 +93,27 @@ export class VocabularyManager {
       return result;
 
     } catch (error) {
-      this.onError('Failed to load vocabulary levels', error);
+      this.onError('Failed to load vocabulary files', error);
       throw error;
     }
+  }
+
+  /**
+   * Get display name from filename
+   * @param {string} filename - CSV filename
+   * @returns {string} Display name
+   */
+  getDisplayNameFromFilename(filename) {
+    const name = filename.replace(/\.csv$/i, '');
+    
+    if (name.match(/^hsk\d+$/i)) {
+      const level = name.match(/\d+/)[0];
+      if (level === '0') return 'HSK 0 (Test)';
+      if (level === '7') return 'HSK 7 (English)';
+      return `HSK ${level}`;
+    }
+    
+    return name.charAt(0).toUpperCase() + name.slice(1).replace(/[-_]/g, ' ');
   }
 
   /**
@@ -116,8 +134,8 @@ export class VocabularyManager {
       state.session.id = vocabularyData.sessionId;
       
       // Save last level preference
-      const levelKey = vocabularyData.levels.length === 1 
-        ? vocabularyData.levels[0] 
+      const levelKey = vocabularyData.filenames.length === 1 
+        ? vocabularyData.filenames[0].replace(/\.csv$/i, '') 
         : 'custom';
       saveLastLevel(levelKey);
 
@@ -126,7 +144,7 @@ export class VocabularyManager {
         sessionName: vocabularyData.sessionName,
         levelLabel: vocabularyData.levelLabel,
         cardCount: vocabularyData.cardCount,
-        levels: vocabularyData.levels,
+        filenames: vocabularyData.filenames,
         startedAt: new Date().toISOString()
       };
 
@@ -141,23 +159,23 @@ export class VocabularyManager {
 
   /**
    * Complete workflow: discover, load, and start session
-   * @param {string[]} levels - Levels to load (if not specified, will discover)
+   * @param {string[]} filenames - Files to load (if not specified, will discover)
    * @returns {Promise<Object>} Complete session information
    */
-  async discoverLoadAndStart(levels = null) {
+  async discoverLoadAndStart(filenames = null) {
     try {
-      // Discover levels if not specified
-      if (!levels) {
-        const availableLevels = await this.discoverAvailableLevels();
-        if (availableLevels.length === 0) {
-          throw new Error('No vocabulary levels found');
+      // Discover files if not specified
+      if (!filenames) {
+        const availableFiles = await this.discoverAvailableCsvFiles();
+        if (availableFiles.length === 0) {
+          throw new Error('No vocabulary files found');
         }
-        // Default to first available level
-        levels = [availableLevels[0]];
+        // Default to first available file
+        filenames = [availableFiles[0].filename];
       }
 
-      // Load vocabulary from levels
-      const vocabularyData = await this.loadLevels(levels);
+      // Load vocabulary from files
+      const vocabularyData = await this.loadLevels(filenames);
       
       // Start session if auto-start is enabled
       if (this.autoStart) {
@@ -191,7 +209,7 @@ export class VocabularyManager {
       const result = {
         cards,
         levelLabel: 'Custom CSV',
-        levels: ['custom'],
+        filenames: ['custom'],
         cardCount: cards.length,
         sessionName: this.sessionName || `Custom: ${file.name}`,
         sessionId: this.sessionId

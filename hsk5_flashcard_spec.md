@@ -1321,3 +1321,40 @@ This would make the code more organized and allow you to reuse this vocabulary m
 - Added proper error handling and user feedback
 - Maintained all existing functionality while making it more modular and reusable
 - Moved functionality out of the gear menu for better accessibility and prominence
+
+### 5.05 Dynamic CSV Discovery with vocab.csv ✅ COMPLETED
+Implement a user-controlled vocabulary file discovery system using a central index file.
+
+**Implementation Details:**
+- **Primary Discovery Method**: `data/vocab.csv` serves as a central index for all available vocabulary files
+- **File Format**: CSV with columns: `filename`, `display_name`, `description`
+- **User Control**: Users decide what files are available by editing `vocab.csv`
+- **Rich Metadata**: Display names and descriptions for better user experience
+- **Fallback System**: Pattern-based discovery if `vocab.csv` is unavailable
+- **Dynamic UI**: Vocabulary manager automatically populates from the index file
+- **Easy Maintenance**: No code changes needed to add new vocabulary files
+- **Flexible Naming**: Support for any CSV filename without pattern restrictions
+- **Future-Proof**: Works with any vocabulary format and naming convention
+
+**Benefits:**
+- **No Hardcoded Patterns**: Completely dynamic file discovery
+- **User Empowerment**: Full control over available vocabulary sets
+- **Rich Information**: Descriptions help users understand content
+- **Easy Extension**: Simple CSV edit to add new files
+- **Backward Compatible**: Fallback ensures existing functionality works
+- **Professional UI**: Clean, organized vocabulary selection interface
+
+**Example vocab.csv:**
+```csv
+filename,display_name,description
+hsk1.csv,HSK 1,Basic Chinese vocabulary (150 words)
+hsk2.csv,HSK 2,Elementary Chinese vocabulary (300 words)
+eng_oliver.csv,Oliver's English,Personal English vocabulary collection
+```
+
+**Usage:**
+1. Place CSV files in `data/` directory
+2. Add entries to `data/vocab.csv` with filename, display name, and description
+3. Reload page - files automatically appear in vocabulary manager
+4. Select individual files or create custom combinations
+5. Start study sessions with chosen vocabulary sets
