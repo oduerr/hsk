@@ -49,12 +49,7 @@
         </div>
         <div id="message" class="message" hidden></div>
         <div id="fallbackPanel" class="message" hidden>
-          <div style="margin-bottom:8px">Could not load deck. Choose a local CSV or paste CSV below:</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
-            <input type="file" id="csvFileInput" accept="text/csv" />
-            <button id="usePastedCsv" class="secondary">Use pasted CSV</button>
-          </div>
-          <textarea id="csvTextArea" rows="6" style="width:100%; resize:vertical" placeholder="hanzi,pinyin,english\n唉,āi,interjection or grunt of agreement\n…"></textarea>
+          <div style="margin-bottom:8px">Could not load deck. Use the  button in the main menu to import HSK vocabulary files.</div>
         </div>
         <section id="card" class="card">
           <div id="mistakeBadge" class="mistake-badge" hidden>Marked mistake</div>
@@ -112,34 +107,6 @@
             <button class="secondary" id="settingsClose">Close</button>
           </div>
           <div class="modal-body">
-            <section style="margin-bottom:12px">
-              <div style="font-weight:600; margin-bottom:6px">Level</div>
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-                <select id="levelPicker">
-                  <option value="0">HSK 0 (test)</option>
-                  <option value="1">HSK 1</option>
-                  <option value="2">HSK 2</option>
-                  <option value="3">HSK 3</option>
-                  <option value="4">HSK 4</option>
-                  <option value="5">HSK 5</option>
-                  <option value="6">HSK 6</option>
-                  <option value="7">HSK 7 (English)</option>
-                  <option value="custom">Custom…</option>
-                </select>
-                <label class="muted" id="levelInfo"></label>
-              </div>
-              <div id="customLevelsRow" style="margin-top:6px; display:none">
-                <label class="muted">Combine:</label>
-                <label><input type="checkbox" value="1" class="lvl" /> 1</label>
-                <label><input type="checkbox" value="2" class="lvl" /> 2</label>
-                <label><input type="checkbox" value="3" class="lvl" /> 3</label>
-                <label><input type="checkbox" value="4" class="lvl" /> 4</label>
-                <label><input type="checkbox" value="5" class="lvl" /> 5</label>
-                <label><input type="checkbox" value="6" class="lvl" /> 6</label>
-                <button id="loadCustomLevels" class="secondary">Load</button>
-              </div>
-            </section>
-            <div class="section-divider"></div>
             <section style="margin-bottom:12px">
               <div style="font-weight:600; margin-bottom:6px">Auto‑reveal</div>
               <label class="toggle"><input type="checkbox" id="settingsAutoToggle" /> <span>Enable</span></label>

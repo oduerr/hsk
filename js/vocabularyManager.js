@@ -5,7 +5,7 @@
 
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { state, newRun } from './state.js';
-import { saveDeck, loadDeck, saveLastLevel, loadLastLevel } from './storage.js';
+import { saveDeck, saveLastLevel } from './storage.js';
 
 /**
  * Vocabulary Manager Class

@@ -1,4 +1,4 @@
-import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
+import { discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard } from './state.js';
@@ -130,31 +130,6 @@ function startCountdownIfNeeded() {
     }
     updateCountdown(countdownRemaining);
   }, 1000);
-}
-
-async function refreshAvailableLevels() {
-  try {
-    const levels = await discoverAvailableLevels();
-    const have = new Set(levels);
-    const options = Array.from(levelPicker?.options || []);
-    let mutated = false;
-    for (const opt of options) {
-      const v = opt.value;
-      if (/^[0-6]$/.test(v)) {
-        if (!have.has(v)) { levelPicker.removeChild(opt); mutated = true; }
-      }
-    }
-    for (const v of levels) {
-      if (![...options].some(o => o.value === v)) {
-        const o = document.createElement('option'); o.value = v; o.textContent = `HSK ${v}`; levelPicker.insertBefore(o, levelPicker.querySelector('option[value="custom"]')); mutated = true;
-      }
-    }
-    if (mutated) {
-      // ensure HSK 0 test remains first if present
-      const zero = levelPicker.querySelector('option[value="0"]');
-      if (zero) levelPicker.insertBefore(zero, levelPicker.firstChild);
-    }
-  } catch {}
 }
 
 // HSK Import Functions
@@ -375,7 +350,6 @@ async function bootstrap() {
     // Update header controls based on Minimal UI
     updateHeaderForMinimalUI(!!s.minimalUI);
     // Probe available CSV levels and update picker
-    await refreshAvailableLevels();
     // Audio cache setting
     try {
       const saved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
@@ -870,16 +844,6 @@ async function loadLevelsAndStart(levels) {
     alert('Failed to load selected level(s).');
   }
 }
-
-levelPicker?.addEventListener('change', async () => {
-  if (levelPicker.value === 'custom') {
-    customLevelsRow.style.display = '';
-  } else {
-    customLevelsRow.style.display = 'none';
-    saveLastLevel(levelPicker.value);
-    await loadLevelsAndStart([levelPicker.value]);
-  }
-});
 
 // Web Speech – Speak Chinese
 let cachedVoices = [];
