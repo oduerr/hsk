@@ -1,2 +1,2 @@
-5.01 — Import Sessions with selection dialog, auto-open replay menu
+5.01 — Import Sessions with selection dialog, auto-open replay menu, rename wrongTone to annotation
 

@@ -1,7 +1,7 @@
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableLevels } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markWrongTone } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -59,7 +59,7 @@ const audioCacheStatus = /** @type {HTMLElement} */(document.getElementById('aud
 const btnCardMistakeToggle = /** @type {HTMLButtonElement} */(document.getElementById('btnCardMistakeToggle'));
 const btnSpeak = /** @type {HTMLButtonElement} */(document.getElementById('btnSpeak'));
 const btnTone = /** @type {HTMLButtonElement} */(document.getElementById('btnTone'));
-const btnWrongTone = /** @type {HTMLButtonElement} */(document.getElementById('btnWrongTone'));
+const btnAnnotation = /** @type {HTMLButtonElement} */(document.getElementById('btnAnnotation'));
 const mediaRow = /** @type {HTMLElement} */(document.getElementById('mediaRow'));
 const levelPicker = /** @type {HTMLSelectElement} */(document.getElementById('levelPicker'));
 const customLevelsRow = /** @type {HTMLElement} */(document.getElementById('customLevelsRow'));
@@ -389,13 +389,13 @@ btnSpeak?.addEventListener('click', () => {
   try { const level = state.levelLabel || ''; speak(card.hanzi || card.pinyin || '', 'zh-CN', { level }); } catch {}
 });
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
-btnWrongTone?.addEventListener('click', () => {
+btnAnnotation?.addEventListener('click', () => {
   const idx = state.order[state.index];
   const card = state.deck[idx];
   if (!card) return;
-  const note = prompt('Describe the tone issue (optional):', '') || '';
-  markWrongTone(note);
-  // Autosave after marking wrong tone
+  const note = prompt('Add annotation (optional):', '') || '';
+  markAnnotation(note);
+  // Autosave after adding annotation
   try {
     const enabled = !!(settingsAutosave && settingsAutosave.checked);
     if (enabled) {

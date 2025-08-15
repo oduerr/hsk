@@ -39,7 +39,7 @@ export let state = {
     finishedAt: null,
     events: [],
     replayOf: null,
-    wrongTone: [],
+    annotation: [],
   },
 };
 
@@ -63,7 +63,7 @@ export function newRun(cards, opts = { replayOf: null }) {
       { type: 'start', at: startedAt, index: 0 },
     ],
     replayOf: opts?.replayOf || null,
-    wrongTone: [],
+    annotation: [],
   };
 }
 
@@ -135,20 +135,20 @@ function logEvent(type, cardId) {
 }
 
 /**
- * Mark current card as wrong tone with optional note.
+ * Mark current card with annotation and optional note.
  * @param {string} [note]
  */
-export function markWrongTone(note = '') {
+export function markAnnotation(note = '') {
   const c = currentCard();
   if (!c) return;
   const at = new Date().toISOString();
   // Keep one entry per card id; update note/time if exists
-  const arr = Array.isArray(state.session.wrongTone) ? state.session.wrongTone : (state.session.wrongTone = []);
+  const arr = Array.isArray(state.session.annotation) ? state.session.annotation : (state.session.annotation = []);
   const idx = arr.findIndex((x) => x && x.cardId === c.id);
   const entry = { cardId: c.id, at, note: String(note || '') };
   if (idx >= 0) arr[idx] = entry; else arr.push(entry);
   // Log event
-  state.session.events.push({ type: 'wrongTone', at, index: state.index, cardId: c.id, note: String(note || '') });
+  state.session.events.push({ type: 'annotation', at, index: state.index, cardId: c.id, note: String(note || '') });
 }
 
 /**
@@ -171,7 +171,7 @@ export function finalizeIfFinished() {
     order: state.order,
     events: state.session.events,
     mistakeIds,
-    wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
+    annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   const summary = {
@@ -179,7 +179,7 @@ export function finalizeIfFinished() {
     startedAt: state.session.startedAt,
     finishedAt,
     mistakeIds,
-    wrongToneCount: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.length : 0,
+    annotationCount: Array.isArray(state.session.annotation) ? state.session.annotation.length : 0,
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
   return { full, summary };
@@ -198,7 +198,7 @@ export function getFullSessionSnapshot() {
     order: state.order,
     events: state.session.events.slice(),
     mistakeIds,
-    wrongTone: Array.isArray(state.session.wrongTone) ? state.session.wrongTone.slice() : [],
+    annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
     counts: { total: state.order.length, mistakes: mistakeIds.length },
   };
 }
@@ -217,7 +217,7 @@ export function resumeRun(full, opts = {}) {
   state.index = Math.min(progressed, state.order.length);
   state.face = 'front';
   state.mistakes = new Set(Array.isArray(full?.mistakeIds) ? full.mistakeIds : []);
-  state.session.wrongTone = Array.isArray(full?.wrongTone) ? full.wrongTone.slice() : [];
+  state.session.annotation = Array.isArray(full?.annotation) ? full.annotation.slice() : [];
   const startedAt = full?.startedAt || new Date().toISOString();
   state.session = {
     id: full?.id || fnv1a32(`${startedAt}|${state.deck.length}|resume`),
@@ -225,7 +225,7 @@ export function resumeRun(full, opts = {}) {
     finishedAt: null,
     events: Array.isArray(full?.events) ? full.events.slice() : [{ type: 'start', at: startedAt, index: 0 }],
     replayOf: opts?.replayOf || null,
-    wrongTone: Array.isArray(full?.wrongTone) ? full.wrongTone.slice() : [],
+    annotation: Array.isArray(full?.annotation) ? full.annotation.slice() : [],
   };
 }
 
