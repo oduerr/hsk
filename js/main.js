@@ -938,6 +938,34 @@ btnSaveProgress?.addEventListener('click', () => {
 const dlgExport = /** @type {HTMLButtonElement} */(document.getElementById('dlgExport'));
 const dlgImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('dlgImportBtn'));
 const dlgImportInput = /** @type {HTMLInputElement} */(document.getElementById('dlgImportInput'));
+const dlgNewSession = /** @type {HTMLButtonElement} */(document.getElementById('dlgNewSession'));
+
+dlgNewSession?.addEventListener('click', () => {
+  try {
+    // Start a new session with the current deck
+    if (state.deck.length > 0) {
+      newRun(state.deck);
+      render();
+      startCountdownIfNeeded();
+      closeReplayDialog();
+    } else {
+      // If no deck loaded, try to load from storage
+      const deck = loadDeck();
+      if (Array.isArray(deck) && deck.length > 0) {
+        newRun(deck);
+        render();
+        startCountdownIfNeeded();
+        closeReplayDialog();
+      } else {
+        alert('No vocabulary deck available. Please use the 📚 button to import HSK files first.');
+      }
+    }
+  } catch (e) {
+    console.error('Failed to start new session:', e);
+    alert('Failed to start new session. Check console.');
+  }
+});
+
 dlgExport?.addEventListener('click', () => {
   try { const snapshot = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snapshot); } catch (e) { console.error(e); }
 });
@@ -1055,10 +1083,14 @@ function startReplayFromSummary(summary) {
 function resumeFromSummary(summary) {
   const full = loadFullSession(summary.id);
   if (!full) { alert('No saved checkpoint found.'); return; }
-  resumeRun(full, { replayOf: full.replayOf || null });
-  render();
-  startCountdownIfNeeded();
-  closeReplayDialog();
+  resumeRun(full, { replayOf: full.replayOf || null }).then(() => {
+    render();
+    startCountdownIfNeeded();
+    closeReplayDialog();
+  }).catch(err => {
+    console.error('Failed to resume session:', err);
+    alert('Failed to resume session. Check console.');
+  });
 }
 
 function renameSummaryInline(li, summary) {

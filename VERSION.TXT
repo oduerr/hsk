@@ -1,2 +1,1 @@
-5.05 — Dynamic CSV Discovery with vocab.csv index file, user-controlled vocabulary management, rich metadata support
-
+5.06 — New and Imported Sessions stored in Session List 

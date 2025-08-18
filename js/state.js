@@ -303,7 +303,7 @@ export function getFullSessionSnapshot() {
  * @param {any} full
  * @param {{ replayOf?: string|null }} [opts]
  */
-export function resumeRun(full, opts = {}) {
+export async function resumeRun(full, opts = {}) {
   state.deck = Array.isArray(full?.cards) ? full.cards.slice() : [];
   state.order = Array.isArray(full?.order) ? full.order.slice() : [];
   const progressed = Array.isArray(full?.events)
@@ -322,6 +322,29 @@ export function resumeRun(full, opts = {}) {
     replayOf: opts?.replayOf || null,
     annotation: Array.isArray(full?.annotation) ? full.annotation.slice() : [],
   };
+  
+  // Auto-save the loaded session so it appears in the replay list
+  // This ensures imported/loaded sessions are automatically available for replay
+  try {
+    const { saveSessionSummary } = await import('./storage.js');
+    const summary = {
+      id: state.session.id,
+      startedAt: state.session.startedAt,
+      finishedAt: null,
+      mistakeIds: Array.from(state.mistakes),
+      counts: { 
+        total: state.order.length, 
+        mistakes: state.mistakes.size,
+        removed: state.session.events.filter(e => e.type === 'remove').length
+      },
+      inProgress: true,
+      title: full?.title || null,
+      name: full?.name || null
+    };
+    saveSessionSummary(summary);
+  } catch (err) {
+    console.warn('Failed to auto-save loaded session:', err);
+  }
 }
 
 

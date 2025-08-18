@@ -1358,3 +1358,20 @@ eng_oliver.csv,Oliver's English,Personal English vocabulary collection
 3. Reload page - files automatically appear in vocabulary manager
 4. Select individual files or create custom combinations
 5. Start study sessions with chosen vocabulary sets
+
+### 5.06 Session Auto-Save & Replay Dialog Enhancement ✅ COMPLETED
+Implement automatic session persistence and improved replay dialog functionality.
+
+**Implementation Details:**
+- **Auto-Save for Imported Sessions**: When sessions are loaded via `resumeRun()`, they are automatically saved to the replay list
+- **Seamless Import Workflow**: Imported sessions immediately appear in the replay dialog without manual saving
+- **New Session Button**: Added "New Session" button to the replay dialog header for better workflow efficiency
+- **Async Session Loading**: Updated `resumeRun()` function to handle automatic session persistence
+- **Smart Fallback Logic**: New Session button intelligently uses current deck or falls back to stored deck
+
+**Benefits:**
+- **No Manual Steps**: Imported sessions automatically appear in replay list
+- **Better UX**: Users can start new sessions directly from replay dialog
+- **Consistent Behavior**: All loaded sessions automatically persist for replay
+- **Workflow Efficiency**: Manage all sessions from one place without dialog switching
+- **Export-Reimport Effect**: Imported sessions behave like they were exported and re-imported
