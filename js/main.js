@@ -549,11 +549,46 @@ function onSecondsChanged() {
   }
 }
 
+// Helper function to check if user is typing in any input field
+function isUserTyping(target) {
+  if (!target) return false;
+  
+  // Check if target is an input element
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    return true;
+  }
+  
+  // Check if target is content-editable
+  if (target.contentEditable === 'true') {
+    return true;
+  }
+  
+  // Check if target is inside a content-editable element
+  let parent = target.parentElement;
+  while (parent) {
+    if (parent.contentEditable === 'true') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  
+  // Check if target is inside an annotation editor
+  if (target.closest('#annotationEditor')) {
+    return true;
+  }
+  
+  // Check if target is inside a rename dialog or any modal input
+  if (target.closest('.modal input, .modal textarea')) {
+    return true;
+  }
+  
+  return false;
+}
+
 function onKeyDown(e) {
-  // Check if annotation editor is open - if so, don't handle global shortcuts
-  const annotationEditor = document.getElementById('annotationEditor');
-  if (annotationEditor && !annotationEditor.hidden) {
-    // Editor is open, let it handle its own keyboard events
+  // Check if user is typing in any input field - if so, don't handle global shortcuts
+  if (isUserTyping(e.target)) {
+    // User is typing, let the input field handle its own keyboard events
     return;
   }
 
@@ -578,41 +613,38 @@ function onKeyDown(e) {
     openReplayDialog();
   } else if (key === 'delete' || key === 'backspace') {
     e.preventDefault();
-    // Only allow delete/backspace for card removal when not in annotation editor
-    const annotationEditor = document.getElementById('annotationEditor');
-    if (!annotationEditor || annotationEditor.hidden) {
-          const remainingCards = state.order.length - 1;
+    // Only allow delete/backspace for card removal when not typing
+    const remainingCards = state.order.length - 1;
     const confirmMessage = remainingCards > 0 
       ? `Remove this card from the session? ${remainingCards} cards will remain. This cannot be undone.`
       : 'Remove this card? This will remove the last card from the session. This cannot be undone.';
-      
+    
     if (confirm(confirmMessage)) {
       const removed = removeCard();
-        if (removed) {
-          // Autosave after removing card
-          try {
-            const enabled = !!(settingsAutosave && settingsAutosave.checked);
-            if (enabled) {
-              const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-              const snapshot = getFullSessionSnapshot();
-              saveCheckpoint(snapshot);
-              const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-              const ms = Math.round(t1 - t0);
-              console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-              if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
-              if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
-            }
-          } catch (e) { console.error('[autosave] failed', e); }
-          
-          // Update UI
-          render();
-          
-          // Show feedback
-          if (state.order.length === 0) {
-            showMessage('All cards removed from session.');
-          } else {
-            showMessage(`Card removed. ${state.order.length} cards remaining.`);
+      if (removed) {
+        // Autosave after removing card
+        try {
+          const enabled = !!(settingsAutosave && settingsAutosave.checked);
+          if (enabled) {
+            const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            const snapshot = getFullSessionSnapshot();
+            saveCheckpoint(snapshot);
+            const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            const ms = Math.round(t1 - t0);
+            console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+            if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
+            if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
           }
+        } catch (e) { console.error('[autosave] failed', e); }
+        
+        // Update UI
+        render();
+        
+        // Show feedback
+        if (state.order.length === 0) {
+          showMessage('All cards removed from session.');
+        } else {
+          showMessage(`Card removed. ${state.order.length} cards remaining.`);
         }
       }
     }
@@ -1008,7 +1040,7 @@ function openReplayDialog() {
       const status = s.finishedAt ? 'complete' : 'incomplete';
       const title = s.title ? ` — ${escapeHtml(s.title)}` : '';
       left.innerHTML = `<div><strong>${ymdhm}</strong>${title}</div>` +
-        `<div class="sid">${s.name ? escapeHtml(s.name) : s.id}</div>`;
+        `<div class="sid" title="Session ID: ${s.id}">${s.name ? escapeHtml(s.name) : s.title || 'Untitled Session'}</div>`;
       right.className = 'counts';
       const removedText = (s.counts?.removed ?? 0) > 0 ? ` • ${s.counts.removed} removed` : '';
       right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes${removedText} • status: ${status}`;
@@ -1018,12 +1050,14 @@ function openReplayDialog() {
       const btnReplay = document.createElement('button');
       btnReplay.className = 'primary';
       btnReplay.textContent = 'Replay mistakes';
+      btnReplay.title = 'Replay only the cards you marked as mistakes in a new session';
       btnReplay.disabled = disabledReplay;
       if (!disabledReplay) btnReplay.addEventListener('click', () => startReplayFromSummary(s));
 
       const btnResume = document.createElement('button');
       btnResume.className = 'secondary';
-      btnResume.textContent = 'Resume checkpoint';
+      btnResume.textContent = 'Resume Session';
+      btnResume.title = 'Continue this session from where you left off';
       const isInProgress = !!s.inProgress || !s.finishedAt;
       btnResume.disabled = !isInProgress;
       if (isInProgress) btnResume.addEventListener('click', () => resumeFromSummary(s));
@@ -1056,6 +1090,13 @@ function closeReplayDialog() { replayDialog.hidden = true; }
 
 function startReplayFromSummary(summary) {
   const full = loadFullSession(summary.id);
+  // Set the name to "replay from" and then use the original session name.
+  if (full && full.name) {
+    full.name = `replay from ${full.name}`;
+  } else if (full && (full.title || summary.title)) {
+    full.name = `replay from ${full.title || summary.title}`;
+  }
+  renameSession(full.id, full.name);
   const mistakeIds = new Set(summary.mistakeIds || []);
   const deck = state.deck.filter((c) => mistakeIds.has(c.id));
   if (!deck.length) {
@@ -1093,8 +1134,12 @@ function renameSummaryInline(li, summary) {
     leftDiv.firstChild.replaceWith(input);
     input.focus();
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { commit(); }
-      if (e.key === 'Escape') { openReplayDialog(); }
+      if (e.key === 'Enter') { 
+        commit(); 
+      }
+      if (e.key === 'Escape') { 
+        openReplayDialog(); 
+      }
     });
     input.addEventListener('blur', commit);
   }

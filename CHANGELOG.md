@@ -1,5 +1,90 @@
 # CHANGELOG
 
+## 5.21 - Keyboard Shortcut Input Field Protection ✅ COMPLETED
+
+**Date**: 2025-01-27
+
+**Summary**: Implemented comprehensive input field detection to prevent global keyboard shortcuts from interfering with user typing in input fields, textareas, and content-editable elements.
+
+**Changes Made**:
+
+### Input Field Detection
+- **New Function**: Added `isUserTyping(target)` helper function for comprehensive input context detection
+- **Input Types Covered**: 
+  - Standard HTML inputs (`<input>`, `<textarea>`)
+  - Content-editable elements
+  - Elements inside content-editable containers
+  - Annotation editor components
+  - Modal input fields (including rename dialogs)
+
+### Global Shortcut Bypass
+- **Smart Detection**: Global keyboard shortcuts are automatically disabled when users are typing
+- **Context Awareness**: Shortcuts only activate when no input field is focused
+- **User Experience**: Users can type freely without triggering card navigation or other actions
+
+### Technical Implementation
+- **Event Handler Update**: Modified `onKeyDown()` function to check input state before processing shortcuts
+- **Comprehensive Coverage**: Handles all common input scenarios including nested content-editable elements
+- **Performance Optimized**: Lightweight detection with early return for better performance
+
+**Files Modified**:
+- `js/main.js` - Added `isUserTyping()` function and updated global keyboard handler
+
+**Benefits**:
+- **Uninterrupted Typing**: Users can type numbers, letters, and special characters without interference
+- **Better Input Experience**: Rename dialogs, annotation editor, and other inputs work as expected
+- **Professional Behavior**: Follows standard web application patterns for keyboard handling
+- **Reduced Frustration**: No more accidental card navigation while typing in input fields
+- **Improved Accessibility**: Better support for users who rely on keyboard navigation
+
+**Example Scenarios Fixed**:
+- **Before**: Typing "123" in rename dialog would trigger card navigation
+- **After**: Numbers, letters, and special characters work normally in all input fields
+- **Before**: Arrow keys in annotation editor would navigate cards
+- **After**: Arrow keys work for text navigation within input fields
+- **Before**: Space key in rename dialog would reveal cards
+- **After**: Space key works normally for typing spaces
+
+---
+
+## 5.20 - Session Manager UI Enhancements ✅ COMPLETED
+
+**Date**: 2025-01-27
+
+**Summary**: Enhanced the session management interface with improved naming, tooltips, and keyboard event handling.
+
+**Changes Made**:
+
+### UI Improvements
+- **Modal Title**: Changed "Replay past session" to "Session Manager" for better clarity
+- **Session Display**: Sessions now show meaningful names/titles instead of cryptic IDs
+- **Session ID Tooltips**: Session IDs are displayed in tooltips for technical reference
+- **Action Button Tooltips**: Added descriptive tooltips for "Replay mistakes" and "Resume checkpoint" buttons
+
+### Keyboard Event Handling
+- **Renaming Input**: Fixed keyboard event conflicts during session renaming
+- **Event Propagation**: Prevented space key, arrow keys, enter, and escape from interfering with card navigation
+- **User Experience**: Users can now type freely in the rename input without triggering card actions
+
+### Technical Details
+- **Session Identification**: Primary display shows `session.name` or `session.title`, falling back to "Untitled Session"
+- **Tooltip Content**: 
+  - "Replay mistakes": "Replay only the cards you marked as mistakes in this session"
+  - "Resume checkpoint": "Continue this session from where you left off"
+- **Event Handling**: Added `preventDefault()` and `stopPropagation()` for navigation keys during renaming
+
+**Files Modified**:
+- `index.html` - Updated modal title from "Replay past session" to "Session Manager"
+- `js/main.js` - Enhanced session list rendering with names, tooltips, and improved keyboard handling
+
+**Benefits**:
+- **Better Usability**: Users can easily identify sessions by meaningful names
+- **Improved Accessibility**: Clear descriptions of what each action button does
+- **Enhanced Workflow**: Renaming sessions no longer interferes with card navigation
+- **Professional Interface**: More descriptive and user-friendly session management
+
+---
+
 ## 5.11 - Refactor: Extract and Document Effects ✅ COMPLETED
 Extracted all I/O operations and side effects into canonical effect functions, ensuring consistent and maintainable external interactions.
 

@@ -1464,3 +1464,45 @@ Extracted all I/O operations and side effects into canonical effect functions, e
 This refactoring ensures all external interactions are properly documented and centralized, making the codebase more maintainable and consistent.
 
 ⸻
+### UI Enhancements
+
+#### 5.20 Replay past sessions Card ✅ COMPLETED
+- rename Replay past sessions to "Session Manager" 
+- names instead of IDs should be displayed (the id are shown in the tooltip)
+- When renaming make sure that keyboard events is not taken over i.e. space should work and not reveal the card
+- Please add a Tooltip describing what Replay Mistakes does
+- Please add a Tooltip describing what Resume Checkpoint does
+
+**Implementation Details:**
+- **Modal Title**: Changed from "Replay past session" to "Session Manager"
+- **Session Display**: Now shows session names/titles instead of IDs, with session IDs displayed in tooltips
+- **Keyboard Event Handling**: Fixed renaming input to prevent card navigation interference (space, arrow keys, enter, escape)
+- **Action Tooltips**: Added descriptive tooltips for "Replay mistakes" and "Resume checkpoint" buttons
+- **User Experience**: Improved clarity of session identification and action descriptions
+
+**Benefits:**
+- **Better Session Identification**: Users can easily identify sessions by meaningful names instead of cryptic IDs
+- **Improved Accessibility**: Clear tooltips explain what each action button does
+- **Enhanced Usability**: Renaming sessions no longer interferes with card navigation controls
+- **Professional Appearance**: "Session Manager" is a more descriptive and professional title
+
+#### 5.21 Keyboard Shortcut Input Field Protection ✅ COMPLETED
+- Implement comprehensive input field detection to prevent global keyboard shortcuts from interfering with user typing
+- Global shortcuts should be disabled when users are typing in inputs, textareas, content-editable fields, or rename dialogs
+- Only local input behavior should apply when users are actively typing
+
+**Implementation Details:**
+- **Input Field Detection**: Created `isUserTyping()` function that detects various input contexts
+- **Global Shortcut Bypass**: Modified `onKeyDown()` to check input state before processing shortcuts
+- **Comprehensive Coverage**: Handles INPUT, TEXTAREA, content-editable, annotation editor, and modal inputs
+- **User Experience**: Users can now type freely in any input field without triggering card navigation
+
+**Benefits:**
+- **Uninterrupted Typing**: Users can type numbers, letters, and special characters without interference
+- **Better Input Experience**: Rename dialogs, annotation editor, and other inputs work as expected
+- **Professional Behavior**: Follows standard web application patterns for keyboard handling
+- **Reduced Frustration**: No more accidental card navigation while typing
+
+**Files Modified:**
+- `js/main.js` - Added `isUserTyping()` function and updated `onKeyDown()` handler
+
