@@ -611,6 +611,9 @@ function onKeyDown(e) {
   } else if (key === 'r') {
     e.preventDefault();
     openReplayDialog();
+  } else if (key === '/') {
+    e.preventDefault();
+    speakGood();
   } else if (key === 'delete' || key === 'backspace') {
     e.preventDefault();
     // Only allow delete/backspace for card removal when not typing
@@ -664,12 +667,18 @@ btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnCardMistakeToggle?.addEventListener('click', onMistake);
-btnSpeak?.addEventListener('click', () => {
+function speakGood() {
   const idx = state.order[state.index];
   const card = state.deck[idx];
   if (!card) return;
-  try { const level = state.levelLabel || ''; speak(card.hanzi || card.pinyin || '', 'zh-CN', { level }); } catch {}
-});
+  try { 
+    const level = state.levelLabel || ''; 
+    speak(card.hanzi || card.pinyin || '', 'zh-CN', { level }); 
+  } catch {
+    console.error('Failed to speak card:', e);
+  }
+}
+btnSpeak?.addEventListener('click', speakGood);
 btnTone?.addEventListener('click', () => { openToneVisualizer(); });
 btnAnnotation?.addEventListener('click', () => {
   openAnnotationEditor();
