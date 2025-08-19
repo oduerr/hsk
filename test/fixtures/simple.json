@@ -1,0 +1,371 @@
+{
+  "version": 1,
+  "exportedAt": "2025-08-19T07:28:07.797Z",
+  "summaries": [
+    {
+      "id": "5cd29480",
+      "startedAt": "2025-08-19T07:17:09.430Z",
+      "finishedAt": null,
+      "mistakeIds": [
+        "3f334bb8",
+        "614912d4",
+        "37d572b8",
+        "2af54f78"
+      ],
+      "counts": {
+        "total": 22,
+        "mistakes": 4,
+        "removed": 0
+      },
+      "inProgress": true
+    },
+    {
+      "id": "vocab_eng_oliver_1755588431038",
+      "startedAt": "2025-08-19T07:27:15.708Z",
+      "finishedAt": null,
+      "mistakeIds": [
+        "874a56a0"
+      ],
+      "counts": {
+        "total": 5,
+        "mistakes": 1,
+        "removed": 0
+      },
+      "inProgress": true
+    }
+  ],
+  "sessions": [
+    {
+      "id": "5cd29480",
+      "startedAt": "2025-08-19T07:17:09.430Z",
+      "finishedAt": null,
+      "cards": [
+        {
+          "id": "f431750e",
+          "hanzi": "爸爸",
+          "pinyin": "bà ba",
+          "english": "(informal) father"
+        },
+        {
+          "id": "ddcea604",
+          "hanzi": "北京",
+          "pinyin": "Běi jīng",
+          "english": "Beijing"
+        },
+        {
+          "id": "614912d4",
+          "hanzi": "茶",
+          "pinyin": "chá",
+          "english": "tea"
+        },
+        {
+          "id": "6f9fb3b0",
+          "hanzi": "大熊猫",
+          "pinyin": "dà xióngmāo",
+          "english": "panda"
+        },
+        {
+          "id": "ad19ac38",
+          "hanzi": "走吧",
+          "pinyin": "zǒu ba",
+          "english": "let's go"
+        },
+        {
+          "id": "37ff7088",
+          "hanzi": "大",
+          "pinyin": "dà",
+          "english": "big"
+        },
+        {
+          "id": "f0b50ea8",
+          "hanzi": "小",
+          "pinyin": "xiǎo",
+          "english": "small"
+        },
+        {
+          "id": "0d2ee414",
+          "hanzi": "中",
+          "pinyin": "zhōng",
+          "english": "middle"
+        },
+        {
+          "id": "b4a00a10",
+          "hanzi": "差不多",
+          "pinyin": "chà bù duō",
+          "english": "almost"
+        },
+        {
+          "id": "f2505a54",
+          "hanzi": "啤酒肚",
+          "pinyin": "píjiǔ dù",
+          "english": "beer belly"
+        },
+        {
+          "id": "ccbad620",
+          "hanzi": "小心",
+          "pinyin": "xiǎo xīn",
+          "english": "careful"
+        },
+        {
+          "id": "37d572b8",
+          "hanzi": "饺子",
+          "pinyin": "jiǎo zi",
+          "english": "dumpling"
+        },
+        {
+          "id": "5a861a68",
+          "hanzi": "牛肉",
+          "pinyin": "niú ròu",
+          "english": "beef"
+        },
+        {
+          "id": "23afc558",
+          "hanzi": "羊肉",
+          "pinyin": "yáng ròu",
+          "english": "mutton"
+        },
+        {
+          "id": "bfc1c148",
+          "hanzi": "猪肉",
+          "pinyin": "zhū ròu",
+          "english": "pork"
+        },
+        {
+          "id": "3f334bb8",
+          "hanzi": "包子",
+          "pinyin": "bāozi",
+          "english": "steamed bun (baozi)"
+        },
+        {
+          "id": "fee32c78",
+          "hanzi": "小笼包",
+          "pinyin": "xiǎolóngbāo",
+          "english": "soup dumpling"
+        },
+        {
+          "id": "b1f85ea8",
+          "hanzi": "biángbiáng面",
+          "pinyin": "biángbiáng miàn",
+          "english": "biángbiáng noodles"
+        },
+        {
+          "id": "4840b128",
+          "hanzi": "兰州拉面",
+          "pinyin": "lán zhōu lā miàn",
+          "english": "Lanzhou hand-pulled noodles"
+        },
+        {
+          "id": "62c37878",
+          "hanzi": "中国人",
+          "pinyin": "Zhōngguó rén",
+          "english": "Chinese person"
+        },
+        {
+          "id": "027d94f0",
+          "hanzi": "德国人",
+          "pinyin": "Déguó rén",
+          "english": "German person"
+        },
+        {
+          "id": "2af54f78",
+          "hanzi": "瑞士人",
+          "pinyin": "Ruìshì rén",
+          "english": "Swiss person"
+        }
+      ],
+      "order": [
+        15,
+        19,
+        2,
+        7,
+        9,
+        11,
+        13,
+        14,
+        21,
+        8,
+        1,
+        20,
+        5,
+        18,
+        17,
+        0,
+        6,
+        12,
+        10,
+        16,
+        4,
+        3
+      ],
+      "events": [
+        {
+          "type": "start",
+          "at": "2025-08-19T07:17:09.430Z",
+          "index": 0
+        },
+        {
+          "type": "reveal",
+          "at": "2025-08-19T07:17:11.909Z",
+          "index": 0
+        },
+        {
+          "type": "mistake",
+          "at": "2025-08-19T07:17:12.226Z",
+          "index": 0,
+          "cardId": "3f334bb8"
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:51.196Z",
+          "index": 0
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:52.963Z",
+          "index": 1
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:54.313Z",
+          "index": 2
+        },
+        {
+          "type": "reveal",
+          "at": "2025-08-19T07:27:56.428Z",
+          "index": 3
+        },
+        {
+          "type": "mistake",
+          "at": "2025-08-19T07:27:57.955Z",
+          "index": 2,
+          "cardId": "614912d4"
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:58.650Z",
+          "index": 2
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:58.814Z",
+          "index": 3
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:58.949Z",
+          "index": 4
+        },
+        {
+          "type": "mistake",
+          "at": "2025-08-19T07:27:59.217Z",
+          "index": 5,
+          "cardId": "37d572b8"
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:59.684Z",
+          "index": 5
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:59.834Z",
+          "index": 6
+        },
+        {
+          "type": "next",
+          "at": "2025-08-19T07:27:59.983Z",
+          "index": 7
+        },
+        {
+          "type": "mistake",
+          "at": "2025-08-19T07:28:00.204Z",
+          "index": 8,
+          "cardId": "2af54f78"
+        }
+      ],
+      "mistakeIds": [
+        "3f334bb8",
+        "614912d4",
+        "37d572b8",
+        "2af54f78"
+      ],
+      "annotation": [],
+      "counts": {
+        "total": 22,
+        "mistakes": 4,
+        "removed": 0
+      }
+    },
+    {
+      "id": "vocab_eng_oliver_1755588431038",
+      "startedAt": "2025-08-19T07:27:15.708Z",
+      "finishedAt": null,
+      "cards": [
+        {
+          "id": "874a560",
+          "hanzi": "Grit",
+          "pinyin": "ɡrɪt",
+          "english": "Courage and determination"
+        },
+        {
+          "id": "0d21635f",
+          "hanzi": "Awkward",
+          "pinyin": "ˈɔːkwəd",
+          "english": "Clumsy or uncomfortable"
+        },
+        {
+          "id": "fbeea6e0",
+          "hanzi": "Array",
+          "pinyin": "əˈreɪ",
+          "english": "An ordered collection"
+        },
+        {
+          "id": "ae526e68",
+          "hanzi": "Variable",
+          "pinyin": "ˈveəriəbl",
+          "english": "Something that can change"
+        },
+        {
+          "id": "f5d1bf1e",
+          "hanzi": "Effigy",
+          "pinyin": "ˈɛfɪdʒi",
+          "english": "A statue or model of a person"
+        }
+      ],
+      "order": [
+        4,
+        0,
+        3,
+        2,
+        1
+      ],
+      "events": [
+        {
+          "type": "start",
+          "at": "2025-08-19T07:27:15.708Z",
+          "index": 0
+        },
+        {
+          "type": "next",
+          "at": "2025-08-18T07:27:22.587Z",
+          "index": 0
+        },
+        {
+          "type": "mistake",
+          "at": "2025-08-19T07:27:30.683Z",
+          "index": 1,
+          "cardId": "874a56a0"
+        }
+      ],
+      "mistakeIds": [
+        "874a56a0"
+      ],
+      "annotation": [],
+      "counts": {
+        "total": 5,
+        "mistakes": 1,
+        "removed": 0
+      }
+    }
+  ]
+}

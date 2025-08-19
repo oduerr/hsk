@@ -1,3 +1,4 @@
 .DS_Store
 /tmp_local
 /dev_tools/audio_*
+/node_modules

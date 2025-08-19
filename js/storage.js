@@ -221,37 +221,12 @@ export function exportAllSessionsFile(currentFullSession = null) {
 
 /**
  * Merge sessions from a JSON object into LocalStorage (dedupe by id).
- * Accepts two shapes:
- * 1) { version?, exportedAt?, summaries:[], sessions:[] }
- * 2) { summaries:[], sessions:[] } or even flat { sessions:[] } only
+ * Accepts standard format: { version?, exportedAt?, summaries:[], sessions:[] }
+ * or simplified: { summaries:[], sessions:[] }
  */
 export function importSessionsFromObject(obj) {
   const summaries = Array.isArray(obj?.summaries) ? obj.summaries : [];
   let sessions = Array.isArray(obj?.sessions) ? obj.sessions.slice() : [];
-
-  // Also support an object that has keys like 'session.<id>' or 'hsk.flash.session.<id>' mapping to session objects
-  const collectFromKeyed = (container) => {
-    let added = 0;
-    for (const key of Object.keys(container || {})) {
-      if (/^(session\.|hsk\.flash\.session\.)/.test(key)) {
-        const full = container[key];
-        if (full && full.id) {
-          sessions.push(full);
-          added++;
-        }
-      }
-    }
-    return added;
-  };
-
-  let keyedCount = 0;
-  if (!sessions.length && obj && typeof obj === 'object') {
-    keyedCount = collectFromKeyed(obj);
-  }
-  // Try sessionsById map
-  if (!sessions.length && obj && typeof obj.sessionsById === 'object') {
-    keyedCount += collectFromKeyed(obj.sessionsById);
-  }
 
   if (!summaries.length && !sessions.length) {
     // Try alternate shape: flat array of full sessions
@@ -280,12 +255,14 @@ export function importSessionsFromObject(obj) {
     saveFullSession(full);
     added += 1;
   }
+  
   // Merge summaries; if a summary for a saved full is missing, synthesize it
   const seenSummaryIds = new Set(summaries.map((s) => s?.id).filter(Boolean));
   for (const s of summaries) {
     if (!s?.id) continue;
     saveSessionSummary(s);
   }
+  
   for (const full of sessions) {
     if (!full?.id || seenSummaryIds.has(full.id)) continue;
     const summary = {
@@ -297,7 +274,8 @@ export function importSessionsFromObject(obj) {
     };
     saveSessionSummary(summary);
   }
-  return { added: added + keyedCount };
+  
+  return { added };
 }
 
 

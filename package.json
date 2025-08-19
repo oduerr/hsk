@@ -1,0 +1,31 @@
+{
+  "name": "hsk-flashcards",
+  "version": "5.11.0",
+  "description": "Chinese HSK vocabulary flashcard application",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
+    "test:verbose": "vitest run --reporter=verbose",
+    "test:actions": "vitest run test/actions.test.js",
+    "test:effects": "vitest run test/effects.test.js"
+  },
+  "keywords": [
+    "chinese",
+    "hsk",
+    "flashcards",
+    "vocabulary",
+    "learning",
+    "mandarin"
+  ],
+  "author": "HSK Flashcards Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/ui": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  }
+}
