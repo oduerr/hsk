@@ -4,7 +4,7 @@
  */
 
 import { fetchCsvText, parseCsv, rowsToCards, discoverAvailableCsvFiles } from './data.js';
-import { state, newRun } from './state.js';
+import { state, newRun, updateSessionMetadata, setLevelLabel } from './state.js';
 import { saveDeck, saveLastLevel } from './storage.js';
 
 /**
@@ -129,9 +129,9 @@ export class VocabularyManager {
       // Initialize new run
       newRun(vocabularyData.cards);
       
-      // Update state with session info
-      state.levelLabel = vocabularyData.levelLabel;
-      state.session.id = vocabularyData.sessionId;
+      // Update state with session info using actions
+      setLevelLabel(vocabularyData.levelLabel);
+      updateSessionMetadata(vocabularyData.sessionName, vocabularyData.sessionId);
       
       // Save last level preference
       const levelKey = vocabularyData.filenames.length === 1 
@@ -250,7 +250,7 @@ export class VocabularyManager {
   updateSessionName(name) {
     this.sessionName = name;
     if (state.session.id === this.sessionId) {
-      state.session.name = name;
+      updateSessionMetadata(name, undefined);
     }
   }
 
@@ -261,7 +261,7 @@ export class VocabularyManager {
   updateSessionId(id) {
     this.sessionId = id;
     if (state.session.id === this.sessionId) {
-      state.session.id = id;
+      updateSessionMetadata(undefined, id);
     }
   }
 }

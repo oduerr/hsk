@@ -1,7 +1,7 @@
 import { discoverAvailableCsvFiles } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -1219,16 +1219,6 @@ function clearAnnotation() {
   const activeEditor = useTrix ? trixEditor : textarea;
   
   activeEditor.value = '';
-}
-
-function removeAnnotation(cardId) {
-  // Remove annotation from state
-  state.session.annotation = state.session.annotation.filter(a => a.cardId !== cardId);
-  
-  // Remove annotation event from events
-  state.session.events = state.session.events.filter(e => 
-    !(e.type === 'annotation' && e.cardId === cardId)
-  );
 }
 
 // Initialize handled in bootstrap via saved settings

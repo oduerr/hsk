@@ -152,6 +152,44 @@ export function markAnnotation(note = '') {
 }
 
 /**
+ * Update session metadata (name, ID) - used by external modules
+ * @param {string} name - Session name
+ * @param {string} id - Session ID
+ */
+export function updateSessionMetadata(name, id) {
+  if (name !== undefined) {
+    state.session.name = name;
+  }
+  if (id !== undefined) {
+    state.session.id = id;
+  }
+}
+
+/**
+ * Update level label - used by vocabulary manager
+ * @param {string} label - New level label
+ */
+export function setLevelLabel(label) {
+  state.levelLabel = label;
+}
+
+/**
+ * Remove annotation from a specific card by ID
+ * @param {string} cardId - ID of card to remove annotation from
+ */
+export function removeAnnotation(cardId) {
+  // Remove annotation from state
+  if (Array.isArray(state.session.annotation)) {
+    state.session.annotation = state.session.annotation.filter(a => a.cardId !== cardId);
+  }
+  
+  // Remove annotation events from events array
+  state.session.events = state.session.events.filter(e => 
+    !(e.type === 'annotation' && e.cardId === cardId)
+  );
+}
+
+/**
  * Remove the current card from the session.
  * This will clean up all references to the card and adjust the session state.
  * @returns {boolean} true if card was removed, false if no card to remove

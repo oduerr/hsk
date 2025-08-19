@@ -177,7 +177,7 @@ start New Run with note {replayOf: sessionId}
 **Exit criteria:** Can select a session, replay only its mistakes, finish a replay-run.
 
 ### Round 3.5 Replay Mode Clarification
-A) “Built-in” replay from LocalStorage (default)
+A) "Built-in" replay from LocalStorage (default)
 	•	Every run writes a session summary + full session JSON to LocalStorage.
 	•	UI: a Replay… button opens a dialog listing past sessions (date, size, mistakes).
 	•	You pick a session → app computes mistakeIds → builds a deck from those cards → starts a replay run (shuffled).
@@ -185,7 +185,7 @@ A) “Built-in” replay from LocalStorage (default)
 
 Agent tasks
 	•	Render a session list from localStorage['hsk.flash.sessions'].
-	•	Disable “Replay” when mistakeIds.length === 0.
+	•	Disable "Replay" when mistakeIds.length === 0.
 
 B) Import & replay from a JSON file (drag & drop or file picker)
 	•	If you exported on another machine—or wiped LocalStorage—you can drag-and-drop a flash_sessions_*.json file into the app (or use an Import button).
@@ -193,7 +193,7 @@ B) Import & replay from a JSON file (drag & drop or file picker)
 	•	After import, use the same Replay… dialog as in A.
 
 UI hooks
-	•	Drop zone over the page: “Drop session JSON to import.”
+	•	Drop zone over the page: "Drop session JSON to import."
 	•	Hidden <input type="file" accept="application/json"> for the Import button.
 
 Agent tasks
@@ -212,7 +212,7 @@ Agent tasks
 	2.	File picker for local CSV.
 	3.	Paste area for manual CSV input.
 	•	Support an optional ?v=<version> query parameter to bypass browser caching when the CSV is updated.
-	•	No hardcoded repo name—read from a config constant so repo renaming doesn’t break loading.
+	•	No hardcoded repo name—read from a config constant so repo renaming doesn't break loading.
 
 ## 3.7 Debugging build indicator + manual session save
 ### Version indicator
@@ -221,7 +221,7 @@ Agent tasks
 	  -	The last modified timestamp of the main code file(s).
 	  -	Purpose: to verify that the browser is serving the latest build from GitHub Pages (avoid confusion with cached or delayed updates).
 ### Manual session save button
-	- Add a button (label: “Save session to LocalStorage” or similar) in debug mode.
+	- Add a button (label: "Save session to LocalStorage" or similar) in debug mode.
 	  - 	Clicking the button immediately serializes the current run state (deck, order, mistakes so far, timestamps) into LocalStorage, overwriting the active session entry.
 	  - This allows testing persistence and replay logic without finishing a run.
   •	Add a Save Progress button available during a run (both in debug and normal mode).
@@ -230,21 +230,21 @@ Agent tasks
     •	Cards already seen, cards remaining
     •	Mistake list so far
     •	Timestamps and any session metadata
-    •	Stored in LocalStorage as a “checkpoint” session.
+    •	Stored in LocalStorage as a "checkpoint" session.
 	On restart, user can choose to:
     1.	Resume from last checkpoint (unfinished cards + mistakes intact)
     2.	Replay only mistakes from the checkpoint
     3.	Start a fresh run
 	•	This supports:
 	•	Debug/testing persistence without finishing a run.
-	•	Practical early save for large decks (e.g., HSK5’s ~1,300 cards).
+	•	Practical early save for large decks (e.g., HSK5's ~1,300 cards).
 	•	Continuation after closing the browser or pausing for long periods.
 	JSON export/import compatibility
 	•	The checkpoint must be saved in the same JSON structure as a finished session, with the only difference being a status flag:
 
 
 ### Round 3.8
-- In the discreet version indicator at the bottom add The Chinese label “莉娜老师的版本” 
+- In the discreet version indicator at the bottom add The Chinese label "莉娜老师的版本" 
 - Past Sessions / Replay UI changes
 	•	When listing sessions, show for each 
   YYYY-MM-DD-hh:mm • <finished>/<total> • <mistakes> mistakes • status: complete|incomplete
@@ -290,7 +290,7 @@ Round 4.04 – Mobile Friendly (Layout)
 Gear Menu
 	•	Move Auto-reveal here.
 	•	Also include Info panel with:
-	•	Version label “莉娜老师的版本”
+	•	Version label "莉娜老师的版本"
 	•	Build timestamp
 	•	Checkpoint hash
 	•	Session name
@@ -309,7 +309,7 @@ Top Bar (compact)
 
 Mark Correct / Mistake Toggle
 	•	Merge into a single toggle button.
-	•	Label changes between “Mistake” and “Mark Correct” depending on current state.
+	•	Label changes between "Mistake" and "Mark Correct" depending on current state.
 	•	When card is marked as a mistake, toggle shows Mark Correct.
 	•	When card is unmarked, toggle shows Mistake.
 
@@ -340,15 +340,15 @@ Schema: hanzi,pinyin,english[,german] (German optional, not yet implemented).
 	•	When Custom is chosen, show a multi-select to combine levels (e.g., 1+2+3).
 	•	Placement
 	•	Show the Level picker on first app open (no deck loaded yet).
-	•	Also expose it in the ⚙ Gear menu (so it’s hidden during normal use).
+	•	Also expose it in the ⚙ Gear menu (so it's hidden during normal use).
 	•	Loading behavior
 	•	Selecting a level immediately fetch()es its CSV (or multiple CSVs for Custom), merges rows, then starts a New Run.
 	•	After a successful load, persist the deck in LocalStorage for offline reuse.
 	•	If fetch fails: fall back to last deck → else offer file picker / paste.
 	•	UI text (compact)
-	•	“Level: HSK 1…6 / Custom” in Gear; current selection shown in the Info panel (with deck size).
+	•	"Level: HSK 1…6 / Custom" in Gear; current selection shown in the Info panel (with deck size).
 	•	Replay/session compatibility
-	•	Sessions store source.level (e.g., "HSK 4" or "HSK 1+2+3"). Replay uses the session’s own frozen deck, independent of current Level picker.
+	•	Sessions store source.level (e.g., "HSK 4" or "HSK 1+2+3"). Replay uses the session's own frozen deck, independent of current Level picker.
 	•	Acceptance (short)
 	•	I can select HSK 1–6 (or a Custom combo), the deck loads, and a run starts.
 	•	The chosen level is remembered on reload.
@@ -365,7 +365,7 @@ Schema: hanzi,pinyin,english[,german] (German optional, not yet implemented).
 #### Mobile (see screenshot)
 - HSK-Flashcards should be on the top center of the screen.
 - Tapping on the card should toggle mistake state. If there is any functionaly of double tapping on the card, please remove it. 
-- Add gear menu option: “Outdoor mode (high contrast)” (mobile only).
+- Add gear menu option: "Outdoor mode (high contrast)" (mobile only).
 - When ON:
 - Solid light or dark background for max contrast.
 - Pure black/white text.
@@ -375,7 +375,7 @@ Schema: hanzi,pinyin,english[,german] (German optional, not yet implemented).
 
 #### Both
 - HSK-Level should be Displayed in the Progress. The HSK level should be infered from what is before .csv
-- Add gear menu option: “Audio feedback on mark/unmark” (default = ON for mobile, OFF for desktop).
+- Add gear menu option: "Audio feedback on mark/unmark" (default = ON for mobile, OFF for desktop).
 - Plays positive tone when changing Mistake → Correct, negative tone for Correct → Mistake.
 - Implement via shared AudioContext unlocked on first gesture; silently skip if unsupported.
 
@@ -389,7 +389,7 @@ Functions not implemented but requested in 4.06
 In addtion change the information shown to be read from a VERSION.TXT file starting with 
 4.06.01 — 莉娜老师的版本
 
-### Round 4.07 – Web Speech “Speak Chinese” Button
+### Round 4.07 – Web Speech "Speak Chinese" Button
 
 Scope:
 Add a button to play Mandarin audio for the Chinese term, available in both front (English) and back (Chinese + pinyin) states of the flashcard.
@@ -415,7 +415,7 @@ Update the version to 4.07 — 莉娜老师的版本
 
 
 ### 4.07.01 Sound Button Interaction Safety
-	•	The Play Sound button must be in its own tap/click area, visually distinct from the card’s Mistake/Correct toggle zone.
+	•	The Play Sound button must be in its own tap/click area, visually distinct from the card's Mistake/Correct toggle zone.
 	•	Tapping/clicking the sound button must only play audio and never toggle the mistake state.
 	•	Maintain a minimum safe distance (8–12 px) from any toggle area to prevent accidental activation.
 	•	Applies to both desktop and mobile layouts.
@@ -454,7 +454,7 @@ This tool is designed for active recall and spaced repetition. You can rename a 
 
 	4.	Ensure the tooltips match the button functionality.
 	5.	Verify the actual button logic matches the descriptions above — if not, update the help page text and tooltips so they reflect the actual behavior.
-	6.	Add a “Help” link inside the gear menu that opens help.html in a new tab
+	6.	Add a "Help" link inside the gear menu that opens help.html in a new tab
 
 7. Minor Tweak Add the loudspeaker symbol to the upper right side of the card. Then it is better accessible for a right handed person.
 
@@ -470,7 +470,7 @@ Allow the user to record their pronunciation of a Chinese character and visualiz
 
 Functional Requirements
 	1.	Activation
-	•	Add a small “Tone Visualizer” button/icon near the “Play Sound” button on each card.
+	•	Add a small "Tone Visualizer" button/icon near the "Play Sound" button on each card.
 	•	Clicking opens a modal dialog (or overlay) with the tone visualizer.
 	•	Works on both desktop and mobile; mobile devices must request microphone access.
 	2.	Display
@@ -482,14 +482,14 @@ Functional Requirements
 	•	Tone 4: falling line
 	•	Tone curves should be normalized to the display (not absolute Hz).
 	3.	Recording
-	•	On “Record”, request microphone access and capture audio for up to ~2 seconds.
+	•	On "Record", request microphone access and capture audio for up to ~2 seconds.
 	•	Analyze pitch (fundamental frequency) in real time or after recording using a lightweight pitch detection algorithm (e.g., autocorrelation or YIN).
 	4.	Visualization
-	•	Plot the user’s detected pitch contour in blue over the existing ideal curve.
+	•	Plot the user's detected pitch contour in blue over the existing ideal curve.
 	•	Normalize user pitch to match the vertical scaling of the ideal curve for easy visual comparison.
-	•	If pitch detection fails, show a message (“No pitch detected, try again”).
+	•	If pitch detection fails, show a message ("No pitch detected, try again").
 	5.	Closure
-	•	Close the modal with an “X” or “Close” button without affecting the flashcard state.
+	•	Close the modal with an "X" or "Close" button without affecting the flashcard state.
 	•	All audio and visualizer code should be isolated from main app logic.
 
 ⸻
@@ -528,7 +528,7 @@ B) UI & Flow (Modal)
 	•	Close: cancels/finishes; releases mic and audio nodes.
 	3.	Canvas
 	•	Background: idealized tone curve.
-	•	During live recording: (optional) show an updating “live” pitch trace (light stroke).
+	•	During live recording: (optional) show an updating "live" pitch trace (light stroke).
 	•	After Stop: render the final user pitch contour (e.g., blue), normalized to the canvas.
 
 ⸻
@@ -537,7 +537,7 @@ C) Recording & Analysis
 	•	Start immediately on open:
 	•	Request getUserMedia({ audio: true }).
 	•	Create a single shared AudioContext (reuse if already created by the app).
-	•	Capture up to a max duration (e.g., 3 s) if user doesn’t press Stop.
+	•	Capture up to a max duration (e.g., 3 s) if user doesn't press Stop.
 	•	Stop behavior
 	•	On Stop: stop tracks, finalize buffer, run pitch detection on the buffered audio (no network).
 	•	Draw final contour and enable Replay.
@@ -549,17 +549,17 @@ C) Recording & Analysis
 
 D) Error Handling & Non-Blocking
 	•	If mic permission is denied/unavailable:
-	•	Show inline message: “Microphone unavailable. Tone visualizer not supported on this device.”
+	•	Show inline message: "Microphone unavailable. Tone visualizer not supported on this device."
 	•	Close button remains; do not impact main flashcard flow.
 	•	If pitch cannot be detected (silence/noise):
-	•	Show: “No clear pitch detected—try again closer to the mic.”
+	•	Show: "No clear pitch detected—try again closer to the mic."
 	•	Keep the modal open; allow the user to Close and retry later.
 	•	Always release media tracks and audio nodes on Stop/Close (no background capture).
 
 ⸻
 
 E) Visuals & Scaling
-	•	Pinyin + tone displayed at the top (e.g., “xué”).
+	•	Pinyin + tone displayed at the top (e.g., "xué").
 	•	Ideal curves (normalized, not Hz):
 	•	T1: high flat; T2: rising; T3: fall–rise; T4: falling.
 	•	Map user F0 → normalized 0–1 range using a robust min/max or median-based window to handle loudness variation.
@@ -575,7 +575,7 @@ F) Performance & Limits
 ⸻
 
 G) Accessibility & UX Polish
-	•	Buttons have labels/aria: “Stop recording”, “Replay recording”, “Close”.
+	•	Buttons have labels/aria: "Stop recording", "Replay recording", "Close".
 	•	If audio feedback (beeps) is globally enabled, do not play tones in this modal to avoid confusion.
 
 ⸻
@@ -584,7 +584,7 @@ H) Acceptance Criteria
 	1.	Opening the Tone Visualizer immediately starts recording; Stop performs analysis; Replay plays back the just-recorded audio.
 	2.	The feature is fully isolated in js/toneVisualizer.js; main.js only calls its API.
 	3.	On permission denial or unsupported API, a clear message appears and the app remains usable.
-	4.	Final view shows pinyin, ideal tone curve, and the user’s pitch contour overlay.
+	4.	Final view shows pinyin, ideal tone curve, and the user's pitch contour overlay.
 	5.	Closing the modal releases all audio resources; reopening works reliably.
 
 
@@ -595,7 +595,7 @@ H) Acceptance Criteria
 	•	Request mic with analysis-friendly constraints:
 echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1.
 	•	Aim for 48 kHz input if available (just request; browsers pick the closest).
-	•	Keep the mic close and speak one sustained syllable (e.g., “ma”) — short, punchy utterances are harder to track.
+	•	Keep the mic close and speak one sustained syllable (e.g., "ma") — short, punchy utterances are harder to track.
 
 2) Remove silence before/after
 	•	During capture, run a voice activity check on the incoming samples (simple is fine):
@@ -610,9 +610,9 @@ Right now you only see the plot after stopping because your loop samples the sam
 	•	Exactly one pitch estimate per animation frame (60 fps typical):
 	•	Each requestAnimationFrame → call analyser.getFloatTimeDomainData(...) once → estimate F0 once → append to a ring buffer of the last ~2–3 s.
 	•	Redraw the canvas every frame from the ring buffer (newest on the right).
-	•	Result: you’ll see the curve moving live while speaking.
+	•	Result: you'll see the curve moving live while speaking.
 
-4) Make pitch estimation stable (why you don’t “see the tone”)
+4) Make pitch estimation stable (why you don't "see the tone")
 
 Your current autocorrelation is very raw. Tighten it:
 	•	Zero-mean + Hann window each frame before correlation (reduces drift & leakage).
@@ -622,19 +622,19 @@ Your current autocorrelation is very raw. Tighten it:
 	•	If you still see flat lines: try longer frames (e.g., 1024–2048 samples) for more stable autocorrelation.
 
 5) Map pitch to screen so contours are obvious
-	•	Don’t map Hz directly to pixels. Convert to semitones relative to the median F0 of the last ~1 s:
+	•	Don't map Hz directly to pixels. Convert to semitones relative to the median F0 of the last ~1 s:
 st = 12 * log2(f0 / medianF0).
 	•	Draw a vertical range of ±12 semitones (octave) around 0.
-	•	Result: everyone’s voice centers near 0, and rising/falling tones visibly slope up/down regardless of speaker.
+	•	Result: everyone's voice centers near 0, and rising/falling tones visibly slope up/down regardless of speaker.
 
-6) Ideal tone overlay (to “see” what you expect)
+6) Ideal tone overlay ("to "see" what you expect")
 	•	Keep your idealized lines (T1 flat high, T2 rising, T3 dip, T4 falling).
 	•	Draw them first in a neutral color.
 	•	Draw the live/user contour on top (thin while recording, thicker once stopped).
-	•	Add faint guide lines at top/bottom (e.g., 20% and 80% height) so “falling vs rising” is visually anchored.
+	•	Add faint guide lines at top/bottom (e.g., 20% and 80% height) so "falling vs rising" is visually anchored.
 
 7) Spectrogram (optional, but if you keep it)
-	•	If you want a real spectrogram, don’t fake it with F0:
+	•	If you want a real spectrogram, don't fake it with F0:
 	•	Use analyser.getByteFrequencyData() each frame, paint a 1-px column of magnitudes, and scroll or advance x.
 	•	Show only 80–4000 Hz log-scaled; this makes voice bands pop.
 
@@ -645,15 +645,15 @@ st = 12 * log2(f0 / medianF0).
 	•	Replay plays the recorded buffer only (no live mic routing).
 	•	Close releases the mic and cancels animation.
 
-9) Quick diagnostics (to confirm it’s fixed)
-	•	While speaking a steady “ma”—the live curve should stabilize near 0 semitones.
-	•	Speak a Tone 2 (rising) “má” — the curve should tilt upward over ~300–600 ms.
-	•	Speak a Tone 4 (falling) “mà” — the curve should tilt downward clearly.
+9) Quick diagnostics (to confirm it's fixed)
+	•	While speaking a steady "ma"—the live curve should stabilize near 0 semitones.
+	•	Speak a Tone 2 (rising) "má" — the curve should tilt upward over ~300–600 ms.
+	•	Speak a Tone 4 (falling) "mà" — the curve should tilt downward clearly.
 	•	Background noise off, no echo, no live monitoring; replay sounds clean (no doubled audio).
 
 10) Acceptance checklist for you
 	•	Live curve visibly updates while I speak (no waiting for Stop).
-	•	F0 isn’t jumpy: occasional blips are smoothed; unvoiced parts drop to baseline.
+	•	F0 isn't jumpy: occasional blips are smoothed; unvoiced parts drop to baseline.
 	•	Tone 2 feels rising; Tone 4 feels falling; Tone 3 shows a dip then rise on longer syllables.
 	•	Start/Stop/Replay work; Stop trims leading/trailing silence.
 	•	No feedback/echo during recording.
@@ -695,7 +695,7 @@ C) Visualization & Comparison
 	•	Acceptance: both curves visible; color legend in the modal header.
 	7.	Optional Spectrogram (toggle)
 	•	If enabled: each frame, getByteFrequencyData() → paint 1‑px column; log‑frequency 80–4000 Hz band.
-	•	Acceptance: clear vocal band; doesn’t tank FPS on mobile.
+	•	Acceptance: clear vocal band; doesn't tank FPS on mobile.
 
 D) Simple Feedback Metrics (no grading)
 	8.	Slope & Shape Hints (Post‑Stop)
@@ -703,12 +703,12 @@ D) Simple Feedback Metrics (no grading)
 	•	Overall slope (first vs. last voiced third).
 	•	Valley depth (for Tone 3: min vs. endpoints).
 	•	Display short, non‑judgmental hints:
-	•	“Looks mostly rising” / “Looks mostly falling” / “Shows a dip then rise.”
+	•	"Looks mostly rising" / "Looks mostly falling" / "Shows a dip then rise."
 	•	Acceptance: hints appear under the canvas after Stop; no pass/fail.
 
 E) UI Details
 	9.	Pinyin & Tone Label
-	•	Show pinyin with tone mark at top (“xué”, “mà”, etc.).
+	•	Show pinyin with tone mark at top ("xué", "mà", etc.).
 	•	Acceptance: correct label shown for the current card.
 	10.	Controls & States
 
@@ -720,17 +720,17 @@ E) UI Details
 F) Error Handling (Non‑blocking)
 	11.	Unsupported / Permission Denied
 
-	•	Show: “Tone visualizer not supported / microphone unavailable.”
+	•	Show: "Tone visualizer not supported / microphone unavailable."
 	•	App continues normally.
 	•	Acceptance: no crashes; main app unaffected.
 
 G) Testing & Acceptance
 	12.	Manual Test Script
 
-	•	Speak “má” (Tone 2): final line tilts upward.
-	•	Speak “mà” (Tone 4): final line tilts downward.
-	•	Speak “mǎ” (Tone 3): visible dip then rise when vowel is long enough.
-	•	Hold steady “ma”: line stays near 0 st (stable).
+	•	Speak "má" (Tone 2): final line tilts upward.
+	•	Speak "mà" (Tone 4): final line tilts downward.
+	•	Speak "mǎ" (Tone 3): visible dip then rise when vowel is long enough.
+	•	Hold steady "ma": line stays near 0 st (stable).
 	•	Acceptance: all four behaviors visible on a typical laptop mic and Android phone.
 
 H) Optional (later, if easy)
@@ -749,7 +749,7 @@ Notes for the Agent
 	•	No network calls; everything client‑side.
 	•	Guard everything with feature detection; fail gracefully.
 
-This gives you live feedback, clearer contours, and a tiny bit of “research‑inspired” guidance—without turning it into a heavy grading system.
+This gives you live feedback, clearer contours, and a tiny bit of "research‑inspired" guidance—without turning it into a heavy grading system.
 
 ⸻
 ### 4.20 Speech Synthesis Module (OpenAI + Browser Fallback)
@@ -762,8 +762,8 @@ Provide high-quality Chinese TTS with OpenAI as primary engine and Browser TTS a
 ⸻
 
 A) Scope & Outcomes
-	•	Users can tap Speak to hear the current card’s hanzi (fallback: pinyin).
-	•	If OpenAI TTS fails or is disabled, the app automatically uses the browser’s Web Speech voice.
+	•	Users can tap Speak to hear the current card's hanzi (fallback: pinyin).
+	•	If OpenAI TTS fails or is disabled, the app automatically uses the browser's Web Speech voice.
 	•	(Optional) Cache audio per text to avoid repeat synthesis and reduce latency/cost.
 	•	All TTS code lives outside main.js.
 
@@ -804,10 +804,10 @@ D) Engines & Behavior
 
 E) Gear / Settings (minimal UI)
 	•	Engine: OpenAI TTS / Browser TTS.
-	•	OpenAI: masked API key field (stored locally only), voice name, audio format, “Test voice” button.
+	•	OpenAI: masked API key field (stored locally only), voice name, audio format, "Test voice" button.
 	•	Browser: voice picker (available zh voices), rate (0.75–1.1), pitch (0.8–1.2).
-	•	Cache: toggle “Cache synthesized audio” (default ON).
-	•	Fallback: toggle “Fallback to Browser if cloud fails” (default ON).
+	•	Cache: toggle "Cache synthesized audio" (default ON).
+	•	Fallback: toggle "Fallback to Browser if cloud fails" (default ON).
 	•	Persist engine/voice/rate/pitch/cache locally; do not export the key.
 
 ⸻
@@ -817,27 +817,27 @@ F) Caching (optional but recommended)
 	•	Key: lang|voice|text (or cardId if stable).
 	•	Store small audio blobs in IndexedDB (preferred) or in-memory Map.
 	•	On cache hit: play immediately, skip network call.
-	•	Provide a “Clear TTS cache” button in Gear (shows size estimate if easy).
+	•	Provide a "Clear TTS cache" button in Gear (shows size estimate if easy).
 
 ⸻
 
 G) Security & Privacy
 	•	Never hard-code or ship API keys.
 	•	Keys stay only in the browser (localStorage/IndexedDB).
-	•	Optionally show a one-line notice: “Your API key is stored locally on this device.”
+	•	Optionally show a one-line notice: "Your API key is stored locally on this device."
 
 ⸻
 
 H) UX & Error Handling
 	•	Debounce: calling speak() stops any current playback first.
-	•	If OpenAI fails → toast “Cloud voice unavailable — using browser voice.” (once per session).
-	•	If both engines fail → non-blocking toast (“Speech not available”).
+	•	If OpenAI fails → toast "Cloud voice unavailable — using browser voice." (once per session).
+	•	If both engines fail → non-blocking toast ("Speech not available").
 	•	Respect global audio feedback setting: TTS is separate; do not suppress TTS when feedback beeps are off.
 
 ⸻
 
 I) Integration Points
-	•	Gear menu section: “Voice”.
+	•	Gear menu section: "Voice".
 	•	Speak button handler in the card view:
 	•	speak(card.hanzi || card.pinyin, 'zh-CN')
 	•	No other module should call Web Speech or network TTS directly.
@@ -861,7 +861,7 @@ Provide a built-in test that confirms OpenAI TTS is configured and reachable, di
 ⸻
 
 A) Entry point (UI)
-	•	Add a “Test OpenAI TTS” button in Gear → Voice (visible regardless of current engine).
+	•	Add a "Test OpenAI TTS" button in Gear → Voice (visible regardless of current engine).
 	•	Under the button, show a compact status line area for results.
 
 ⸻
@@ -869,7 +869,7 @@ A) Entry point (UI)
 B) What the test does (sequence)
 	1.	Pre-checks
 	•	Verify an API key is present in local storage.
-	•	If missing: show “No API key found. Enter your key and try again.” (link focus to the key field).
+	•	If missing: show "No API key found. Enter your key and try again." (link focus to the key field).
 	2.	Sample synthesis (OpenAI only)
 	•	Disable any TTS cache for the test.
 	•	Send a one-line sample (e.g., 学习中文真好！) to OpenAI TTS (tts-1 or tts-1-hd) using current Voice settings.
@@ -878,16 +878,16 @@ B) What the test does (sequence)
 	•	Play the returned OpenAI audio buffer.
 	•	Ensure no fallback to Browser TTS during this test (if request fails, do not speak via browser).
 	4.	Optional A/B
-	•	Offer a “Compare with Browser TTS” sub-button that immediately speaks the same text using Browser TTS for ear comparison.
+	•	Offer a "Compare with Browser TTS" sub-button that immediately speaks the same text using Browser TTS for ear comparison.
 
 ⸻
 
 C) Diagnostics to show (in the Gear panel)
-	•	Result: ✅ “OpenAI TTS OK” or ❌ “OpenAI TTS failed”
-	•	Latency: e.g., “Latency: 480 ms”
+	•	Result: ✅ "OpenAI TTS OK" or ❌ "OpenAI TTS failed"
+	•	Latency: e.g., "Latency: 480 ms"
 	•	Model/Voice: e.g., tts-1-hd • zh-CN-XiaoxiaoNeural (use whatever is configured)
 	•	Audio format: mp3 / opus
-	•	Key scope: “Key detected locally” (never display the key)
+	•	Key scope: "Key detected locally" (never display the key)
 	•	Fallback used: Yes/No (for this test it should be No; if Yes, mark as warning)
 	•	Timestamp of last successful test
 
@@ -901,7 +901,7 @@ On failure, show a concise error cause if detectable:
 
 D) Behavior & Safety
 	•	The test never stores the API key in exports; it only reads from local storage.
-	•	The test does not change the user’s selected engine or settings.
+	•	The test does not change the user's selected engine or settings.
 	•	If playback is already running, the test should stop it before starting.
 	•	If the call fails, do not auto-fallback to Browser TTS (to avoid confusion).
 
@@ -926,12 +926,12 @@ Let the user choose between Speed (tts-1, default) and Quality (tts-1-hd) from t
 A) Gear → Voice (UI)
 	•	Model selector (radio or dropdown):
 	•	Speed (tts-1) — default
-	•	Quality (tts-1-hd) — shows a brief note: “higher quality, higher latency”
+	•	Quality (tts-1-hd) — shows a brief note: "higher quality, higher latency"
 	•	OpenAI Voice selector (existing).
 	•	Cache
 	•	Toggle: Cache synthesized audio (ON by default)
 	•	Button: Clear TTS cache → confirm dialog → clears cached audio.
-	•	(Optional) show a small estimate like “~X files, ~Y MB”.
+	•	(Optional) show a small estimate like "~X files, ~Y MB".
 
 Persist all settings locally (engine, model, voice, cache ON/OFF). Do not export the API key.
 
@@ -939,7 +939,7 @@ Persist all settings locally (engine, model, voice, cache ON/OFF). Do not export
 
 B) Behavior
 	•	The selected model is used on the next synthesis request (no need to reload).
-	•	Cache key must include model + voice + lang + text so changing the model won’t reuse the wrong audio.
+	•	Cache key must include model + voice + lang + text so changing the model won't reuse the wrong audio.
 	•	Clear TTS cache removes all stored synthesized audio (model-agnostic).
 	•	If OpenAI call fails or no key: gracefully fallback to Browser TTS (if fallback enabled).
 
@@ -988,9 +988,9 @@ Tasks:
 	•	Allow user to choose the phrase used for TTS testing from the Gear menu.
 	•	Use current default if the user does not change it.
 	4.	Test Script Integration
-	•	Add a “Test TTS” entry in the Gear menu to play the selected test phrase using the current TTS settings (voice, model, engine).
+	•	Add a "Test TTS" entry in the Gear menu to play the selected test phrase using the current TTS settings (voice, model, engine).
 	5.	Clear Cache
-	•	Add a “Clear TTS Cache” option in the Gear menu that deletes all locally cached audio files.
+	•	Add a "Clear TTS Cache" option in the Gear menu that deletes all locally cached audio files.
 	6.	Test Vocabulary File
 	•	Include hsk0.csv in the project alongside the other HSK files for testing purposes.
 	•	Ensure it is selectable in the same way as other HSK lists.
@@ -1018,11 +1018,11 @@ Details:
 	•	If the current rendering combines both sides in one element, refactor into two face elements stacked in 3D space.
 	3.	Toggle control:
 	•	Add a setting in the Gear menu:
-	•	“Enable Flip Animation” (default: enabled).
+	•	"Enable Flip Animation" (default: enabled).
 	•	Store preference in localStorage.
 	•	When disabled, cards switch instantly with no animation.
 	4.	Accessibility:
-	•	Respect prefers-reduced-motion and disable animation if the user’s system requests reduced motion.
+	•	Respect prefers-reduced-motion and disable animation if the user's system requests reduced motion.
 	5.	Performance:
 	•	Use GPU-accelerated CSS transforms for smooth animation.
 	•	Avoid reflow or layout shift during the flip.
@@ -1045,7 +1045,7 @@ Details:
 ##### 4.30.c Card Flip Animation (Refinement)
 4.30.c Card Flip Animation (Gesture-Driven Refinement)
 
-Goal: Flip follows the user’s vertical gesture and works in both directions.
+Goal: Flip follows the user's vertical gesture and works in both directions.
 
 Behavior
 	•	Gesture tracking (mobile + desktop drag):
@@ -1069,8 +1069,8 @@ Visual polish (optional)
 	•	Soft shadow intensity tied to |angle| for depth cue.
 
 Settings
-	•	Extend Gear with “Gesture-driven flip” (default ON on mobile, OFF on desktop).
-	•	Respect “Enable flip animation” and prefers-reduced-motion: if disabled/reduced, gesture still changes state but without animation.
+	•	Extend Gear with "Gesture-driven flip" (default ON on mobile, OFF on desktop).
+	•	Respect "Enable flip animation" and prefers-reduced-motion: if disabled/reduced, gesture still changes state but without animation.
 
 Performance
 	•	Use only transform/opacity; target 60 fps on mid-range phones.
@@ -1121,7 +1121,7 @@ Update the version to 4.40 — 莉娜老师的版本
 - It should check the data directory on the server if there is a new card. If so, it should download it and integrate it. The order should be alphabetic order. This could also be English (but that should no be a problem).
 
 #### Make Playback Speed adjustable
-- Add a “Voice speed” slider in the gear menu, range e.g. 0.5–1.5.
+- Add a "Voice speed" slider in the gear menu, range e.g. 0.5–1.5.
 
 #### UI
 - Mic and Loudspeaker must be in a row above the card on the rigth side (see image)
@@ -1136,7 +1136,7 @@ Update the version to 4.40 — 莉娜老师的版本
 	•	No changes to main app; purely for testing.
 
 
-Got it. Here’s a concise spec that adds download caching on top of your play logic.
+Got it. Here's a concise spec that adds download caching on top of your play logic.
 
 ⸻
 
@@ -1162,7 +1162,7 @@ Caching details
 	•	Cache name: hsk-audio-v1. Key: full request URL.
 	•	Persist per-level to avoid collisions (/data/hsk0/中国人.wav).
 	•	Clear audio cache deletes hsk-audio-v1.
-	•	Respect Cache ON/OFF setting: when OFF, always bypass cache (use cache: 'reload') and don’t store.
+	•	Respect Cache ON/OFF setting: when OFF, always bypass cache (use cache: 'reload') and don't store.
 	•	Add lightweight versioning: if you ever change files, bump cache name to hsk-audio-v2 to invalidate.
 
 Failure handling
@@ -1176,7 +1176,7 @@ Telemetry (dev-only, console)
 Acceptance
 	•	With Request OpenAI OFF and cache ON: first play downloads once; subsequent plays are offline from cache.
 	•	Clearing cache forces re-download on next play.
-	•	With Request OpenAI ON, audio plays from OpenAI; if “cache synthesized” is enabled, later plays can use cached audio even with the toggle OFF.
+	•	With Request OpenAI ON, audio plays from OpenAI; if "cache synthesized" is enabled, later plays can use cached audio even with the toggle OFF.
 
 
 ### 4.8 Simplify Audio: Pre-recorded WAV Only
@@ -1185,14 +1185,14 @@ Goal
 Remove cloud TTS and keys. Play only bundled WAVs (one per card), with a tiny cache.
 
 What to remove
-	•	Gear menu items: API key field, “Request sounds from OpenAI”, engine/model/voice pickers, TTS test.
+	•	Gear menu items: API key field, "Request sounds from OpenAI", engine/model/voice pickers, TTS test.
 	•	All OpenAI/browser-TTS code paths.
 
 Playback logic (single path)
 	1.	Resolve path: /data/<level>/<hanzi>.wav (UTF-8 filenames).
 	2.	Try Cache Storage (hsk-audio-v1) → if hit, play.
-	3.	If miss, fetch the WAV → on 200, optionally store in cache (toggle “Cache audio” ON by default) → play.
-	4.	If 404 or fetch error: show small toast “No audio for ”.
+	3.	If miss, fetch the WAV → on 200, optionally store in cache (toggle "Cache audio" ON by default) → play.
+	4.	If 404 or fetch error: show small toast "No audio for ".
 
 Settings (Gear)
 	•	Cache audio: ON/OFF (default ON).
@@ -1212,7 +1212,7 @@ Edge cases
 Acceptance
 	•	No references to OpenAI or WebSpeech remain.
 	•	First play downloads, subsequent plays read from cache (when enabled).
-	•	“Clear cache” forces re-download next time.
+	•	"Clear cache" forces re-download next time.
 	•	Missing audio shows a non-blocking toast and the app continues.
 
 
@@ -1375,3 +1375,46 @@ Implement automatic session persistence and improved replay dialog functionality
 - **Consistent Behavior**: All loaded sessions automatically persist for replay
 - **Workflow Efficiency**: Manage all sessions from one place without dialog switching
 - **Export-Reimport Effect**: Imported sessions behave like they were exported and re-imported
+
+### 5.10 Refactor: Funnel All Core State Changes Through Actions ✅ COMPLETED
+Refactored the application to ensure all core state changes happen through explicit action functions, improving maintainability, consistency, and debuggability.
+
+**Implementation Details:**
+- **New Action Functions**: Added `updateSessionMetadata()`, `setLevelLabel()`, and `removeAnnotation()` actions
+- **Refactored Modules**: Updated `vocabularyManager.js` and `main.js` to use actions instead of direct state mutation
+- **Comprehensive Documentation**: Created `STATE.md`, `ACTIONS.md`, and `CHANGELOG.md`
+- **Test Suite**: Added lightweight tests for action functions using MockStates
+- **State Mutation Rules**: Established clear rules for core vs UI-local state management
+
+**Benefits:**
+- **Consistency**: All state changes follow the same pattern through named actions
+- **Maintainability**: State logic is centralized in action functions
+- **Debuggability**: Actions provide clear entry points for state changes
+- **Replay**: Event logging enables session replay and analysis
+- **Testing**: Actions can be tested independently with mock state
+- **Future-Proof**: Establishes foundation for advanced state management features
+
+**New Actions Added:**
+- `updateSessionMetadata(name, id)` - Update session name and/or ID
+- `setLevelLabel(label)` - Update vocabulary level label
+- `removeAnnotation(cardId)` - Remove annotation from specific card
+
+**Files Modified:**
+- `js/state.js` - Added new action functions
+- `js/vocabularyManager.js` - Updated to use actions
+- `js/main.js` - Updated to use actions
+- `STATE.md` - Comprehensive state documentation
+- `ACTIONS.md` - Complete action documentation
+- `js/actions.test.js` - Test suite for actions
+- `CHANGELOG.md` - Detailed change documentation
+
+**State Mutation Rules:**
+1. Core state must only be modified through action functions
+2. UI-local state may be modified directly
+3. All state changes should be logged via events when appropriate
+4. State mutations should be atomic and consistent
+5. External modules should only read state, never write to it directly
+
+This refactoring establishes a solid foundation for future state management improvements while maintaining all existing functionality.
+
+⸻
