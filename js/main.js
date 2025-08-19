@@ -13,7 +13,7 @@ const $ = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
 const btnReveal = /** @type {HTMLButtonElement} */($('btnReveal'));
 const btnNext = /** @type {HTMLButtonElement} */($('btnNext'));
 const btnMistake = /** @type {HTMLButtonElement} */($('btnMistakeToggle') || $('btnMistake'));
-const btnNewRun = /** @type {HTMLButtonElement} */($('btnNewRun'));
+//const btnNewRun = /** @type {HTMLButtonElement} */($('btnNewRun'));
 const btnReplay = /** @type {HTMLButtonElement} */($('btnReplay'));
 // Removed top-level import/export buttons; moved to dialog
 // legacy header controls (may be absent after 4.04)
@@ -25,7 +25,7 @@ const dropOverlay = /** @type {HTMLElement} */(document.getElementById('dropOver
 
 const btnSaveProgress = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgress'));
 const btnSaveProgressTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
-const btnMistakeTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
+// const btnMistakeTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
 const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'));
 const infoVersionTxt = /** @type {HTMLElement} */(document.getElementById('infoVersionTxt'));
 const infoAudioCacheSize = /** @type {HTMLElement} */(document.getElementById('infoAudioCacheSize'));
@@ -439,21 +439,21 @@ function applyMinimalUI(enabled) {
 
 function updateHeaderForMinimalUI(enabled) {
   try {
-    const newRunBtn = /** @type {HTMLButtonElement} */(document.getElementById('btnNewRun'));
+    //const newRunBtn = /** @type {HTMLButtonElement} */(document.getElementById('btnNewRun'));
     const replayBtn = /** @type {HTMLButtonElement} */(document.getElementById('btnReplay'));
     const saveBtnTop = /** @type {HTMLButtonElement} */(document.getElementById('btnSaveProgressTop'));
-    const mistakeBtnTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
+    //const mistakeBtnTop = /** @type {HTMLButtonElement} */(document.getElementById('btnMistakeTop'));
     if (enabled) {
-      if (newRunBtn) { newRunBtn.textContent = '🆕'; newRunBtn.title = 'New Session'; }
+    //  if (newRunBtn) { newRunBtn.textContent = '🆕'; newRunBtn.title = 'New Session'; }
       if (replayBtn) { replayBtn.textContent = '🔄'; replayBtn.title = 'Replay…'; }
       if (saveBtnTop) { saveBtnTop.textContent = '💾'; saveBtnTop.title = 'Save Progress'; }
       if (mistakeBtnTop) mistakeBtnTop.style.display = '';
     } else {
-      if (newRunBtn) { newRunBtn.textContent = 'New Session'; newRunBtn.title = 'Start a new learning session'; }
+     // if (newRunBtn) { newRunBtn.textContent = 'New Session'; newRunBtn.title = 'Start a new learning session'; }
       if (replayBtn) { replayBtn.textContent = 'Replay…'; replayBtn.title = 'Replay a previously saved session'; }
       if (saveBtnTop) { saveBtnTop.textContent = 'Save Progress'; saveBtnTop.title = 'Save your progress in the current session'; }
       // When minimal UI is off, remove the Mistake button per spec
-      if (mistakeBtnTop) mistakeBtnTop.style.display = 'none';
+      //if (mistakeBtnTop) mistakeBtnTop.style.display = 'none';
     }
   } catch {}
 }
@@ -715,7 +715,7 @@ btnRemoveCard?.addEventListener('click', () => {
 });
 btnBack.addEventListener('click', onBack);
 btnCorrect?.addEventListener('click', onUnmistake);
-btnNewRun.addEventListener('click', onNewRun);
+//btnNewRun.addEventListener('click', onNewRun);
 settingsAutoToggle?.addEventListener('change', onAutoToggleChanged);
 settingsAutoSeconds?.addEventListener('change', onSecondsChanged);
 settingsMinimalUI?.addEventListener('change', () => { try { updateHeaderForMinimalUI(!!settingsMinimalUI.checked); } catch {} });
@@ -752,7 +752,7 @@ settingsImportInput?.addEventListener('change', async () => {
   finally { settingsImportInput.value = ''; }
 });
 btnSaveProgressTop?.addEventListener('click', () => btnSaveProgress?.click());
-btnMistakeTop?.addEventListener('click', onMistake);
+//btnMistakeTop?.addEventListener('click', onMistake);
 
 // Annotation Editor Event Listeners
 document.getElementById('annotationEditorClose')?.addEventListener('click', closeAnnotationEditor);
@@ -958,33 +958,33 @@ btnSaveProgress?.addEventListener('click', () => {
 const dlgExport = /** @type {HTMLButtonElement} */(document.getElementById('dlgExport'));
 const dlgImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('dlgImportBtn'));
 const dlgImportInput = /** @type {HTMLInputElement} */(document.getElementById('dlgImportInput'));
-const dlgNewSession = /** @type {HTMLButtonElement} */(document.getElementById('dlgNewSession'));
+//const dlgNewSession = /** @type {HTMLButtonElement} */(document.getElementById('dlgNewSession'));
 
-dlgNewSession?.addEventListener('click', () => {
-  try {
-    // Start a new session with the current deck
-    if (state.deck.length > 0) {
-      newRun(state.deck);
-      render();
-      startCountdownIfNeeded();
-      closeReplayDialog();
-    } else {
-      // If no deck loaded, try to load from storage
-      const deck = loadDeck();
-      if (Array.isArray(deck) && deck.length > 0) {
-        newRun(deck);
-        render();
-        startCountdownIfNeeded();
-        closeReplayDialog();
-      } else {
-        alert('No vocabulary deck available. Please use the 📚 button to import HSK files first.');
-      }
-    }
-  } catch (e) {
-    console.error('Failed to start new session:', e);
-    alert('Failed to start new session. Check console.');
-  }
-});
+// dlgNewSession?.addEventListener('click', () => {
+//   try {
+//     // Start a new session with the current deck
+//     if (state.deck.length > 0) {
+//       newRun(state.deck);
+//       render();
+//       startCountdownIfNeeded();
+//       closeReplayDialog();
+//     } else {
+//       // If no deck loaded, try to load from storage
+//       const deck = loadDeck();
+//       if (Array.isArray(deck) && deck.length > 0) {
+//         newRun(deck);
+//         render();
+//         startCountdownIfNeeded();
+//         closeReplayDialog();
+//       } else {
+//         alert('No vocabulary deck available. Please use the 📚 button to import HSK files first.');
+//       }
+//     }
+//   } catch (e) {
+//     console.error('Failed to start new session:', e);
+//     alert('Failed to start new session. Check console.');
+//   }
+// });
 
 dlgExport?.addEventListener('click', () => {
   try { const snapshot = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snapshot); } catch (e) { console.error(e); }
