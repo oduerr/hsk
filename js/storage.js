@@ -119,6 +119,53 @@ export function loadLastLevel() {
   try { return localStorage.getItem(LAST_LEVEL_KEY); } catch { return null; }
 }
 
+// TTS Settings Effects
+const TTS_SETTINGS_KEY = 'hsk.tts.settings';
+const TTS_VOICE_KEY = 'hsk.flash.voice';
+
+export function loadTtsSettings() {
+  return readJson(TTS_SETTINGS_KEY, { audioCache: true });
+}
+
+export function saveTtsSettings(settings) {
+  writeJson(TTS_SETTINGS_KEY, settings);
+}
+
+export function loadTtsVoice() {
+  try { return localStorage.getItem(TTS_VOICE_KEY); } catch { return null; }
+}
+
+export function saveTtsVoice(voice) {
+  try { localStorage.setItem(TTS_VOICE_KEY, voice); } catch {}
+}
+
+// Session Size Computation Effect
+export function computeSessionsSizeBytes() {
+  try {
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (/^hsk\.flash\.(session\.|sessions$|lastCheckpointId$)/.test(key)) {
+        const val = localStorage.getItem(key) || '';
+        total += val.length;
+      }
+    }
+    return total;
+  } catch { return 0; }
+}
+
+// Version Loading Effect
+export async function loadVersionFile() {
+  try {
+    const response = await fetch('./VERSION.TXT');
+    const text = await response.text();
+    return text.trim();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Build and download an export JSON. Optionally include the current in-memory session snapshot.
  * @param {null|object} currentFullSession

@@ -2,7 +2,7 @@ import { discoverAvailableCsvFiles } from './data.js';
 import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel } from './storage.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel, loadTtsSettings, saveTtsSettings, loadTtsVoice, saveTtsVoice, computeSessionsSizeBytes, loadVersionFile } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 import { createVocabularyManager } from './vocabularyManager.js';
@@ -369,7 +369,7 @@ async function bootstrap() {
     // Try to read VERSION.TXT for version label
     let versionLabel = 'HSK Flash v1';
     try {
-      const v = await fetch('./VERSION.TXT').then(r => r.text()).catch(() => '');
+      const v = await loadVersionFile();
       versionLabel = v ? v.trim() : versionLabel;
       // Do not show version in the main header brand; keep static brand text
     } catch {}
@@ -398,7 +398,7 @@ async function bootstrap() {
     // Probe available CSV levels and update picker
     // Audio cache setting
     try {
-      const saved = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}');
+      const saved = loadTtsSettings();
       if (audioCacheToggle) audioCacheToggle.checked = saved.audioCache !== false;
     } catch {}
   } catch {}
@@ -744,7 +744,12 @@ document.addEventListener('keydown', (e) => {
 
 // Audio handlers
 audioCacheToggle?.addEventListener('change', () => {
-  try { const current = JSON.parse(localStorage.getItem('hsk.tts.settings') || '{}'); const val = !!audioCacheToggle.checked; localStorage.setItem('hsk.tts.settings', JSON.stringify({ ...current, audioCache: val })); try { setTtsSettings({ audioCache: val }); } catch {} } catch {}
+  try { 
+    const current = loadTtsSettings(); 
+    const val = !!audioCacheToggle.checked; 
+    saveTtsSettings({ ...current, audioCache: val }); 
+    try { setTtsSettings({ audioCache: val }); } catch {} 
+  } catch {}
 });
 audioCacheClear?.addEventListener('click', async () => {
   if (!confirm('Clear downloaded audio cache?')) return;
@@ -837,29 +842,12 @@ function formatBytes(bytes) {
   } catch { return '—'; }
 }
 
-function computeSessionsSizeBytes() {
-  try {
-    let total = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key) continue;
-      if (/^hsk\.flash\.(session\.|sessions$|lastCheckpointId$)/.test(key)) {
-        const val = localStorage.getItem(key) || '';
-        total += val.length;
-      }
-    }
-    return total;
-  } catch { return 0; }
-}
-
-
-
 // Web Speech – Speak Chinese
 let cachedVoices = [];
 function pickZhVoice() {
   try {
     if (!('speechSynthesis' in window)) return null;
-    const saved = localStorage.getItem('hsk.flash.voice');
+    const saved = loadTtsVoice();
     if (cachedVoices.length === 0) cachedVoices = window.speechSynthesis.getVoices();
     const list = cachedVoices.filter(v => /zh|chinese/i.test(v.lang) || /zh/i.test(v.name));
     let voice = null;
@@ -880,7 +868,7 @@ function speakChinese() {
     const voice = pickZhVoice();
     if (voice) {
       utter.voice = voice;
-      localStorage.setItem('hsk.flash.voice', voice.voiceURI || voice.name);
+      saveTtsVoice(voice.voiceURI || voice.name);
     }
     utter.rate = 0.9;
     utter.pitch = 1.0;

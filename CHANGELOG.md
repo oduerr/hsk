@@ -1,100 +1,88 @@
 # CHANGELOG
 
-## 5.10 - Refactor: Funnel All Core State Changes Through Actions
+## 5.11 - Refactor: Extract and Document Effects ✅ COMPLETED
+Extracted all I/O operations and side effects into canonical effect functions, ensuring consistent and maintainable external interactions.
 
-### Overview
+**Implementation Details:**
+- **New Effect Functions**: Added TTS settings, voice preferences, version loading, and session size computation effects
+- **Consolidated localStorage Access**: Moved all direct localStorage operations from main.js into storage.js effect functions
+- **Comprehensive Documentation**: Created EFFECTS.md cataloging all effect functions with consistent schema
+- **Eliminated Duplicates**: Removed duplicate computeSessionsSizeBytes function and consolidated TTS settings handling
+- **Single Source of Truth**: Each effect now has only one canonical implementation
+
+**New Effects Added:**
+- `loadTtsSettings()` - Load TTS settings from localStorage
+- `saveTtsSettings(settings)` - Save TTS settings to localStorage
+- `loadTtsVoice()` - Load saved TTS voice preference
+- `saveTtsVoice(voice)` - Save TTS voice preference
+- `computeSessionsSizeBytes()` - Calculate total session data size
+- `loadVersionFile()` - Load application version from file
+
+**Refactored Modules:**
+- `js/storage.js` - Added new effect functions for TTS and version handling
+- `js/main.js` - Updated to use effect functions instead of direct localStorage access
+- `EFFECTS.md` - Comprehensive documentation of all effects with consistent schema
+- `CHANGELOG.md` - Added 5.11 documentation
+
+**Benefits:**
+- **Consistency**: All I/O operations go through named effect functions
+- **Maintainability**: Effects are centralized and easier to modify
+- **Error Handling**: Centralized error handling for all external operations
+- **Testing**: Effects can be tested independently with proper mocking
+- **Documentation**: Clear catalog of all side effects and their purposes
+
+**Effect Categories Documented:**
+- **Storage Effects**: localStorage operations for sessions, settings, and data
+- **File I/O Effects**: CSV loading, file discovery, and version loading
+- **Audio Effects**: Speech synthesis, TTS settings, and voice management
+- **UI Effects**: DOM manipulation, rendering, and user feedback
+- **Utility Effects**: Pure functions for data processing
+
+**Files Modified:**
+- `js/storage.js` - Added new effect functions
+- `js/main.js` - Updated to use effect functions
+- `EFFECTS.md` - Complete effects documentation
+- `CHANGELOG.md` - Added 5.11 documentation
+
+This refactoring ensures all external interactions are properly documented and centralized, making the codebase more maintainable and consistent.
+
+## 5.10 - Refactor: Funnel All Core State Changes Through Actions ✅ COMPLETED
 Refactored the application to ensure all core state changes happen through explicit action functions, improving maintainability, consistency, and debuggability.
 
-### New Actions Added
+**Implementation Details:**
+- **New Action Functions**: Added `updateSessionMetadata()`, `setLevelLabel()`, and `removeAnnotation()` actions
+- **Refactored Modules**: Updated `vocabularyManager.js` and `main.js` to use actions instead of direct state mutation
+- **Comprehensive Documentation**: Created `STATE.md`, `ACTIONS.md`, and `CHANGELOG.md`
+- **Test Suite**: Added lightweight tests for action functions using MockStates
+- **State Mutation Rules**: Established clear rules for core vs UI-local state management
 
-#### `updateSessionMetadata(name, id)`
-- **Purpose**: Update session name and/or ID
-- **State Changes**: `state.session.name`, `state.session.id`
-- **Usage**: External modules updating session information
-- **Replaces**: Direct `state.session.name =` and `state.session.id =` assignments
-
-#### `setLevelLabel(label)`
-- **Purpose**: Update the current vocabulary level label
-- **State Changes**: `state.levelLabel`
-- **Usage**: Vocabulary manager setting level information
-- **Replaces**: Direct `state.levelLabel =` assignments
-
-#### `removeAnnotation(cardId)`
-- **Purpose**: Remove annotation from a specific card
-- **State Changes**: `state.session.annotation`, `state.session.events`
-- **Usage**: Clean up annotations when cards are removed
-- **Replaces**: Direct annotation array filtering in main.js
-
-### Refactored Modules
-
-#### `js/vocabularyManager.js`
-- **Before**: Directly mutated `state.levelLabel` and `state.session` properties
-- **After**: Uses `setLevelLabel()` and `updateSessionMetadata()` actions
-- **Benefits**: Consistent state management, proper action funneling
-
-#### `js/main.js`
-- **Before**: Directly filtered `state.session.annotation` and `state.session.events`
-- **After**: Uses `removeAnnotation()` action
-- **Benefits**: Centralized annotation removal logic, consistent event cleanup
-
-### Documentation Created
-
-#### `STATE.md`
-- Comprehensive documentation of all state properties
-- Clear distinction between core state (managed by actions) and UI-local state
-- State mutation rules and guidelines
-- Action function mappings for each state property
-
-#### `ACTIONS.md`
-- Complete documentation of all action functions
-- State change mappings for each action
-- Event logging specifications
-- Usage examples and benefits
-
-#### `js/actions.test.js`
-- Lightweight test suite for action functions
-- MockState-based testing approach
-- Tests for state deltas and event logging
-- Covers reveal, markMistake, nextCard, and markAnnotation actions
-
-### State Mutation Rules Established
-
-1. **Core state must only be modified through action functions**
-2. **UI-local state may be modified directly**
-3. **All state changes should be logged via events when appropriate**
-4. **State mutations should be atomic and consistent**
-5. **External modules should only read state, never write to it directly**
-
-### Benefits Achieved
-
-- **Consistency**: All state changes follow the same pattern
-- **Maintainability**: State logic is centralized in actions
+**Benefits:**
+- **Consistency**: All state changes follow the same pattern through named actions
+- **Maintainability**: State logic is centralized in action functions
 - **Debuggability**: Actions provide clear entry points for state changes
 - **Replay**: Event logging enables session replay and analysis
 - **Testing**: Actions can be tested independently with mock state
+- **Future-Proof**: Establishes foundation for advanced state management features
 
-### Files Modified
+**New Actions Added:**
+- `updateSessionMetadata(name, id)` - Update session name and/or ID
+- `setLevelLabel(label)` - Update vocabulary level label
+- `removeAnnotation(cardId)` - Remove annotation from specific card
 
+**Files Modified:**
 - `js/state.js` - Added new action functions
-- `js/vocabularyManager.js` - Updated to use actions instead of direct mutation
-- `js/main.js` - Updated to use actions instead of direct mutation
-- `STATE.md` - Created comprehensive state documentation
-- `ACTIONS.md` - Created comprehensive action documentation
-- `js/actions.test.js` - Created test suite for actions
+- `js/vocabularyManager.js` - Updated to use actions
+- `js/main.js` - Updated to use actions
+- `STATE.md` - Comprehensive state documentation
+- `ACTIONS.md` - Complete action documentation
+- `js/actions.test.js` - Test suite for actions
+- `CHANGELOG.md` - Detailed change documentation
 
-### Acceptance Criteria Met
-
-✅ **Grep/search shows no state writes outside action modules** (for core keys)
-✅ **UI/event handlers call only actions/effects**
-✅ **Names consistent and descriptive**
-✅ **Core behavior unchanged**
-✅ **Max files edited: ≤ 6** (6 files modified)
-✅ **Max new actions: ≤ 8** (3 new actions added)
-
-### Exception Handling
-
-- **UI-local/transient state** (dialogs, hover, CSS toggles, temporary inputs) may still be mutated directly as intended
-- **Configuration changes** (like `setAutoReveal`) don't log events as they're not user interactions
-- **Session metadata updates** are handled through dedicated actions for external module use
+**State Mutation Rules:**
+1. Core state must only be modified through action functions
+2. UI-local state may be modified directly
+3. All state changes should be logged via events when appropriate
+4. State mutations should be atomic and consistent
+5. External modules should only read state, never write to it directly
 
 This refactoring establishes a solid foundation for future state management improvements while maintaining all existing functionality.
