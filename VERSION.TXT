@@ -1,1 +1,1 @@
-5.06 — New and Imported Sessions stored in Session List 
+5.22 UI Cleanup and Session Management

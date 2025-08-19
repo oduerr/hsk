@@ -1506,3 +1506,5 @@ This refactoring ensures all external interactions are properly documented and c
 **Files Modified:**
 - `js/main.js` - Added `isUserTyping()` function and updated `onKeyDown()` handler
 
+#### 5.23 Polishing
+- is speakChinese() needed?
