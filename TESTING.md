@@ -33,14 +33,53 @@ npm run test:watch
 
 ```
 test/
-├── setup.js           # Global test configuration and mocks
-├── actions.test.js    # Tests for state action functions
-└── effects.test.js    # Tests for I/O and side effect functions
+├── setup.js                    # Global test configuration and mocks
+├── roundtrip.storage.test.js  # End-to-end persistence verification (MOST IMPORTANT)
+├── actions.test.js            # Tests for state action functions
+└── effects.test.js            # Tests for I/O and side effect functions
 ```
 
 ## Test Categories
 
-### 1. Actions Tests (`test/actions.test.js`)
+### 1. Round-Trip Persistence Tests (`test/roundtrip.storage.test.js`) ⭐ **MOST IMPORTANT**
+**Critical infrastructure tests** that verify end-to-end data persistence and prevent data corruption:
+
+- **Import → Mutate → Export Cycle**: Ensures imported data can be modified and re-exported without loss
+- **Data Integrity Verification**: Validates that all session data (cards, events, annotations, mistakes) survives the round-trip
+- **Storage Consistency**: Tests localStorage operations, session summaries, and full session persistence
+- **Schema Validation**: Ensures exported data maintains proper structure and required fields
+- **Re-import Verification**: Confirms exported data can be imported again without duplicates or corruption
+
+**Why This Test is Critical:**
+- **Prevents data loss** when users import/export sessions
+- **Catches storage bugs** that could corrupt user study progress
+- **Ensures backup/restore functionality** works reliably
+- **Tests the complete persistence layer** in realistic scenarios
+
+**Test Scenarios:**
+```javascript
+// 1. Import fixture data and verify integrity
+const importResult = importSessionsFromObject(fixtureData)
+expect(importResult.added).toBe(2)
+
+// 2. Mutate sessions (add annotations, rename)
+fullSession.annotation.push(testAnnotation)
+saveFullSession(fullSession)
+renameSession(sessionId, 'New Title')
+
+// 3. Export and verify all changes are preserved
+exportAllSessionsFile()
+const exportedData = JSON.parse(mockBlob.content)
+expect(exportedData.sessions[0].annotation).toHaveLength(1)
+
+// 4. Re-import and verify no data loss
+localStorageShim.clear()
+importSessionsFromObject(exportedData)
+const reimportedSession = loadFullSession(sessionId)
+expect(reimportedSession.annotation[0].note).toBe('Test Annotation')
+```
+
+### 2. Actions Tests (`test/actions.test.js`)
 Tests for pure state mutation functions that modify the application state:
 - **Session Management**: `newRun`, `resumeRun`
 - **Card Navigation**: `nextCard`, `prevCard`, `reveal`, `unreveal`
@@ -48,7 +87,7 @@ Tests for pure state mutation functions that modify the application state:
 - **Annotation System**: `markAnnotation`, `removeAnnotation`
 - **Configuration**: `setAutoReveal`, `updateSessionMetadata`, `setLevelLabel`
 
-### 2. Effects Tests (`test/effects.test.js`)
+### 3. Effects Tests (`test/effects.test.js`)
 Tests for I/O operations and side effects:
 - **Storage Effects**: localStorage operations for sessions, settings, and data
 - **File I/O Effects**: CSV loading, file discovery, and version loading
@@ -272,8 +311,26 @@ npm test -- --reporter=verbose
 Run specific test files:
 
 ```bash
+# Most Important: Round-trip persistence tests
+npm test test/roundtrip.storage.test.js
+
+# Other test categories
 npm test test/actions.test.js
 npm test test/effects.test.js
+```
+
+### Run Critical Round-Trip Tests
+The round-trip tests are the most important for ensuring data integrity:
+
+```bash
+# Run only the critical persistence tests
+npm test test/roundtrip.storage.test.js
+
+# Run with verbose output for debugging
+npm test test/roundtrip.storage.test.js -- --reporter=verbose
+
+# Run round-trip tests in watch mode during development
+npm test test/roundtrip.storage.test.js -- --watch
 ```
 
 ## Best Practices
