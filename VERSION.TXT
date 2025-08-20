@@ -1,1 +1,1 @@
-5.22 UI Cleanup and Session Management
+5.22 Fallback WEBUI
