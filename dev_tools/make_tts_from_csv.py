@@ -197,7 +197,7 @@ def main():
 
 # Example:
 # python dev_tools/make_tts_from_csv.py data/eng_oliver.csv --out dev_tools/audio_eng_oliver --model gpt-4o-mini-tts --voice alloy 
-# python dev_tools/make_tts_from_csv.py dev_tools/chinese_dev.csv --out dev_tools/audio_chinese_dev_with_pinyin --model gpt-4o-mini-tts --voice alloy --pinyin-hint
+# python dev_tools/make_tts_from_csv.py dev_tools/chinese_dev.csv --out dev_tools/audio_chinese_dev_with_laobeijing --model gpt-4o-mini-tts --voice alloy 
 
 if __name__ == "__main__":
     main()
