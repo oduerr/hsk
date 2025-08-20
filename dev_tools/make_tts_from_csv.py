@@ -54,7 +54,19 @@ INSTRUCTIONS_LAOBEIJING = (
 )
 
 #INSTRUCTIONS_DEFAULT = INSTRUCTIONS_LAOBEIJING # If you want to use the Beijing dialect
-
+INSTRUCTIONS_DEFAULT = (
+    "Context: This audio will be used in a flashcard language-learning app. "
+    "The user hears only this snippet in isolation, so pronunciation should be precise, clear, and slightly over-articulated. "
+    "Avoid filler words or conversational extras. Deliver the phrase as if teaching correct pronunciation. "
+    "Use standard Italian pronunciation (neutral, not strongly regional).\n\n"
+    "Voice Affect: Calm, composed, and reassuring; project quiet authority and confidence.\n\n"
+    "Tone: Sincere, empathetic, and gently authoritative—express genuine care while demonstrating competence.\n\n"
+    "Pacing: Steady and moderate; unhurried enough for clarity, yet efficient enough to remain engaging.\n\n"
+    "Emotion: Genuine warmth and encouragement; the delivery should feel supportive, as if helping someone learn with patience.\n\n"
+    "Pronunciation: Clear and precise, slightly over-corrected to emphasize accurate articulation. "
+    "Stress key syllables and word boundaries to reinforce correct learning. "
+    "Pauses: Brief pauses after the snippet if necessary, highlighting that the unit is complete and self-contained."
+)
 
 def detect_delimiter(sample: str) -> str:
     return "," if sample.count(",") >= sample.count("\t") else "\t"
