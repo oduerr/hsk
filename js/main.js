@@ -667,14 +667,43 @@ btnReveal.addEventListener('click', onReveal);
 btnNext.addEventListener('click', onNext);
 btnMistake.addEventListener('click', onMistake);
 btnCardMistakeToggle?.addEventListener('click', onMistake);
-function speakGood() {
-  const idx = state.order[state.index];
-  const card = state.deck[idx];
-  if (!card) return;
-  try { 
+async function speakGood() {
+  try {
+    const idx = state.order[state.index];
+    const card = state.deck[idx];
+    if (!card) return;
+    
     const level = state.levelLabel || ''; 
-    speak(card.hanzi || card.pinyin || '', 'zh-CN', { level }); 
-  } catch {
+    const result = await speak(card.hanzi || card.pinyin || '', 'zh-CN', { level });
+    
+    // Update button icon based on audio source
+    if (btnSpeak) {
+      if (result?.source === 'cache') {
+        btnSpeak.textContent = '💾'; // Pre-recorded WAV (cache)
+        btnSpeak.title = 'Speak (Pre-recorded cache)';
+      } else if (result?.source === 'remote') {
+        btnSpeak.textContent = '🌐'; // Pre-recorded WAV (remote)
+        btnSpeak.title = 'Speak (Pre-recorded remote)';
+      } else if (result?.source === 'browser') {
+        btnSpeak.textContent = '⚡'; // Browser TTS
+        btnSpeak.title = 'Speak (Web TTS - lower quality)';
+      } else if (result?.source === 'error') {
+        btnSpeak.textContent = '🔊❌'; // Error
+        btnSpeak.title = 'Speak (Audio unavailable)';
+      } else {
+        btnSpeak.textContent = '🔊'; // Default
+        btnSpeak.title = 'Speak';
+      }
+      
+      // Reset icon after a delay
+      setTimeout(() => {
+        if (btnSpeak) {
+          btnSpeak.textContent = '🔊';
+          btnSpeak.title = 'Speak';
+        }
+      }, 2000);
+    }
+  } catch (e) {
     console.error('Failed to speak card:', e);
   }
 }

@@ -116,16 +116,25 @@ async function playArrayBuffer(buf) {
 }
 
 export async function speak(text, lang='zh-CN', opts = {}) {
-  if (!text) return;
+  if (!text) return { source: 'none' };
   stop();
   try {
     const preferredLevel = typeof opts?.level === 'string' ? opts.level : null;
     console.info('[tts] speak', { text, preferredLevel });
+    
+    // Try WAV first
     const played = await tryPlayCachedOrRemoteWav(text, preferredLevel);
-    if (played) return;
-    console.warn('[audio] no wav available');
+    if (played !== 'none') {
+      return { source: played }; // Pre-recorded WAV file
+    }
+    
+    // Fallback to browser TTS
+    await speakWithBrowser(text, lang);
+    console.warn('[audio] no wav available, using browser TTS');
+    return { source: 'browser' }; // Browser TTS
   } catch (e) {
     console.warn('Audio not available:', e);
+    return { source: 'error', error: e };
   }
 }
 
@@ -149,7 +158,7 @@ async function tryPlayCachedOrRemoteWav(hanzi, preferredLevelLabel = null) {
         console.info('[audio] source=cache', { url });
         const buf = await hit.arrayBuffer();
         await playArrayBuffer(buf);
-        return true;
+        return 'cache';
       }
     }
     
@@ -161,10 +170,10 @@ async function tryPlayCachedOrRemoteWav(hanzi, preferredLevelLabel = null) {
         try { await cache.put(url, new Response(buf)); console.info('[audio] cache store ok'); } catch {}
       }
       await playArrayBuffer(buf);
-      return true;
+      return 'remote';
     }
   } catch (e) { console.warn('[audio] wav failed', e); }
-  return false;
+  return 'none';
 }
 
 // Explicit OpenAI connectivity test (4.21)
