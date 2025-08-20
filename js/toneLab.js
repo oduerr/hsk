@@ -145,24 +145,7 @@ function createToneLabModal() {
   console.log('Canvas elements:', { spectrogramCanvas, pitchCanvas });
   console.log('Context elements:', { spectrogramCtx, pitchCtx });
   
-  // Generate some test data for visualization
-  setTimeout(() => {
-    // Add dummy spectrogram data
-    for (let i = 0; i < 50; i++) {
-      const dummySpectrum = new Array(128).fill(0).map(() => Math.random() * 100);
-      spectrogramData.push(dummySpectrum);
-    }
-    
-    // Add dummy pitch data
-    for (let i = 0; i < 50; i++) {
-      pitchData.push(200 + Math.random() * 200); // Random pitch between 200-400Hz
-    }
-    
-    // Update visualizations
-    drawSpectrogram();
-    drawPitchContour();
-    console.log('Added test data, visualizations should now be visible');
-  }, 1000);
+  console.log('ToneLab modal ready for audio visualization');
 }
 
 /**
@@ -387,6 +370,7 @@ async function startRecording() {
     source._chunks = chunks;
 
     isRecording = true;
+    currentMode = 'recording';
     updateRecordingUI(true);
     setStatus('Recording... Speak now!');
     console.log('Recording started successfully');
@@ -444,6 +428,9 @@ function stopRecording() {
       setStatus('Recording complete');
       document.getElementById('btnPlayRec').disabled = false;
       document.getElementById('btnToggleAB').disabled = !referenceBuffer;
+      
+      // Set mode to recorded for visualization
+      currentMode = 'recorded';
     } else {
       console.error('No chunks found in source');
       setStatus('Recording failed - no audio data');
@@ -472,10 +459,25 @@ function playReference() {
     const source = audioCtx.createBufferSource();
     source.buffer = referenceBuffer;
     source.connect(audioCtx.destination);
+    
+    // Add error handling
+    source.onerror = (e) => {
+      console.error('Reference audio error:', e);
+      setStatus('Reference audio error');
+    };
+    
+    source.onended = () => {
+      console.log('Reference audio playback ended');
+      setStatus('Reference audio finished');
+    };
+    
     source.start();
     
     currentMode = 'reference';
     setStatus('Playing reference audio');
+    
+    // Visualize reference audio
+    visualizeAudioBuffer(referenceBuffer, 'reference');
     
   } catch (error) {
     setStatus('Failed to play reference audio');
@@ -517,10 +519,58 @@ function playRecording() {
     currentMode = 'recorded';
     setStatus('Playing your recording');
     
+    // Visualize recorded audio
+    visualizeAudioBuffer(recordedBuffer, 'recorded');
+    
   } catch (error) {
     setStatus('Failed to play recording');
     console.error('Play recording failed:', error);
   }
+}
+
+/**
+ * Visualize audio buffer for playback
+ */
+function visualizeAudioBuffer(buffer, mode) {
+  if (!buffer) return;
+  
+  console.log(`Visualizing ${mode} audio buffer:`, buffer.length, 'samples, duration:', buffer.duration);
+  
+  // Clear previous data
+  spectrogramData = [];
+  pitchData = [];
+  
+  const data = buffer.getChannelData(0);
+  const sampleRate = buffer.sampleRate;
+  const frameSize = 1024;
+  const hopSize = 256;
+  
+  // Process audio in frames
+  for (let i = 0; i < data.length - frameSize; i += hopSize) {
+    const frame = data.slice(i, i + frameSize);
+    
+    // Compute spectrum for spectrogram
+    const spectrum = computeSpectrum(frame);
+    spectrogramData.push(spectrum);
+    
+    // Estimate pitch for contour
+    const pitch = estimatePitch(frame, sampleRate);
+    pitchData.push(pitch);
+  }
+  
+  // Limit data size for display
+  if (spectrogramData.length > SPECTROGRAM_HISTORY) {
+    spectrogramData = spectrogramData.slice(-SPECTROGRAM_HISTORY);
+  }
+  if (pitchData.length > PITCH_HISTORY) {
+    pitchData = pitchData.slice(-PITCH_HISTORY);
+  }
+  
+  console.log(`Generated ${spectrogramData.length} spectrogram frames and ${pitchData.length} pitch values for ${mode} audio`);
+  
+  // Update visualizations
+  drawSpectrogram();
+  drawPitchContour();
 }
 
 /**
@@ -632,6 +682,26 @@ function drawSpectrogram() {
     const y = canvas.height - (i / 5) * canvas.height;
     ctx.fillText(`${Math.round(8000 * (1 - i / 5))}Hz`, canvas.width - 5, y + 3);
   }
+  
+  // Draw mode label
+  let modeText = 'Unknown';
+  let modeColor = '#ffffff';
+  
+  if (currentMode === 'reference') {
+    modeText = 'Reference';
+    modeColor = '#3b82f6';
+  } else if (currentMode === 'recorded') {
+    modeText = 'Recorded';
+    modeColor = '#10b981';
+  } else if (currentMode === 'recording') {
+    modeText = 'Recording...';
+    modeColor = '#ef4444';
+  }
+  
+  ctx.fillStyle = modeColor;
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Mode: ${modeText}`, 10, 20);
 }
 
 /**
@@ -656,6 +726,26 @@ function drawPitchContour() {
     ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
+  
+  // Draw mode label
+  let modeText = 'Unknown';
+  let modeColor = '#ffffff';
+  
+  if (currentMode === 'reference') {
+    modeText = 'Reference';
+    modeColor = '#3b82f6';
+  } else if (currentMode === 'recorded') {
+    modeText = 'Recorded';
+    modeColor = '#10b981';
+  } else if (currentMode === 'recording') {
+    modeText = 'Recording...';
+    modeColor = '#ef4444';
+  }
+  
+  ctx.fillStyle = modeColor;
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Mode: ${modeText}`, 10, 20);
   
   // Draw tone contour guide if available
   if (currentCard?.pinyin) {
@@ -814,6 +904,30 @@ function cleanup() {
   
   analyser = null;
   isRecording = false;
+}
+
+/**
+ * Compute spectrum for a frame of audio data
+ */
+function computeSpectrum(timeData) {
+  const fftSize = Math.min(timeData.length, 256);
+  const spectrum = new Array(fftSize / 2).fill(0);
+  
+  // Simple energy-based spectrum approximation
+  for (let i = 0; i < spectrum.length; i++) {
+    let energy = 0;
+    const binSize = Math.floor(timeData.length / spectrum.length);
+    const start = i * binSize;
+    const end = Math.min(start + binSize, timeData.length);
+    
+    for (let j = start; j < end; j++) {
+      energy += timeData[j] * timeData[j];
+    }
+    
+    spectrum[i] = Math.sqrt(energy / binSize) * 255;
+  }
+  
+  return spectrum;
 }
 
 /**
