@@ -1,5 +1,5 @@
 import { discoverAvailableCsvFiles } from './data.js';
-import { openToneVisualizer, closeToneVisualizer } from './toneVisualizer.js';
+import './toneLab.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel, loadTtsSettings, saveTtsSettings, loadTtsVoice, saveTtsVoice, computeSessionsSizeBytes, loadVersionFile } from './storage.js';
@@ -708,7 +708,17 @@ async function speakGood() {
   }
 }
 btnSpeak?.addEventListener('click', speakGood);
-btnTone?.addEventListener('click', () => { openToneVisualizer(); });
+btnTone?.addEventListener('click', () => { 
+  const card = currentCard();
+  if (card) {
+    if (window.toneLab && window.toneLab.openToneLab) {
+      window.toneLab.openToneLab(card);
+    } else {
+      console.error('ToneLab not available');
+      alert('Tone Lab is not available. Please refresh the page.');
+    }
+  }
+});
 btnAnnotation?.addEventListener('click', () => {
   openAnnotationEditor();
 });

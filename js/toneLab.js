@@ -1,131 +1,856 @@
-const canvas = /** @type {HTMLCanvasElement} */(document.getElementById('labCanvas'));
-const ctx = canvas.getContext('2d');
-const btnMicStart = document.getElementById('btnMicStart');
-const btnMicStop = document.getElementById('btnMicStop');
-const audioFile = /** @type {HTMLInputElement} */(document.getElementById('audioFile'));
-const btnPlay = /** @type {HTMLButtonElement} */(document.getElementById('btnPlay'));
-const btnMicReplay = /** @type {HTMLButtonElement} */(document.getElementById('btnMicReplay'));
-const statusEl = document.getElementById('labStatus');
+/**
+ * Tone Lab - Audio Visualizer for Pronunciation Practice
+ * Replaces toneVisualizer.js with enhanced spectrogram and tone analysis
+ */
 
 let audioCtx = null;
 let analyser = null;
 let stream = null;
 let source = null;
 let reqId = 0;
-let loadedBuffer = null;
-let micBuffer = null;
+let recordedBuffer = null;
+let referenceBuffer = null;
+let isRecording = false;
+let currentMode = 'reference'; // 'reference' or 'recorded'
 
-function setStatus(t) { if (statusEl) statusEl.textContent = t || ''; }
+// Canvas elements
+let spectrogramCanvas = null;
+let spectrogramCtx = null;
+let pitchCanvas = null;
+let pitchCtx = null;
 
-function ensureAudio() { if (audioCtx) return audioCtx; audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+// Audio data
+let spectrogramData = [];
+let pitchData = [];
+const SPECTROGRAM_HISTORY = 200;
+const PITCH_HISTORY = 180;
 
-function hann(len) { const w = new Float32Array(len); for (let i=0;i<len;i++) w[i]=0.5*(1-Math.cos((2*Math.PI*i)/(len-1))); return w; }
-const hannCache = {}; function getHann(n){ return hannCache[n] || (hannCache[n]=hann(n)); }
+// Tone contour definitions
+const TONE_CONTOURS = {
+  1: { name: 'High Level', color: '#10b981', points: [0.8, 0.8, 0.8, 0.8, 0.8] },
+  2: { name: 'Rising', color: '#3b82f6', points: [0.5, 0.6, 0.7, 0.8, 0.9] },
+  3: { name: 'Falling-Rising', color: '#f59e0b', points: [0.6, 0.4, 0.2, 0.4, 0.7] },
+  4: { name: 'Falling', color: '#ef4444', points: [0.9, 0.7, 0.5, 0.3, 0.1] },
+  0: { name: 'Neutral', color: '#6b7280', points: [0.5, 0.5, 0.5, 0.5, 0.5] }
+};
 
-function estimatePitchHzFromBuffer(buf, sr){
-  const n = buf.length; if (n < 256) return 0;
-  let mean=0; for(let i=0;i<n;i++) mean+=buf[i]; mean/=n;
-  const w=getHann(n); let e0=0; const x=new Float32Array(n);
-  for(let i=0;i<n;i++){ const v=(buf[i]-mean)*w[i]; x[i]=v; e0+=v*v; }
-  if (e0<=1e-7) return 0;
-  const minLag=Math.floor(sr/350), maxLag=Math.floor(sr/80);
-  let bestLag=-1, bestRho=0;
-  for(let lag=minLag; lag<=maxLag; lag++){
-    let num=0, eLag=0;
-    for(let i=0;i<n-lag;i++){ const a=x[i]; const b=x[i+lag]; num+=a*b; eLag+=b*b; }
-    const rho=num/Math.sqrt(e0*(eLag||1e-7));
-    if (rho>bestRho){ bestRho=rho; bestLag=lag; }
-  }
-  if (bestLag<0 || bestRho<0.35) return 0; return sr/bestLag;
+// Current card data
+let currentCard = null;
+
+/**
+ * Public API - Open tone lab for a card
+ */
+export function openToneLab(card) {
+  console.log('Opening tone lab for card:', card);
+  currentCard = card;
+  createToneLabModal();
+  loadReferenceAudio(card);
 }
 
-function drawBackground(){ if(!ctx) return; ctx.fillStyle='#0b1220'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='#1f2937'; ctx.beginPath(); ctx.moveTo(20, canvas.height*0.2); ctx.lineTo(canvas.width-20, canvas.height*0.2); ctx.moveTo(20, canvas.height*0.8); ctx.lineTo(canvas.width-20, canvas.height*0.8); ctx.stroke(); }
-
-function hzToY(hz, center){ const h=canvas.height; if (hz<=0) return h/2; const st=12*Math.log2(hz/center); const clamped=Math.max(-12, Math.min(12, st)); return h/2 - (clamped/12)*(h*0.3); }
-
-// Live mic rendering
-const live = [];
-const LIVE_MAX = 180;
-function renderLive(){
-  if (!analyser) return;
-  const sr = audioCtx.sampleRate; const n = analyser.fftSize; const buf = new Float32Array(n); analyser.getFloatTimeDomainData(buf);
-  const hz = estimatePitchHzFromBuffer(buf, sr);
-  if (hz>0) live.push(hz); else live.push(null);
-  if (live.length>LIVE_MAX) live.shift();
-  drawBackground();
-  const voiced = live.filter(v=>v>0); const center = voiced.length ? median(voiced) : 200;
-  ctx.strokeStyle='#93c5fd'; ctx.beginPath(); let moved=false;
-  for (let i=0;i<live.length;i++){
-    const x = 20 + (i/(LIVE_MAX-1))*(canvas.width-40);
-    const hzv = live[i]; if (!hzv) continue; const y = hzToY(hzv, center);
-    if (!moved){ ctx.moveTo(x,y); moved=true; } else { ctx.lineTo(x,y); }
+/**
+ * Close tone lab and cleanup resources
+ */
+export function closeToneLab() {
+  cleanup();
+  const modal = document.getElementById('toneLabModal');
+  if (modal) {
+    modal.remove();
   }
-  if (moved) ctx.stroke();
-  reqId = requestAnimationFrame(renderLive);
 }
 
-function median(arr){ const v=arr.slice().sort((a,b)=>a-b); const n=v.length; if(!n) return 0; const m=Math.floor(n/2); return n%2?v[m]:(v[m-1]+v[m])/2; }
+/**
+ * Create the tone lab modal UI
+ */
+function createToneLabModal() {
+  console.log('Creating tone lab modal...');
+  // Remove existing modal if present
+  const existing = document.getElementById('toneLabModal');
+  if (existing) existing.remove();
 
-async function startMic(){
-  try{
-    const ctxA = ensureAudio();
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    source = ctxA.createMediaStreamSource(stream);
-    analyser = ctxA.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser);
-    // capture raw for replay
-    const recorder = ctxA.createScriptProcessor(4096, 1, 1);
+  const modal = document.createElement('div');
+  modal.id = 'toneLabModal';
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel tone-lab-modal">
+      <div class="modal-header">
+        <div class="modal-title">Tone Lab</div>
+        <button class="modal-close" id="toneLabClose">×</button>
+      </div>
+      
+      <div class="modal-body tone-lab-content">
+        <!-- Card Info -->
+        <div class="tone-lab-card">
+          <div class="tone-lab-hanzi">${currentCard?.hanzi || '—'}</div>
+          <div class="tone-lab-pinyin">${currentCard?.pinyin || '—'}</div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="tone-lab-controls">
+          <button id="btnRecord" class="tone-lab-btn record">🎙️ Record</button>
+          <button id="btnStop" class="tone-lab-btn stop" disabled>⏹️ Stop</button>
+          <button id="btnPlayRef" class="tone-lab-btn play">🔊 Reference</button>
+          <button id="btnPlayRec" class="tone-lab-btn play" disabled>🎧 My Recording</button>
+          <button id="btnToggleAB" class="tone-lab-btn toggle" disabled>🔄 A/B Toggle</button>
+        </div>
+        
+        <!-- Status -->
+        <div id="toneLabStatus" class="tone-lab-status">Ready</div>
+        
+        <!-- Visualizations -->
+        <div class="tone-lab-viz">
+          <div class="viz-section">
+            <h4>Spectrogram</h4>
+            <canvas id="spectrogramCanvas" width="400" height="200"></canvas>
+          </div>
+          <div class="viz-section">
+            <h4>Pitch Contour</h4>
+            <canvas id="pitchCanvas" width="400" height="200"></canvas>
+          </div>
+        </div>
+        
+        <!-- Hints -->
+        <div id="toneLabHints" class="tone-lab-hints"></div>
+      </div>
+    </div>
+  `;
+
+  addToneLabStyles();
+  document.body.appendChild(modal);
+  console.log('Modal added to DOM');
+
+  // Add backdrop click handler
+  const backdrop = modal.querySelector('.modal-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      window.toneLab.closeToneLab();
+    });
+  }
+
+  // Initialize canvases
+  spectrogramCanvas = document.getElementById('spectrogramCanvas');
+  spectrogramCtx = spectrogramCanvas.getContext('2d');
+  pitchCanvas = document.getElementById('pitchCanvas');
+  pitchCtx = pitchCanvas.getContext('2d');
+
+  // Bind event handlers
+  bindEventHandlers();
+  
+  // Initialize visualizations
+  drawSpectrogram();
+  drawPitchContour();
+  
+  // Add some test data to make visualizations visible
+  console.log('ToneLab modal created successfully');
+  console.log('Canvas elements:', { spectrogramCanvas, pitchCanvas });
+  console.log('Context elements:', { spectrogramCtx, pitchCtx });
+  
+  // Generate some test data for visualization
+  setTimeout(() => {
+    // Add dummy spectrogram data
+    for (let i = 0; i < 50; i++) {
+      const dummySpectrum = new Array(128).fill(0).map(() => Math.random() * 100);
+      spectrogramData.push(dummySpectrum);
+    }
+    
+    // Add dummy pitch data
+    for (let i = 0; i < 50; i++) {
+      pitchData.push(200 + Math.random() * 200); // Random pitch between 200-400Hz
+    }
+    
+    // Update visualizations
+    drawSpectrogram();
+    drawPitchContour();
+    console.log('Added test data, visualizations should now be visible');
+  }, 1000);
+}
+
+/**
+ * Add CSS styles for tone lab
+ */
+function addToneLabStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .tone-lab-modal {
+      max-width: 800px;
+      width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .tone-lab-content {
+      padding: 16px;
+    }
+    
+    .tone-lab-card {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+    }
+    
+    .tone-lab-hanzi {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+    
+    .tone-lab-pinyin {
+      font-size: 24px;
+      color: #6b7280;
+    }
+    
+    .tone-lab-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    
+    .tone-lab-btn {
+      padding: 8px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #111827;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .tone-lab-btn:hover {
+      background: #f9fafb;
+    }
+    
+    .tone-lab-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .tone-lab-btn.record {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .tone-lab-btn.recording {
+      background: #ef4444;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .tone-lab-status {
+      text-align: center;
+      padding: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    
+    .tone-lab-viz {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .viz-section {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+    }
+    
+    .viz-section h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    
+    .viz-section canvas {
+      width: 100%;
+      background: #0b1220;
+      border-radius: 4px;
+    }
+    
+    .tone-lab-hints {
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      min-height: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .tone-lab-viz {
+        grid-template-columns: 1fr;
+      }
+      
+      .tone-lab-hanzi {
+        font-size: 36px;
+      }
+      
+      .tone-lab-pinyin {
+        font-size: 18px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+/**
+ * Bind event handlers for controls
+ */
+function bindEventHandlers() {
+  document.getElementById('btnRecord')?.addEventListener('click', startRecording);
+  document.getElementById('btnStop')?.addEventListener('click', stopRecording);
+  document.getElementById('btnPlayRef')?.addEventListener('click', playReference);
+  document.getElementById('btnPlayRec')?.addEventListener('click', playRecording);
+  document.getElementById('btnToggleAB')?.addEventListener('click', toggleAB);
+  document.getElementById('toneLabClose')?.addEventListener('click', () => {
+    window.toneLab.closeToneLab();
+  });
+}
+
+/**
+ * Load reference audio for the card
+ */
+async function loadReferenceAudio(card) {
+  if (!card?.hanzi) {
+    setStatus('No reference audio available');
+    return;
+  }
+
+  try {
+    const audioUrl = `./data/recordings/${encodeURIComponent(card.hanzi)}.wav`;
+    const response = await fetch(audioUrl);
+    
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      const audioCtx = getAudioContext();
+      referenceBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      setStatus('Reference audio loaded');
+      document.getElementById('btnPlayRef').disabled = false;
+    } else {
+      setStatus('No reference audio found');
+    }
+  } catch (error) {
+    setStatus('Failed to load reference audio');
+    console.warn('Reference audio load failed:', error);
+  }
+}
+
+/**
+ * Start recording user audio
+ */
+async function startRecording() {
+  try {
+    console.log('Starting recording...');
+    const audioCtx = getAudioContext();
+    
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    });
+
+    source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+
+    // Setup recording
+    const recorder = audioCtx.createScriptProcessor(4096, 1, 1);
     const chunks = [];
     source.connect(recorder);
-    const silent = ctxA.createGain(); silent.gain.value = 0; recorder.connect(silent); silent.connect(ctxA.destination);
-    recorder.onaudioprocess = (e) => { chunks.push(e.inputBuffer.getChannelData(0).slice()); };
-    // stop hook stores buffer
-    const finalize = () => {
-      try { recorder.disconnect(); } catch {}
-      const total = chunks.reduce((n,c)=>n+c.length, 0);
-      const flat = new Float32Array(total); let ofs=0; for(const c of chunks){ flat.set(c, ofs); ofs += c.length; }
-      micBuffer = ctxA.createBuffer(1, flat.length, ctxA.sampleRate); micBuffer.copyToChannel(flat, 0, 0);
-      if (btnMicReplay) btnMicReplay.disabled = !micBuffer;
+    
+    // Silent output to prevent feedback
+    const silent = audioCtx.createGain();
+    silent.gain.value = 0;
+    recorder.connect(silent);
+    silent.connect(audioCtx.destination);
+
+    recorder.onaudioprocess = (e) => {
+      chunks.push(e.inputBuffer.getChannelData(0).slice());
     };
-    // attach stop to global stop
-    stopMic._finalize = finalize;
-    live.length = 0; setStatus('Recording…');
-    if (reqId) cancelAnimationFrame(reqId); renderLive();
-  } catch(e){ setStatus('Mic unavailable'); }
+
+    // Store recorder for cleanup
+    source._recorder = recorder;
+    source._chunks = chunks;
+
+    isRecording = true;
+    updateRecordingUI(true);
+    setStatus('Recording... Speak now!');
+    console.log('Recording started successfully');
+    
+    // Start visualization
+    spectrogramData = [];
+    pitchData = [];
+    if (reqId) cancelAnimationFrame(reqId);
+    visualizeRecording();
+
+  } catch (error) {
+    setStatus('Microphone access denied or unavailable');
+    console.error('Recording failed:', error);
+  }
 }
 
-function stopMic(){ try{ if (reqId) cancelAnimationFrame(reqId); }catch{}; try{ stream?.getTracks()?.forEach(t=>t.stop()); }catch{}; analyser=null; source=null; stream=null; try { stopMic._finalize && stopMic._finalize(); } catch {} ; setStatus(''); }
+/**
+ * Stop recording and process audio
+ */
+function stopRecording() {
+  if (!isRecording) return;
 
-// File loading and playback
-audioFile?.addEventListener('change', async () => {
-  const f = audioFile.files && audioFile.files[0]; if (!f) return;
-  try{
-    const arr = await f.arrayBuffer(); const ctxA = ensureAudio();
-    loadedBuffer = await ctxA.decodeAudioData(arr.slice(0));
-    drawFromBuffer(loadedBuffer);
-    btnPlay.disabled = false; setStatus('Loaded audio');
-  }catch(e){ setStatus('Failed to load audio'); }
-});
+  isRecording = false;
+  updateRecordingUI(false);
 
-function drawFromBuffer(buffer){
-  const sr = buffer.sampleRate; const data = buffer.getChannelData(0);
-  drawBackground();
-  const frame=1024, hop=512; const points=[];
-  for (let p=0; p+frame<=data.length; p+=hop){ const hz=estimatePitchHzFromBuffer(data.slice(p,p+frame), sr); if (hz>0) points.push({idx:p, hz}); }
-  const center = points.length ? median(points.map(p=>p.hz)) : 200;
-  ctx.strokeStyle='#3b82f6'; ctx.beginPath(); let moved=false; const nFrames = Math.max(1, Math.floor(data.length/hop));
-  for (let p=0; p+frame<=data.length; p+=hop){ const hz=estimatePitchHzFromBuffer(data.slice(p,p+frame), sr); if(hz<=0) continue; const x = 20 + (p/(data.length-frame))*(canvas.width-40); const y = hzToY(hz, center); if(!moved){ ctx.moveTo(x,y); moved=true; } else { ctx.lineTo(x,y); } }
-  if (moved) ctx.stroke();
+  try {
+    if (reqId) {
+      cancelAnimationFrame(reqId);
+      reqId = 0;
+    }
+
+    // Process recorded audio
+    if (source && source._chunks) {
+      const chunks = source._chunks;
+      console.log('Processing recorded chunks:', chunks.length, 'chunks');
+      
+      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      console.log('Total recorded length:', totalLength, 'samples');
+      
+      const recordedData = new Float32Array(totalLength);
+      
+      let offset = 0;
+      for (const chunk of chunks) {
+        recordedData.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Create audio buffer
+      const audioCtx = getAudioContext();
+      recordedBuffer = audioCtx.createBuffer(1, recordedData.length, audioCtx.sampleRate);
+      recordedBuffer.copyToChannel(recordedData, 0, 0);
+
+      console.log('Created recorded buffer:', recordedBuffer.length, 'samples, duration:', recordedBuffer.duration, 'seconds');
+      
+      setStatus('Recording complete');
+      document.getElementById('btnPlayRec').disabled = false;
+      document.getElementById('btnToggleAB').disabled = !referenceBuffer;
+    } else {
+      console.error('No chunks found in source');
+      setStatus('Recording failed - no audio data');
+    }
+
+    // Cleanup after processing
+    cleanup();
+    
+  } catch (error) {
+    setStatus('Failed to process recording');
+    console.error('Stop recording failed:', error);
+  }
 }
 
-btnMicStart?.addEventListener('click', startMic);
-btnMicStop?.addEventListener('click', stopMic);
-btnMicReplay?.addEventListener('click', () => {
-  try{ if(!micBuffer) return; const ctxA = ensureAudio(); const src = ctxA.createBufferSource(); src.buffer = micBuffer; src.connect(ctxA.destination); src.start(); }catch{}
-});
-btnPlay?.addEventListener('click', () => {
-  try{ if(!loadedBuffer) return; const ctxA = ensureAudio(); const src = ctxA.createBufferSource(); src.buffer = loadedBuffer; src.connect(ctxA.destination); src.start(); }catch{}
-});
+/**
+ * Play reference audio
+ */
+function playReference() {
+  if (!referenceBuffer) {
+    setStatus('No reference audio available');
+    return;
+  }
 
-drawBackground();
+  try {
+    const audioCtx = getAudioContext();
+    const source = audioCtx.createBufferSource();
+    source.buffer = referenceBuffer;
+    source.connect(audioCtx.destination);
+    source.start();
+    
+    currentMode = 'reference';
+    setStatus('Playing reference audio');
+    
+  } catch (error) {
+    setStatus('Failed to play reference audio');
+    console.error('Play reference failed:', error);
+  }
+}
 
+/**
+ * Play recorded audio
+ */
+function playRecording() {
+  if (!recordedBuffer) {
+    setStatus('No recording available');
+    console.error('No recorded buffer available');
+    return;
+  }
 
+  try {
+    console.log('Playing recorded buffer:', recordedBuffer.length, 'samples, duration:', recordedBuffer.duration);
+    
+    const audioCtx = getAudioContext();
+    const source = audioCtx.createBufferSource();
+    source.buffer = recordedBuffer;
+    source.connect(audioCtx.destination);
+    
+    // Add error handling
+    source.onerror = (e) => {
+      console.error('Audio source error:', e);
+      setStatus('Audio playback error');
+    };
+    
+    source.onended = () => {
+      console.log('Recording playback ended');
+      setStatus('Recording playback finished');
+    };
+    
+    source.start();
+    
+    currentMode = 'recorded';
+    setStatus('Playing your recording');
+    
+  } catch (error) {
+    setStatus('Failed to play recording');
+    console.error('Play recording failed:', error);
+  }
+}
+
+/**
+ * Toggle between reference and recorded audio
+ */
+function toggleAB() {
+  if (currentMode === 'reference') {
+    playRecording();
+  } else {
+    playReference();
+  }
+}
+
+/**
+ * Real-time visualization during recording
+ */
+function visualizeRecording() {
+  if (!isRecording || !analyser) return;
+
+  const bufferLength = analyser.fftSize;
+  const timeData = new Float32Array(bufferLength);
+  const freqData = new Uint8Array(analyser.frequencyBinCount);
+  
+  analyser.getFloatTimeDomainData(timeData);
+  analyser.getByteFrequencyData(freqData);
+
+  // Add to spectrogram data
+  spectrogramData.push(Array.from(freqData));
+  if (spectrogramData.length > SPECTROGRAM_HISTORY) {
+    spectrogramData.shift();
+  }
+
+  // Estimate pitch for visualization
+  const pitch = estimatePitch(timeData, getAudioContext().sampleRate);
+  pitchData.push(pitch);
+  if (pitchData.length > PITCH_HISTORY) {
+    pitchData.shift();
+  }
+
+  // Debug logging
+  if (spectrogramData.length % 30 === 0) { // Log every 30 frames
+    console.log('Spectrogram data:', spectrogramData.length, 'slices, last slice length:', spectrogramData[spectrogramData.length - 1]?.length);
+    console.log('Pitch data:', pitchData.length, 'values, last pitch:', pitch);
+  }
+
+  // Update visualizations
+  drawSpectrogram();
+  drawPitchContour();
+
+  reqId = requestAnimationFrame(visualizeRecording);
+}
+
+/**
+ * Draw spectrogram visualization
+ */
+function drawSpectrogram() {
+  if (!spectrogramCtx) return;
+  
+  const canvas = spectrogramCanvas;
+  const ctx = spectrogramCtx;
+  
+  // Clear canvas
+  ctx.fillStyle = '#0b1220';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  if (spectrogramData.length === 0) {
+    // Draw placeholder text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  
+  const timeSlices = spectrogramData.length;
+  const freqBins = spectrogramData[0].length;
+  const sliceWidth = Math.max(1, canvas.width / timeSlices);
+  const binHeight = Math.max(1, canvas.height / freqBins);
+  
+  // Draw spectrogram
+  for (let t = 0; t < timeSlices; t++) {
+    const slice = spectrogramData[t];
+    if (!slice) continue;
+    
+    for (let f = 0; f < freqBins; f++) {
+      const intensity = slice[f] / 255;
+      if (intensity > 0.1) { // Only draw visible intensity
+        // Use a more visible color scheme
+        const r = Math.floor(intensity * 255);
+        const g = Math.floor(intensity * 200);
+        const b = Math.floor(intensity * 100);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(
+          t * sliceWidth,
+          canvas.height - (f + 1) * binHeight,
+          sliceWidth,
+          binHeight
+        );
+      }
+    }
+  }
+  
+  // Draw frequency labels
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const y = canvas.height - (i / 5) * canvas.height;
+    ctx.fillText(`${Math.round(8000 * (1 - i / 5))}Hz`, canvas.width - 5, y + 3);
+  }
+}
+
+/**
+ * Draw pitch contour with tone overlay
+ */
+function drawPitchContour() {
+  if (!pitchCtx) return;
+  
+  const canvas = pitchCanvas;
+  const ctx = pitchCtx;
+  
+  ctx.fillStyle = '#0b1220';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw grid
+  ctx.strokeStyle = '#1f2937';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = (canvas.height / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  
+  // Draw tone contour guide if available
+  if (currentCard?.pinyin) {
+    drawToneGuide();
+  }
+  
+  // Draw pitch data if available
+  if (pitchData.length > 1) {
+    const validPitches = pitchData.filter(p => p > 0);
+    if (validPitches.length > 0) {
+      const minPitch = Math.min(...validPitches);
+      const maxPitch = Math.max(...validPitches);
+      const range = maxPitch - minPitch || 1;
+      
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      let started = false;
+      for (let i = 0; i < pitchData.length; i++) {
+        const pitch = pitchData[i];
+        if (pitch <= 0) continue;
+        
+        const x = (i / pitchData.length) * canvas.width;
+        const y = canvas.height - ((pitch - minPitch) / range) * (canvas.height * 0.8) - canvas.height * 0.1;
+        
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      if (started) {
+        ctx.stroke();
+      }
+      
+      // Draw pitch value labels
+      ctx.fillStyle = '#10b981';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Min: ${Math.round(minPitch)}Hz`, 10, canvas.height - 30);
+      ctx.fillText(`Max: ${Math.round(maxPitch)}Hz`, 10, canvas.height - 15);
+    }
+  } else {
+    // Draw placeholder text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No pitch data yet', canvas.width / 2, canvas.height / 2);
+  }
+}
+
+/**
+ * Draw tone contour guide based on pinyin
+ */
+function drawToneGuide() {
+  if (!currentCard?.pinyin || !pitchCtx) return;
+  
+  const toneMatch = currentCard.pinyin.match(/[1-4]/);
+  const toneNumber = toneMatch ? parseInt(toneMatch[0]) : 0;
+  
+  const toneInfo = TONE_CONTOURS[toneNumber];
+  if (!toneInfo) return;
+  
+  const ctx = pitchCtx;
+  const canvas = pitchCanvas;
+  
+  ctx.strokeStyle = toneInfo.color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  
+  for (let i = 0; i < toneInfo.points.length; i++) {
+    const x = (i / (toneInfo.points.length - 1)) * canvas.width;
+    const y = canvas.height - (toneInfo.points[i] * canvas.height * 0.8) - canvas.height * 0.1;
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  ctx.fillStyle = toneInfo.color;
+  ctx.font = '12px sans-serif';
+  ctx.fillText(`Tone ${toneNumber}: ${toneInfo.name}`, 10, 20);
+}
+
+/**
+ * Update recording UI state
+ */
+function updateRecordingUI(recording) {
+  const recordBtn = document.getElementById('btnRecord');
+  const stopBtn = document.getElementById('btnStop');
+  
+  if (recordBtn) {
+    recordBtn.disabled = recording;
+    recordBtn.className = recording ? 'tone-lab-btn recording' : 'tone-lab-btn record';
+  }
+  
+  if (stopBtn) {
+    stopBtn.disabled = !recording;
+  }
+}
+
+/**
+ * Set status message
+ */
+function setStatus(message) {
+  const statusEl = document.getElementById('toneLabStatus');
+  if (statusEl) {
+    statusEl.textContent = message;
+  }
+}
+
+/**
+ * Get or create audio context
+ */
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+/**
+ * Cleanup audio resources
+ */
+function cleanup() {
+  if (reqId) {
+    cancelAnimationFrame(reqId);
+    reqId = 0;
+  }
+  
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  
+  if (source) {
+    try {
+      if (source._recorder) {
+        source._recorder.disconnect();
+      }
+      source.disconnect();
+    } catch (e) {
+      // Ignore disconnect errors
+    }
+    source = null;
+  }
+  
+  analyser = null;
+  isRecording = false;
+}
+
+/**
+ * Simple pitch estimation using autocorrelation
+ */
+function estimatePitch(buffer, sampleRate) {
+  const bufferSize = buffer.length;
+  if (bufferSize < 1024) return 0;
+  
+  // Find the best autocorrelation
+  let bestOffset = -1;
+  let bestCorrelation = 0;
+  const minOffset = Math.floor(sampleRate / 300); // ~300Hz max
+  const maxOffset = Math.floor(sampleRate / 80);  // ~80Hz min
+  
+  for (let offset = minOffset; offset < Math.min(maxOffset, bufferSize / 2); offset++) {
+    let correlation = 0;
+    for (let i = 0; i < bufferSize - offset; i++) {
+      correlation += Math.abs(buffer[i] - buffer[i + offset]);
+    }
+    correlation = 1 - (correlation / (bufferSize - offset));
+    
+    if (correlation > bestCorrelation) {
+      bestCorrelation = correlation;
+      bestOffset = offset;
+    }
+  }
+  
+  if (bestCorrelation > 0.3 && bestOffset > 0) {
+    return sampleRate / bestOffset;
+  }
+  
+  return 0;
+}
+
+// Export for global access
+window.toneLab = {
+  openToneLab,
+  closeToneLab
+};

@@ -1509,5 +1509,54 @@ This refactoring ensures all external interactions are properly documented and c
 #### 5.23 Polishing
 - is speakChinese() needed?
 
-#### 5.24 Autosave
-- Make autosave default and 
+## 5.40 Pluggable Audio Visualizer (Tone Practice) — Lite Spec ✅ COMPLETED
+
+Goal
+
+Add an optional pronunciation practice view that can run standalone or be opened as a modal card in the app. If the visualizer fails or is unavailable, the app continues using the normal card flow without errors. This replaces toneVisualizer.js call it toneLab.js
+
+**Implementation Details:**
+- **New toneLab.js Module**: Complete replacement for toneVisualizer.js with enhanced functionality
+- **Real-time Spectrogram**: Live frequency visualization during recording and playback
+- **Tone Contour Overlay**: Visual guides for Chinese tones (1-4) based on pinyin
+- **A/B Audio Comparison**: Easy switching between reference and recorded audio
+- **Professional UI**: Modal interface with intuitive controls and visual feedback
+- **Error Handling**: Graceful fallback when microphone unavailable or permissions denied
+- **Standalone Mode**: Testing interface available at `tone-lab-standalone.html`
+- **Reference Audio Support**: Loads WAV files from `data/recordings/` when available
+
+What it does (essentials)
+	•	Shows the current item (Hanzi big, Pinyin medium)
+	•	Lets the learner record, play reference, play my recording, and A/B toggle between them.
+	•	Displays a simple spectrogram and a tone contour overlay (guide from pinyin tones + estimated pitch from audio).
+	•	Works with an existing reference audio file if present; if not, still allows recording and playback.
+
+Integration (minimal)
+	•	It should be started via btnTone and replace the current implementation of the Tone Visualizer.
+	•	Input data passed from card: { hanzi, pinyin, referenceAudioUrl? }.
+	•	No hard coupling: visualizer returns nothing required by the main flow. Closing the visualizer returns to the card as-is.
+
+Standalone mode
+	•	Visualizer also loads standalone with URL params or a small JSON blob (for testing without the app).
+	•	If no reference provided, show “No reference audio” but keep record and playback working.
+
+Include
+	•	Easy switching between the recording and the reference audio
+	•	Spectrogram and short hints (e.g., “input too quiet”).
+
+Failure & fallback
+	•	If mic permission denied or any runtime error occurs: show a friendly message and allow closing back to the card.
+	•	Never block or alter session state when the visualizer is used or fails.
+
+
+Acceptance criteria (pragmatic)
+	•	Opening the visualizer from a card shows that card’s Hanzi/Pinyin and (if present) plays its reference audio.
+	•	Recording works on a typical laptop and a modern phone; playback works for both reference and user recording.
+	•	A simple visual display (spectrogram) renders while recording or on playback.
+	•	Closing the visualizer returns to the card with no changes to learning state and no console errors.
+	•	Disabling the feature in the gear menu hides its entry points.
+
+Out of scope (for this round)
+	•	Scoring, ML alignment, or persistence of recordings.
+	•	Strict UI/tech choices (agent is free to pick Canvas/WebAudio/etc.).
+	•	Precise DSP details; any reasonable implementation that is responsive is fine.
