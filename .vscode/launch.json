@@ -15,6 +15,17 @@
         "console": "integratedTerminal",
         "autoAttachChildProcesses": true,
         "skipFiles": ["<node_internals>/**"]
-      }
-    ]
+      },
+     
+          {
+            "name": "Debug Web App (attach to Live Server)",
+            "type": "pwa-chrome",           // or "pwa-msedge"
+            "request": "launch",
+            "url": "http://127.0.0.1:5500/index.html",
+            "webRoot": "${workspaceFolder}", // maps files -> breakpoints
+            "sourceMaps": true
+          }
+        ]
   }
+
+  

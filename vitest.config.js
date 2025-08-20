@@ -7,6 +7,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.js'],
     include: ['test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    watch: false,   // 👈 disable watch mode (so it won’t hang)
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
