@@ -636,6 +636,28 @@ function drawSpectrogram() {
   ctx.fillStyle = '#0b1220';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
+  // Draw background grid for better readability
+  ctx.strokeStyle = '#1f2937';
+  ctx.lineWidth = 0.5;
+  
+  // Vertical time lines
+  for (let i = 1; i < 10; i++) {
+    const x = (canvas.width / 10) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  
+  // Horizontal frequency lines
+  for (let i = 1; i < 8; i++) {
+    const y = (canvas.height / 8) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  
   if (spectrogramData.length === 0) {
     // Draw placeholder text
     ctx.fillStyle = '#ffffff';
@@ -650,18 +672,38 @@ function drawSpectrogram() {
   const sliceWidth = Math.max(1, canvas.width / timeSlices);
   const binHeight = Math.max(1, canvas.height / freqBins);
   
-  // Draw spectrogram
+  // Find the maximum intensity for normalization
+  let maxIntensity = 0;
+  for (let t = 0; t < timeSlices; t++) {
+    const slice = spectrogramData[t];
+    if (!slice) continue;
+    for (let f = 0; f < freqBins; f++) {
+      maxIntensity = Math.max(maxIntensity, slice[f]);
+    }
+  }
+  
+  // Normalize factor - boost weak signals and reduce strong ones
+  const normalizeFactor = maxIntensity > 0 ? (255 / maxIntensity) * 2 : 1;
+  
+  // Draw spectrogram with enhanced contrast
   for (let t = 0; t < timeSlices; t++) {
     const slice = spectrogramData[t];
     if (!slice) continue;
     
     for (let f = 0; f < freqBins; f++) {
-      const intensity = slice[f] / 255;
-      if (intensity > 0.1) { // Only draw visible intensity
-        // Use a more visible color scheme
+      let intensity = slice[f] / 255;
+      
+      // Apply normalization and contrast enhancement
+      intensity = Math.pow(intensity, 0.7); // Gamma correction for better contrast
+      intensity = intensity * normalizeFactor;
+      intensity = Math.min(1, intensity); // Clamp to 0-1 range
+      
+      // Only draw if intensity is above a lower threshold for better visibility
+      if (intensity > 0.05) {
+        // Enhanced color scheme with better contrast
         const r = Math.floor(intensity * 255);
-        const g = Math.floor(intensity * 200);
-        const b = Math.floor(intensity * 100);
+        const g = Math.floor(intensity * 220);
+        const b = Math.floor(intensity * 120);
         
         ctx.fillStyle = `rgb(${r},${g},${b})`;
         ctx.fillRect(
@@ -702,6 +744,33 @@ function drawSpectrogram() {
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText(`Mode: ${modeText}`, 10, 20);
+  
+  // Draw intensity legend
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Intensity:', 10, canvas.height - 30);
+  
+  // Draw color bars
+  const legendWidth = 60;
+  const legendHeight = 15;
+  const legendX = 10;
+  const legendY = canvas.height - 25;
+  
+  for (let i = 0; i < 5; i++) {
+    const intensity = i / 4;
+    const r = Math.floor(intensity * 255);
+    const g = Math.floor(intensity * 220);
+    const b = Math.floor(intensity * 120);
+    
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(legendX + i * (legendWidth / 4), legendY, legendWidth / 4, legendHeight);
+  }
+  
+  // Draw legend border
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(legendX, legendY, legendWidth, legendHeight);
 }
 
 /**
@@ -913,18 +982,26 @@ function computeSpectrum(timeData) {
   const fftSize = Math.min(timeData.length, 256);
   const spectrum = new Array(fftSize / 2).fill(0);
   
-  // Simple energy-based spectrum approximation
+  // Enhanced energy-based spectrum with better frequency distribution
   for (let i = 0; i < spectrum.length; i++) {
     let energy = 0;
     const binSize = Math.floor(timeData.length / spectrum.length);
     const start = i * binSize;
     const end = Math.min(start + binSize, timeData.length);
     
+    // Apply windowing for better frequency resolution
     for (let j = start; j < end; j++) {
-      energy += timeData[j] * timeData[j];
+      const window = 0.5 - 0.5 * Math.cos(2 * Math.PI * (j - start) / (end - start));
+      energy += (timeData[j] * window) * (timeData[j] * window);
     }
     
-    spectrum[i] = Math.sqrt(energy / binSize) * 255;
+    // Normalize and apply frequency weighting for better visibility
+    const normalizedEnergy = Math.sqrt(energy / binSize);
+    
+    // Boost lower frequencies slightly for better visibility
+    const freqBoost = 1 + (0.3 * (1 - i / spectrum.length));
+    
+    spectrum[i] = Math.min(255, normalizedEnergy * 255 * freqBoost);
   }
   
   return spectrum;

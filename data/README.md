@@ -7,7 +7,7 @@ The prompt in `..dev_tools/make_tts_from_csv.py` can be tested in [https://www.o
 
 Create WAV-Files for the HSK1 level:
 ```
-python dev_tools/make_tts_from_csv.py data/hsk1.csv --out dev_tools/audio_chinese_hsk1_wo_pinyin --model gpt-4o-mini-tts --voice alloy
+python dev_tools/make_tts_from_csv.py data/hsk5.csv --out dev_tools/audio_chinese_hsk5_wo_pinyin --model gpt-4o-mini-tts --voice alloy --skip
 ```
 
 Moving the files to the data directory
