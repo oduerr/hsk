@@ -53,7 +53,7 @@ INSTRUCTIONS_LAOBEIJING = (
     "Pronunciation: Use Beijing dialect features such as 儿化音 (ér-suffix) and local slang when appropriate."
 )
 
-INSTRUCTIONS_DEFAULT = INSTRUCTIONS_LAOBEIJING
+#INSTRUCTIONS_DEFAULT = INSTRUCTIONS_LAOBEIJING # If you want to use the Beijing dialect
 
 
 def detect_delimiter(sample: str) -> str:
@@ -196,8 +196,9 @@ def main():
     print(f"[TTS] Done. Generated {processed} WAV file(s).")
 
 # Example:
-# python dev_tools/make_tts_from_csv.py data/eng_oliver.csv --out dev_tools/audio_eng_oliver --model gpt-4o-mini-tts --voice alloy 
 # python dev_tools/make_tts_from_csv.py dev_tools/chinese_dev.csv --out dev_tools/audio_chinese_dev_with_laobeijing --model gpt-4o-mini-tts --voice alloy 
+# python dev_tools/make_tts_from_csv.py data/eng_oliver.csv --out dev_tools/audio_eng_oliver --model gpt-4o-mini-tts --voice alloy 
+# python dev_tools/make_tts_from_csv.py data/hsk1.csv --out dev_tools/audio_chinese_hsk1_wo_pinyin --model gpt-4o-mini-tts --voice alloy 
 
 if __name__ == "__main__":
     main()
