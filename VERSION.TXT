@@ -1,1 +1,1 @@
-5.40 New ToneLab - Enhanced Spectrogram Contrast + Playback Line 
+5.40 New ToneLab - Enhanced Spectrogram Contrast + Playback Line + Manual Scrub Bar 

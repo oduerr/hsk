@@ -43,6 +43,15 @@ let playbackDuration = 0;
 let isPlaying = false;
 let playbackAnimationId = null;
 
+// Scrub bar variables
+let isScrubbing = false;
+let scrubProgress = 0;
+let currentAudioSource = null; // 'reference' or 'recorded'
+let isPaused = false;
+let loopStart = 0;
+let loopEnd = 1;
+let isLooping = false;
+
 /**
  * Public API - Open tone lab for a card
  */
@@ -115,6 +124,22 @@ function createToneLabModal() {
           </div>
         </div>
         
+        <!-- Scrub Bar -->
+        <div class="tone-lab-scrub-container">
+          <div class="tone-lab-scrub-bar">
+            <div class="tone-lab-scrub-track">
+              <div class="tone-lab-scrub-fill"></div>
+              <div class="tone-lab-scrub-handle"></div>
+            </div>
+            <div class="tone-lab-scrub-time">0.0s / 0.0s</div>
+          </div>
+          <div class="tone-lab-scrub-controls">
+            <button id="btnPause" class="tone-lab-btn control" disabled>⏸️ Pause</button>
+            <button id="btnResume" class="tone-lab-btn control" disabled>▶️ Resume</button>
+            <button id="btnLoop" class="tone-lab-btn control" disabled>🔁 Loop</button>
+          </div>
+        </div>
+        
         <!-- Hints -->
         <div id="toneLabHints" class="tone-lab-hints"></div>
       </div>
@@ -150,6 +175,9 @@ function createToneLabModal() {
   console.log('ToneLab modal created successfully');
   console.log('Canvas elements:', { spectrogramCanvas, pitchCanvas });
   console.log('Context elements:', { spectrogramCtx, pitchCtx });
+  
+  // Initialize scrub bar
+  initializeScrubBar();
   
   console.log('ToneLab modal ready for audio visualization');
 }
@@ -273,6 +301,75 @@ function addToneLabStyles() {
       font-size: 12px;
       color: #6b7280;
       min-height: 20px;
+    }
+    
+    .tone-lab-scrub-container {
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #d1d5db;
+    }
+    
+    .tone-lab-scrub-bar {
+      margin-bottom: 12px;
+    }
+    
+    .tone-lab-scrub-track {
+      position: relative;
+      height: 8px;
+      background: #d1d5db;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    
+    .tone-lab-scrub-fill {
+      position: absolute;
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 4px;
+      transition: width 0.1s ease;
+    }
+    
+    .tone-lab-scrub-handle {
+      position: absolute;
+      top: -4px;
+      width: 16px;
+      height: 16px;
+      background: #ef4444;
+      border-radius: 50%;
+      cursor: grab;
+      transition: transform 0.1s ease;
+    }
+    
+    .tone-lab-scrub-handle:active {
+      cursor: grabbing;
+      transform: scale(1.2);
+    }
+    
+    .tone-lab-scrub-time {
+      text-align: center;
+      font-family: monospace;
+      font-size: 12px;
+      color: #374151;
+    }
+    
+    .tone-lab-scrub-controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    
+    .tone-lab-btn.control {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+    
+    .tone-lab-btn.control:hover {
+      background: #7c3aed;
+      border-color: #7c3aed;
     }
     
     @media (max-width: 768px) {
@@ -482,6 +579,7 @@ function playReference() {
     source.start();
     
     currentMode = 'reference';
+    currentAudioSource = 'reference';
     setStatus('Playing reference audio');
     
     // Start playback line animation
@@ -489,6 +587,9 @@ function playReference() {
     
     // Visualize reference audio
     visualizeAudioBuffer(referenceBuffer, 'reference');
+    
+    // Enable scrub bar controls
+    enableScrubBarControls();
     
   } catch (error) {
     setStatus('Failed to play reference audio');
@@ -529,6 +630,7 @@ function playRecording() {
     source.start();
     
     currentMode = 'recorded';
+    currentAudioSource = 'recorded';
     setStatus('Playing your recording');
     
     // Start playback line animation
@@ -536,6 +638,9 @@ function playRecording() {
     
     // Visualize recorded audio
     visualizeAudioBuffer(recordedBuffer, 'recorded');
+    
+    // Enable scrub bar controls
+    enableScrubBarControls();
     
   } catch (error) {
     setStatus('Failed to play recording');
@@ -581,6 +686,9 @@ function animatePlaybackLine() {
   
   const elapsed = Date.now() - playbackStartTime;
   const progress = Math.min(elapsed / playbackDuration, 1);
+  
+  // Update scrub bar position
+  updateScrubBar(progress, playbackDuration / 1000);
   
   // Update visualizations with current playback position
   drawSpectrogram(progress);
@@ -1048,6 +1156,184 @@ function setStatus(message) {
   if (statusEl) {
     statusEl.textContent = message;
   }
+}
+
+/**
+ * Initialize scrub bar functionality
+ */
+function initializeScrubBar() {
+  const scrubTrack = document.querySelector('.tone-lab-scrub-track');
+  const scrubHandle = document.querySelector('.tone-lab-scrub-handle');
+  const scrubFill = document.querySelector('.tone-lab-scrub-fill');
+  const scrubTime = document.querySelector('.tone-lab-scrub-time');
+  const btnPause = document.getElementById('btnPause');
+  const btnResume = document.getElementById('btnResume');
+  const btnLoop = document.getElementById('btnLoop');
+  
+  if (!scrubTrack || !scrubHandle || !scrubFill || !scrubTime) {
+    console.error('Scrub bar elements not found');
+    return;
+  }
+  
+  // Mouse events for scrub track
+  scrubTrack.addEventListener('click', (e) => {
+    if (!currentAudioSource) return;
+    
+    const rect = scrubTrack.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const progress = Math.max(0, Math.min(1, clickX / rect.width));
+    
+    scrubToPosition(progress);
+  });
+  
+  // Drag functionality for scrub handle
+  let isDragging = false;
+  
+  scrubHandle.addEventListener('mousedown', (e) => {
+    if (!currentAudioSource) return;
+    
+    isDragging = true;
+    isScrubbing = true;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    e.preventDefault();
+  });
+  
+  function onMouseMove(e) {
+    if (!isDragging) return;
+    
+    const rect = scrubTrack.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const progress = Math.max(0, Math.min(1, mouseX / rect.width));
+    
+    scrubToPosition(progress);
+  }
+  
+  function onMouseUp() {
+    isDragging = false;
+    isScrubbing = false;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  // Control button events
+  btnPause?.addEventListener('click', pausePlayback);
+  btnResume?.addEventListener('click', resumePlayback);
+  btnLoop?.addEventListener('click', toggleLoop);
+  
+  // Initialize scrub bar state
+  updateScrubBar(0, 0);
+}
+
+/**
+ * Scrub to a specific position in the audio
+ */
+function scrubToPosition(progress) {
+  if (!currentAudioSource) return;
+  
+  scrubProgress = progress;
+  updateScrubBar(progress, playbackDuration / 1000);
+  
+  // Update visualizations to show position
+  drawSpectrogram(progress);
+  drawPitchContour(progress);
+  
+  console.log(`Scrubbed to position: ${(progress * 100).toFixed(1)}%`);
+}
+
+/**
+ * Update scrub bar display
+ */
+function updateScrubBar(progress, duration) {
+  const scrubHandle = document.querySelector('.tone-lab-scrub-handle');
+  const scrubFill = document.querySelector('.tone-lab-scrub-fill');
+  const scrubTime = document.querySelector('.tone-lab-scrub-time');
+  
+  if (!scrubHandle || !scrubFill || !scrubTime) return;
+  
+  const progressPercent = progress * 100;
+  const currentTime = progress * duration;
+  
+  scrubHandle.style.left = `${progressPercent}%`;
+  scrubFill.style.width = `${progressPercent}%`;
+  scrubTime.textContent = `${currentTime.toFixed(1)}s / ${duration.toFixed(1)}s`;
+}
+
+/**
+ * Pause playback
+ */
+function pausePlayback() {
+  if (!isPlaying) return;
+  
+  isPaused = true;
+  isPlaying = false;
+  
+  if (playbackAnimationId) {
+    cancelAnimationFrame(playbackAnimationId);
+    playbackAnimationId = null;
+  }
+  
+  // Update button states
+  const btnPause = document.getElementById('btnPause');
+  const btnResume = document.getElementById('btnResume');
+  
+  if (btnPause) btnPause.disabled = true;
+  if (btnResume) btnResume.disabled = false;
+  
+  setStatus('Playback paused');
+}
+
+/**
+ * Resume playback
+ */
+function resumePlayback() {
+  if (!isPaused || !currentAudioSource) return;
+  
+  isPaused = false;
+  isPlaying = true;
+  
+  // Resume from current scrub position
+  const elapsed = scrubProgress * playbackDuration;
+  playbackStartTime = Date.now() - elapsed;
+  
+  animatePlaybackLine();
+  
+  // Update button states
+  const btnPause = document.getElementById('btnPause');
+  const btnResume = document.getElementById('btnResume');
+  
+  if (btnPause) btnPause.disabled = false;
+  if (btnResume) btnResume.disabled = true;
+  
+  setStatus('Playback resumed');
+}
+
+/**
+ * Enable scrub bar controls when audio is available
+ */
+function enableScrubBarControls() {
+  const btnPause = document.getElementById('btnPause');
+  const btnResume = document.getElementById('btnResume');
+  const btnLoop = document.getElementById('btnLoop');
+  
+  if (btnPause) btnPause.disabled = false;
+  if (btnResume) btnResume.disabled = true; // Resume is disabled when starting
+  if (btnLoop) btnLoop.disabled = false;
+}
+
+/**
+ * Toggle loop mode
+ */
+function toggleLoop() {
+  isLooping = !isLooping;
+  
+  const btnLoop = document.getElementById('btnLoop');
+  if (btnLoop) {
+    btnLoop.textContent = isLooping ? '🔁 Loop On' : '🔁 Loop Off';
+    btnLoop.style.background = isLooping ? '#10b981' : '#8b5cf6';
+  }
+  
+  setStatus(isLooping ? 'Loop mode enabled' : 'Loop mode disabled');
 }
 
 /**
