@@ -37,6 +37,12 @@ const TONE_CONTOURS = {
 // Current card data
 let currentCard = null;
 
+// Playback tracking variables
+let playbackStartTime = 0;
+let playbackDuration = 0;
+let isPlaying = false;
+let playbackAnimationId = null;
+
 /**
  * Public API - Open tone lab for a card
  */
@@ -136,7 +142,7 @@ function createToneLabModal() {
   // Bind event handlers
   bindEventHandlers();
   
-  // Initialize visualizations
+  // Initialize visualizations (no playback progress initially)
   drawSpectrogram();
   drawPitchContour();
   
@@ -464,17 +470,22 @@ function playReference() {
     source.onerror = (e) => {
       console.error('Reference audio error:', e);
       setStatus('Reference audio error');
+      stopPlaybackLine();
     };
     
     source.onended = () => {
       console.log('Reference audio playback ended');
       setStatus('Reference audio finished');
+      stopPlaybackLine();
     };
     
     source.start();
     
     currentMode = 'reference';
     setStatus('Playing reference audio');
+    
+    // Start playback line animation
+    startPlaybackLine(referenceBuffer.duration);
     
     // Visualize reference audio
     visualizeAudioBuffer(referenceBuffer, 'reference');
@@ -512,6 +523,7 @@ function playRecording() {
     source.onended = () => {
       console.log('Recording playback ended');
       setStatus('Recording playback finished');
+      stopPlaybackLine();
     };
     
     source.start();
@@ -519,12 +531,65 @@ function playRecording() {
     currentMode = 'recorded';
     setStatus('Playing your recording');
     
+    // Start playback line animation
+    startPlaybackLine(recordedBuffer.duration);
+    
     // Visualize recorded audio
     visualizeAudioBuffer(recordedBuffer, 'recorded');
     
   } catch (error) {
     setStatus('Failed to play recording');
     console.error('Play recording failed:', error);
+  }
+}
+
+/**
+ * Start playback line animation
+ */
+function startPlaybackLine(duration) {
+  if (playbackAnimationId) {
+    cancelAnimationFrame(playbackAnimationId);
+  }
+  
+  playbackStartTime = Date.now();
+  playbackDuration = duration * 1000; // Convert to milliseconds
+  isPlaying = true;
+  
+  animatePlaybackLine();
+}
+
+/**
+ * Stop playback line animation
+ */
+function stopPlaybackLine() {
+  isPlaying = false;
+  if (playbackAnimationId) {
+    cancelAnimationFrame(playbackAnimationId);
+    playbackAnimationId = null;
+  }
+  
+  // Clear the line by redrawing visualizations
+  drawSpectrogram();
+  drawPitchContour();
+}
+
+/**
+ * Animate the playback line across visualizations
+ */
+function animatePlaybackLine() {
+  if (!isPlaying) return;
+  
+  const elapsed = Date.now() - playbackStartTime;
+  const progress = Math.min(elapsed / playbackDuration, 1);
+  
+  // Update visualizations with current playback position
+  drawSpectrogram(progress);
+  drawPitchContour(progress);
+  
+  if (progress < 1) {
+    playbackAnimationId = requestAnimationFrame(animatePlaybackLine);
+  } else {
+    stopPlaybackLine();
   }
 }
 
@@ -568,7 +633,7 @@ function visualizeAudioBuffer(buffer, mode) {
   
   console.log(`Generated ${spectrogramData.length} spectrogram frames and ${pitchData.length} pitch values for ${mode} audio`);
   
-  // Update visualizations
+  // Update visualizations (no playback progress for static visualization)
   drawSpectrogram();
   drawPitchContour();
 }
@@ -616,7 +681,7 @@ function visualizeRecording() {
     console.log('Pitch data:', pitchData.length, 'values, last pitch:', pitch);
   }
 
-  // Update visualizations
+  // Update visualizations (no playback progress during live recording)
   drawSpectrogram();
   drawPitchContour();
 
@@ -626,7 +691,7 @@ function visualizeRecording() {
 /**
  * Draw spectrogram visualization
  */
-function drawSpectrogram() {
+function drawSpectrogram(playbackProgress = null) {
   if (!spectrogramCtx) return;
   
   const canvas = spectrogramCanvas;
@@ -771,12 +836,37 @@ function drawSpectrogram() {
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 1;
   ctx.strokeRect(legendX, legendY, legendWidth, legendHeight);
+  
+  // Draw playback line if provided
+  if (playbackProgress !== null && isPlaying) {
+    const lineX = playbackProgress * canvas.width;
+    
+    ctx.strokeStyle = '#ef4444'; // Red color
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // Dashed line
+    
+    ctx.beginPath();
+    ctx.moveTo(lineX, 0);
+    ctx.lineTo(lineX, canvas.height);
+    ctx.stroke();
+    
+    ctx.setLineDash([]); // Reset line dash
+    
+    // Draw time indicator
+    const currentTime = playbackProgress * playbackDuration / 1000; // Convert back to seconds
+    const totalTime = playbackDuration / 1000;
+    
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${currentTime.toFixed(1)}s / ${totalTime.toFixed(1)}s`, lineX, 25);
+  }
 }
 
 /**
  * Draw pitch contour with tone overlay
  */
-function drawPitchContour() {
+function drawPitchContour(playbackProgress = null) {
   if (!pitchCtx) return;
   
   const canvas = pitchCanvas;
@@ -866,6 +956,31 @@ function drawPitchContour() {
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No pitch data yet', canvas.width / 2, canvas.height / 2);
+  }
+  
+  // Draw playback line if provided
+  if (playbackProgress !== null && isPlaying) {
+    const lineX = playbackProgress * canvas.width;
+    
+    ctx.strokeStyle = '#ef4444'; // Red color
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // Dashed line
+    
+    ctx.beginPath();
+    ctx.moveTo(lineX, 0);
+    ctx.lineTo(lineX, canvas.height);
+    ctx.stroke();
+    
+    ctx.setLineDash([]); // Reset line dash
+    
+    // Draw time indicator
+    const currentTime = playbackProgress * playbackDuration / 1000; // Convert back to seconds
+    const totalTime = playbackDuration / 1000;
+    
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${currentTime.toFixed(1)}s / ${totalTime.toFixed(1)}s`, lineX, 25);
   }
 }
 
