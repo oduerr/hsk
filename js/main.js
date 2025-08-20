@@ -1058,6 +1058,11 @@ replayDialog?.addEventListener('click', (e) => {
 });
 
 function openReplayDialog() {
+  // Save the current session as a checkpoint
+  const snapshot = getFullSessionSnapshot();
+  saveCheckpoint(snapshot);
+
+  // Load the session summaries
   const summaries = loadSessionSummaries().slice().sort((a, b) => {
     return (b.startedAt || '').localeCompare(a.startedAt || '');
   });
