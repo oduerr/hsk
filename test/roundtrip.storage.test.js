@@ -213,7 +213,7 @@ describe('Storage Round-Trip Persistence', () => {
       // Verify changes are persisted
       const updatedSummaries = loadSessionSummaries()
       const updatedSummary = updatedSummaries.find(s => s.id === latestSession.id)
-      expect(updatedSummary.title).toBe(newTitle)
+      expect(updatedSummary.name).toBe(newTitle)
       
       const updatedSession = loadFullSession(latestSession.id)
       expect(updatedSession.annotation).toHaveLength(1)
@@ -286,9 +286,9 @@ describe('Storage Round-Trip Persistence', () => {
       expect(exportedSession.annotation).toHaveLength(1)
       expect(exportedSession.annotation[0].note).toBe('Export Test Annotation')
       
-      // Verify the summary has the new title
+      // Verify the summary has the new name
       const exportedSummary = exportedData.summaries.find(s => s.id === latestSession.id)
-      expect(exportedSummary.title).toBe('Export Test Session')
+      expect(exportedSummary.name).toBe('Export Test Session')
     })
 
     it('should maintain data consistency across re-import cycles', () => {
@@ -339,7 +339,7 @@ describe('Storage Round-Trip Persistence', () => {
       expect(reimportedSession.annotation[0].note).toBe('Reimport Test Annotation')
       
       const reimportedSummary = reimportedSummaries.find(s => s.id === sessionToMutate.id)
-      expect(reimportedSummary.title).toBe('Reimport Test Session')
+      expect(reimportedSummary.name).toBe('Reimport Test Session')
       
       // Verify no duplicates were created
       const allSessions = loadSessionSummaries()

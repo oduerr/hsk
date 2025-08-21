@@ -17,7 +17,11 @@
         "mistakes": 4,
         "removed": 0
       },
-      "inProgress": true
+      "inProgress": true,
+      "name": "HSK5 Practice Session",
+      "lastPlayedAt": "2025-08-19T07:28:07.797Z",
+      "locale": "zh-CN",
+      "annotationCount": 0
     },
     {
       "id": "vocab_eng_oliver_1755588431038",
@@ -31,7 +35,11 @@
         "mistakes": 1,
         "removed": 0
       },
-      "inProgress": true
+      "inProgress": true,
+      "name": "Vocabulary Practice",
+      "lastPlayedAt": "2025-08-19T07:28:07.797Z",
+      "locale": "en-US",
+      "annotationCount": 0
     }
   ],
   "sessions": [
@@ -39,6 +47,8 @@
       "id": "5cd29480",
       "startedAt": "2025-08-19T07:17:09.430Z",
       "finishedAt": null,
+      "name": "HSK5 Practice Session",
+      "lastPlayedAt": "2025-08-19T07:28:07.797Z",
       "cards": [
         {
           "id": "f431750e",
@@ -300,6 +310,9 @@
       "id": "vocab_eng_oliver_1755588431038",
       "startedAt": "2025-08-19T07:27:15.708Z",
       "finishedAt": null,
+      "name": "Vocabulary Practice",
+      "lastPlayedAt": "2025-08-19T07:28:07.797Z",
+      "locale": "zh-CN",
       "cards": [
         {
           "id": "874a560",

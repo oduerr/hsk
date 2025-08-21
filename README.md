@@ -10,7 +10,7 @@ Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow:
 
 ## Data & levels
 
-- CSV format: `hanzi,pinyin,english` (UTF‑8, quoted fields supported; pinyin spacing normalized).
+- CSV format: `hanzi,pinyin,english,locale` (UTF‑8, quoted fields supported; pinyin spacing normalized; locale defaults to zh-CN if missing).
 - Vocabulary files live in `data/` directory.
 - The app automatically discovers available vocabulary files using a smart discovery system.
 
@@ -77,6 +77,7 @@ If `vocab.csv` is not available, the app falls back to pattern-based discovery, 
 - Found in the Gear menu and also the Replay dialog; drag‑and‑drop supported.
 - Exports `flash_sessions_YYYYMMDD.json` of all sessions; includes the current in‑progress run snapshot so mid‑run mistakes are preserved.
 - Import merges sessions by `id`; supports multiple JSON shapes.
+- **Format documentation**: See [`data/JSON_FORMAT.md`](data/JSON_FORMAT.md) for complete JSON structure specifications.
 
 ## File structure
 

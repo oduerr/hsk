@@ -1538,11 +1538,11 @@ Integration (minimal)
 
 Standalone mode
 	•	Visualizer also loads standalone with URL params or a small JSON blob (for testing without the app).
-	•	If no reference provided, show “No reference audio” but keep record and playback working.
+	•	If no reference provided, show "No reference audio" but keep record and playback working.
 
 Include
 	•	Easy switching between the recording and the reference audio
-	•	Spectrogram and short hints (e.g., “input too quiet”).
+	•	Spectrogram and short hints (e.g., "input too quiet").
 
 Failure & fallback
 	•	If mic permission denied or any runtime error occurs: show a friendly message and allow closing back to the card.
@@ -1550,7 +1550,7 @@ Failure & fallback
 
 
 Acceptance criteria (pragmatic)
-	•	Opening the visualizer from a card shows that card’s Hanzi/Pinyin and (if present) plays its reference audio.
+	•	Opening the visualizer from a card shows that card's Hanzi/Pinyin and (if present) plays its reference audio.
 	•	Recording works on a typical laptop and a modern phone; playback works for both reference and user recording.
 	•	A simple visual display (spectrogram) renders while recording or on playback.
 	•	Closing the visualizer returns to the card with no changes to learning state and no console errors.
@@ -1560,3 +1560,48 @@ Out of scope (for this round)
 	•	Scoring, ML alignment, or persistence of recordings.
 	•	Strict UI/tech choices (agent is free to pick Canvas/WebAudio/etc.).
 	•	Precise DSP details; any reasonable implementation that is responsive is fine.
+
+
+### 5.50 Refactoring of the JSON Format ✅ COMPLETED
+#### Task: Session JSON metadata update 
+All changes go in the Summary Section of the JSON Format
+
+- Add recency
+	- Add lastPlayedAt to session summaries (and full sessions if present).
+	- Update lastPlayedAt whenever the user performs an action like: reveal, unreveal, next,...
+	- Add lastPlayedAt in the "Session Manager"
+
+- Add Locale
+	- Add Locale (e.g. zh-CN or de-DE) to the Summary Section of the JSON Format
+	- on import: if locale missing set locale = "zh-CN".
+	- Add a new column to the vocab.csv file with this local and use it upon import
+
+- De-duplicate 
+	- Remove name title use only name
+		- On import: if name missing but title present, set name = title.
+		- On export: never write title
+    - Keep startedAt / finishedAt only in summaries of the JSON Format remove it sessions section of the JSON Format
+
+
+Example:
+```json
+	"finishedAt": "…",
+    "lastPlayedAt": "2025-08-21T10:12:34.000Z",
+    "language": "zh",          // ISO 639-1 (e.g., zh, it, de)
+    "locale": "zh-CN",         // BCP-47 (e.g., zh-CN, de-CH, it-IT)
+```
+
+- Further Updates
+	- Update the JSON spec doc accordingly
+	- Update the fixture and the tests accordingly
+
+Acceptance criteria
+	- All new sessions/summaries have locale and lastPlayedAt.
+	- lastPlayedAt updates on listed actions.
+	- Session Manager shows lastPlayedAt.
+	- Exports contain name (no title).
+	- Old files import cleanly with sensible defaults.
+	- Unity tests pass
+
+#### 5.51 Fixes ✅ COMPLETED
+- The locale must not be stored in the sessions section of the JSON Format, just in the summaries section. So, reading the cards, importing the cards should write into the summary. That is in the file vocab.csv there MUST be a locale column. And it should now read.

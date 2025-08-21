@@ -39,11 +39,11 @@ export function saveSessionSummary(summary) {
   writeJson(SESSIONS_KEY, list);
 }
 
-export function renameSession(id, title) {
+export function renameSession(id, name) {
   const list = loadSessionSummaries();
   const idx = list.findIndex((s) => s.id === id);
   if (idx >= 0) {
-    list[idx] = { ...list[idx], title: title || '' };
+    list[idx] = { ...list[idx], name: name || '' };
     writeJson(SESSIONS_KEY, list);
   }
 }
@@ -76,9 +76,14 @@ export function clearLastCheckpointId() {
   localStorage.removeItem(LAST_CHECKPOINT_KEY);
 }
 
-export function saveCheckpoint(fullSnapshot) {
+export async function saveCheckpoint(fullSnapshot) {
   // Save full
   saveFullSession(fullSnapshot);
+  
+  // Get locale from state (set by vocabulary manager)
+  const { state } = await import('./state.js');
+  const locale = state.sessionLocale || 'zh-CN';
+  
   // Save summary with inProgress flag
   const summary = {
     id: fullSnapshot.id,
@@ -87,7 +92,10 @@ export function saveCheckpoint(fullSnapshot) {
     mistakeIds: fullSnapshot.mistakeIds || [],
     counts: fullSnapshot.counts || { total: fullSnapshot.order?.length || 0, mistakes: fullSnapshot.mistakeIds?.length || 0 },
     inProgress: !fullSnapshot.finishedAt,
-    // Note: name is not included here - it should be set separately via renameSession
+    lastPlayedAt: fullSnapshot.lastPlayedAt || fullSnapshot.startedAt,
+    locale: locale,
+    name: fullSnapshot.name || null,
+    // Note: title field is removed, use name instead
   };
   saveSessionSummary(summary);
   saveLastCheckpointId(fullSnapshot.id);
@@ -170,7 +178,7 @@ export async function loadVersionFile() {
  * Build and download an export JSON. Optionally include the current in-memory session snapshot.
  * @param {null|object} currentFullSession
  */
-export function exportAllSessionsFile(currentFullSession = null) {
+export async function exportAllSessionsFile(currentFullSession = null) {
   const summaries = loadSessionSummaries().slice();
   const sessions = [];
   for (const s of summaries) {
@@ -180,6 +188,10 @@ export function exportAllSessionsFile(currentFullSession = null) {
   if (currentFullSession) {
     const exists = summaries.some((s) => s.id === currentFullSession.id);
     if (!exists) {
+      // Get locale from state (set by vocabulary manager)
+      const { state } = await import('./state.js');
+      const locale = state.sessionLocale || 'zh-CN';
+      
       // minimal summary derived from provided full snapshot
       const summary = {
         id: currentFullSession.id,
@@ -191,6 +203,9 @@ export function exportAllSessionsFile(currentFullSession = null) {
           mistakes: (currentFullSession.mistakeIds && currentFullSession.mistakeIds.length) || 0,
         },
         inProgress: !currentFullSession.finishedAt,
+        lastPlayedAt: currentFullSession.lastPlayedAt || currentFullSession.startedAt,
+        locale: locale,
+        name: currentFullSession.name || null,
       };
       summaries.push(summary);
       sessions.push(currentFullSession);
@@ -260,6 +275,25 @@ export function importSessionsFromObject(obj) {
   const seenSummaryIds = new Set(summaries.map((s) => s?.id).filter(Boolean));
   for (const s of summaries) {
     if (!s?.id) continue;
+    
+    // Migrate old data: if title exists but name doesn't, set name = title
+    if (s.title && !s.name) {
+      s.name = s.title;
+    }
+    
+    // Set default locale if missing
+    if (!s.locale) {
+      s.locale = 'zh-CN';
+    }
+    
+    // Set default lastPlayedAt if missing
+    if (!s.lastPlayedAt) {
+      s.lastPlayedAt = s.startedAt || new Date().toISOString();
+    }
+    
+    // Remove title field (no longer used)
+    delete s.title;
+    
     saveSessionSummary(s);
   }
   

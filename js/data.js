@@ -65,7 +65,7 @@ export function parseCsv(csv) {
 
 /**
  * Normalize and map parsed rows to cards.
- * CSV has columns: hanzi, pinyin, english.
+ * CSV has columns: hanzi, pinyin, english, locale.
  * @param {string[][]} rows
  */
 export function rowsToCards(rows) {
@@ -74,7 +74,7 @@ export function rowsToCards(rows) {
     rows[0][0].toLowerCase().includes('hanzi');
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
-  /** @type {{ id: string, hanzi: string, pinyin: string, english: string }[]} */
+  /** @type {{ id: string, hanzi: string, pinyin: string, english: string, locale?: string }[]} */
   const cards = [];
   for (const r of dataRows) {
     if (!r || r.length < 3) continue;
@@ -82,9 +82,10 @@ export function rowsToCards(rows) {
     const rawPinyin = (r[1] || '').trim();
     const pinyin = rawPinyin.replace(/\s+/g, ' ');
     const english = (r[2] || '').trim();
+    const locale = (r[3] || '').trim() || 'zh-CN'; // Default to zh-CN if missing
     if (!hanzi || !english) continue;
     const id = fnv1a32(`${hanzi}|${pinyin}|${english}`);
-    cards.push({ id, hanzi, pinyin, english });
+    cards.push({ id, hanzi, pinyin, english, locale });
   }
   // de-dupe by id, first occurrence wins
   const seen = new Set();
@@ -118,6 +119,7 @@ export async function discoverAvailableCsvFiles() {
             filename: row[0],
             displayName: row[1],
             description: row[2] || '',
+            locale: row[3] || 'zh-CN', // Read locale from vocab.csv
             path: `./data/${row[0]}`
           });
         }

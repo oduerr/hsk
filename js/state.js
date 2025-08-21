@@ -40,6 +40,7 @@ export let state = {
     events: [],
     replayOf: null,
     annotation: [],
+    lastPlayedAt: '',
   },
 };
 
@@ -64,6 +65,7 @@ export function newRun(cards, opts = { replayOf: null }) {
     ],
     replayOf: opts?.replayOf || null,
     annotation: [],
+    lastPlayedAt: startedAt,
   };
 }
 
@@ -132,6 +134,8 @@ function logEvent(type, cardId) {
   const evt = { type, at, index: state.index };
   if (cardId) evt.cardId = cardId;
   state.session.events.push(evt);
+  // Update lastPlayedAt for any user action
+  state.session.lastPlayedAt = at;
 }
 
 /**
@@ -149,6 +153,8 @@ export function markAnnotation(note = '') {
   if (idx >= 0) arr[idx] = entry; else arr.push(entry);
   // Log event
   state.session.events.push({ type: 'annotation', at, index: state.index, cardId: c.id, note: String(note || '') });
+  // Update lastPlayedAt for annotation action
+  state.session.lastPlayedAt = at;
 }
 
 /**
@@ -171,6 +177,14 @@ export function updateSessionMetadata(name, id) {
  */
 export function setLevelLabel(label) {
   state.levelLabel = label;
+}
+
+/**
+ * Set session locale - used by vocabulary manager
+ * @param {string} locale - BCP-47 locale identifier
+ */
+export function setSessionLocale(locale) {
+  state.sessionLocale = locale || 'zh-CN';
 }
 
 /**
@@ -274,7 +288,8 @@ export function removeCard() {
  * If finished and not yet finalized, finalize and return { full, summary }.
  * Otherwise returns null.
  */
-export function finalizeIfFinished() {
+export function createFullSessionSnapshot() {
+  console.log('createFullSessionSnapshot', state.session.id);
   if (!isFinished()) return null;
   if (state.session.finishedAt) return null;
   const finishedAt = new Date().toISOString();
@@ -292,6 +307,8 @@ export function finalizeIfFinished() {
     events: state.session.events,
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
+    lastPlayedAt: state.session.lastPlayedAt,
+    locale: state.session.locale,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -304,6 +321,8 @@ export function finalizeIfFinished() {
     finishedAt,
     mistakeIds,
     annotationCount: Array.isArray(state.session.annotation) ? state.session.annotation.length : 0,
+    lastPlayedAt: state.session.lastPlayedAt,
+    locale: state.session.locale,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -328,6 +347,8 @@ export function getFullSessionSnapshot() {
     events: state.session.events.slice(),
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
+    lastPlayedAt: state.session.lastPlayedAt,
+    // locale: state.session.locale,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -359,6 +380,8 @@ export async function resumeRun(full, opts = {}) {
     events: Array.isArray(full?.events) ? full.events.slice() : [{ type: 'start', at: startedAt, index: 0 }],
     replayOf: opts?.replayOf || null,
     annotation: Array.isArray(full?.annotation) ? full.annotation.slice() : [],
+    lastPlayedAt: full?.lastPlayedAt || startedAt,
+    locale: full?.locale || 'zh-CN',
   };
   
   // Auto-save the loaded session so it appears in the replay list
@@ -376,7 +399,8 @@ export async function resumeRun(full, opts = {}) {
         removed: state.session.events.filter(e => e.type === 'remove').length
       },
       inProgress: true,
-      title: full?.title || null,
+      lastPlayedAt: state.session.lastPlayedAt,
+      locale: state.session.locale,
       name: full?.name || null
     };
     saveSessionSummary(summary);

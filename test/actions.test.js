@@ -50,7 +50,7 @@ import {
   currentCard,
   isFinished,
   setAutoReveal,
-  finalizeIfFinished,
+  createFullSessionSnapshot,
   getFullSessionSnapshot,
   resumeRun,
   prevCard,

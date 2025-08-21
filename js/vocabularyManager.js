@@ -55,6 +55,10 @@ export class VocabularyManager {
    */
   async loadLevels(filenames) {
     try {
+      // Get discovered files to access locale information
+      const discoveredFiles = await discoverAvailableCsvFiles();
+      const fileMap = new Map(discoveredFiles.map(f => [f.filename, f]));
+      
       // Fetch CSV texts from all specified files
       const texts = await Promise.all(
         filenames.map(filename => fetchCsvText(`./data/${filename}`).catch(() => ''))
@@ -75,6 +79,24 @@ export class VocabularyManager {
         throw new Error('No vocabulary cards found in selected files');
       }
 
+      // Determine locale from the files
+      let locale = 'zh-CN'; // Default
+      if (filenames.length === 1) {
+        const discoveredFile = fileMap.get(filenames[0]);
+        if (discoveredFile && discoveredFile.locale) {
+          locale = discoveredFile.locale;
+        }
+      } else {
+        // For multiple files, use the first non-default locale or default to zh-CN
+        for (const filename of filenames) {
+          const discoveredFile = fileMap.get(filename);
+          if (discoveredFile && discoveredFile.locale && discoveredFile.locale !== 'zh-CN') {
+            locale = discoveredFile.locale;
+            break;
+          }
+        }
+      }
+
       // Generate level label from filenames
       const levelLabel = filenames.length === 1 
         ? this.getDisplayNameFromFilename(filenames[0])
@@ -86,7 +108,8 @@ export class VocabularyManager {
         filenames,
         cardCount: cards.length,
         sessionName: this.sessionName || levelLabel,
-        sessionId: this.sessionId
+        sessionId: this.sessionId,
+        locale
       };
 
       this.onLevelsLoaded(result);
@@ -132,6 +155,12 @@ export class VocabularyManager {
       // Update state with session info using actions
       setLevelLabel(vocabularyData.levelLabel);
       updateSessionMetadata(vocabularyData.sessionName, vocabularyData.sessionId);
+      
+      // Set session locale if available
+      if (vocabularyData.locale) {
+        const { setSessionLocale } = await import('./state.js');
+        setSessionLocale(vocabularyData.locale);
+      }
       
       // Save last level preference
       const levelKey = vocabularyData.filenames.length === 1 

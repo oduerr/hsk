@@ -137,10 +137,10 @@ describe('Storage Effects', () => {
   })
 
   describe('saveCheckpoint', () => {
-    it('should save checkpoint and update last checkpoint ID', () => {
+    it('should save checkpoint and update last checkpoint ID', async () => {
       const snapshot = { id: 'checkpoint-1', data: 'checkpoint-data' }
       
-      saveCheckpoint(snapshot)
+      await saveCheckpoint(snapshot)
       
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'hsk.flash.session.checkpoint-1',
@@ -313,7 +313,7 @@ describe('Storage Effects', () => {
   })
 
   describe('exportAllSessionsFile', () => {
-    it('should create and download export file', () => {
+    it('should create and download export file', async () => {
       const currentSnapshot = { id: 'current', data: 'current-data' }
       const summaries = [{ id: 'current', title: 'Current Session' }]
       
@@ -323,7 +323,7 @@ describe('Storage Effects', () => {
       const originalAppendChild = document.body.appendChild
       document.body.appendChild = vi.fn()
       
-      exportAllSessionsFile(currentSnapshot)
+      await exportAllSessionsFile(currentSnapshot)
       
       // Verify that the download link was created and clicked
       expect(document.createElement).toHaveBeenCalledWith('a')

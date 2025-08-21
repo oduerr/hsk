@@ -1,12 +1,12 @@
-filename,display_name,description
-hsk1.csv,HSK 1,Basic Chinese vocabulary (150 words)
-hsk2.csv,HSK 2,Elementary Chinese vocabulary (300 words)
-hsk3.csv,HSK 3,Intermediate Chinese vocabulary (600 words)
-hsk4.csv,HSK 4,Upper-intermediate Chinese vocabulary (1200 words)
-hsk5.csv,HSK 5,Advanced Chinese vocabulary (2500 words)
-hsk6.csv,HSK 6,Proficient Chinese vocabulary (5000 words)
-eng_oliver.csv,Oliver's English,Personal English vocabulary collection
-chinese_oliver.csv,Chinese Oliver,Personal Chinese vocabulary collection
-hsk_lena_tones.csv,HSK Lena Tones,Personal Chinese vocabulary collection
-italian_survival.csv,Italian Survival 🇮🇹,Italian vocabulary collection 
+filename,display_name,description,locale
+hsk1.csv,HSK 1,Basic Chinese vocabulary (150 words),zh-CN
+hsk2.csv,HSK 2,Elementary Chinese vocabulary (300 words),zh-CN
+hsk3.csv,HSK 3,Intermediate Chinese vocabulary (600 words),zh-CN
+hsk4.csv,HSK 4,Upper-intermediate Chinese vocabulary (1200 words),zh-CN
+hsk5.csv,HSK 5,Advanced Chinese vocabulary (2500 words),zh-CN
+hsk6.csv,HSK 6,Proficient Chinese vocabulary (5000 words),zh-CN
+eng_oliver.csv,Oliver's English,Personal English vocabulary collection,en-US
+chinese_oliver.csv,Chinese Oliver,Personal Chinese vocabulary collection,zh-CN
+hsk_lena_tones.csv,HSK Lena Tones,Personal Chinese vocabulary collection,zh-CN
+italian_survival.csv,Italian Survival 🇮🇹,Italian vocabulary collection,it-IT 
 

@@ -1,7 +1,7 @@
 import { discoverAvailableCsvFiles } from './data.js';
 import './toneLab.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
-import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, finalizeIfFinished, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
+import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, createFullSessionSnapshot, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
 import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel, loadTtsSettings, saveTtsSettings, loadTtsVoice, saveTtsVoice, computeSessionsSizeBytes, loadVersionFile } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
@@ -469,7 +469,7 @@ function onNext() {
   nextCard();
   render();
   startCountdownIfNeeded();
-  const finalized = finalizeIfFinished();
+  const finalized = createFullSessionSnapshot();
   if (finalized) {
     try {
       saveFullSession(finalized.full);
@@ -499,7 +499,7 @@ function onMistake() {
     if (enabled) {
       const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot);
+      saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
       const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const ms = Math.round(t1 - t0);
       console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
@@ -631,7 +631,7 @@ function onKeyDown(e) {
           if (enabled) {
             const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const snapshot = getFullSessionSnapshot();
-            saveCheckpoint(snapshot);
+            saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
             const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const ms = Math.round(t1 - t0);
             console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
@@ -740,7 +740,7 @@ btnRemoveCard?.addEventListener('click', () => {
         if (enabled) {
           const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
           const snapshot = getFullSessionSnapshot();
-          saveCheckpoint(snapshot);
+          saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
           const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
           const ms = Math.round(t1 - t0);
           console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
@@ -772,7 +772,14 @@ settingsClose?.addEventListener('click', () => { settingsDialog.hidden = true; }
 // Hide/show media row alongside settings visibility
 if (btnSettings) btnSettings.addEventListener('click', () => { if (mediaRow) mediaRow.classList.add('hidden'); });
 if (settingsClose) settingsClose.addEventListener('click', () => { if (mediaRow) mediaRow.classList.remove('hidden'); });
-settingsExport?.addEventListener('click', () => { try { const snap = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snap); } catch (e) { console.error(e); } });
+settingsExport?.addEventListener('click', () => { 
+  try { 
+    const snapshot = state.deck.length ? getFullSessionSnapshot() : null; 
+    exportAllSessionsFile(snapshot).catch(err => console.error('Export failed:', err)); 
+  } catch (e) { 
+    console.error(e); 
+  } 
+});
 settingsImportBtn?.addEventListener('click', () => settingsImportInput?.click());
 btnVocabularyManager?.addEventListener('click', openHskImportDialog);
 // Outdoor/Audio/Light listeners
@@ -985,7 +992,7 @@ if (btnExport) {
     try {
       // Include current in-memory session snapshot so mistakes are visible even mid-run
       const snapshot = state.deck.length ? getFullSessionSnapshot() : null;
-      exportAllSessionsFile(snapshot);
+      exportAllSessionsFile(snapshot).catch(err => console.error('Export failed:', err));
     } catch (e) { console.error(e); }
   });
 }
@@ -993,7 +1000,7 @@ if (btnExport) {
 btnSaveProgress?.addEventListener('click', () => {
   try {
     const snapshot = getFullSessionSnapshot();
-    saveCheckpoint(snapshot);
+    saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
     alert('Progress saved to LocalStorage. You can export or resume later.');
   } catch (e) {
     console.error('Save progress failed:', e);
@@ -1035,7 +1042,12 @@ const dlgImportInput = /** @type {HTMLInputElement} */(document.getElementById('
 // });
 
 dlgExport?.addEventListener('click', () => {
-  try { const snapshot = state.deck.length ? getFullSessionSnapshot() : null; exportAllSessionsFile(snapshot); } catch (e) { console.error(e); }
+  try { 
+    const snapshot = state.deck.length ? getFullSessionSnapshot() : null; 
+    exportAllSessionsFile(snapshot).catch(err => console.error('Export failed:', err)); 
+  } catch (e) { 
+    console.error(e); 
+  } 
 });
 dlgImportBtn?.addEventListener('click', () => dlgImportInput?.click());
 dlgImportInput?.addEventListener('change', async () => {
@@ -1070,7 +1082,7 @@ replayDialog?.addEventListener('click', (e) => {
 function openReplayDialog() {
   // Save the current session as a checkpoint
   const snapshot = getFullSessionSnapshot();
-  saveCheckpoint(snapshot);
+  saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
 
   // Load the session summaries
   const summaries = loadSessionSummaries().slice().sort((a, b) => {
@@ -1091,12 +1103,21 @@ function openReplayDialog() {
       const finished = s.counts?.total ?? 0;
       const progressed = (s.finishedAt ? finished : Math.min(finished, (loadFullSession(s.id)?.events || []).filter(e => e.type==='next').length));
       const status = s.finishedAt ? 'complete' : 'incomplete';
-      const title = s.title ? ` — ${escapeHtml(s.title)}` : '';
-      left.innerHTML = `<div><strong>${ymdhm}</strong>${title}</div>` +
-        `<div class="sid" title="Session ID: ${s.id}">${s.name ? escapeHtml(s.name) : s.title || 'Untitled Session'}</div>`;
+      const name = s.name || 'Untitled Session';
+      
+      // Format lastPlayedAt if available
+      let lastPlayedText = '';
+      if (s.lastPlayedAt) {
+        const lastPlayed = new Date(s.lastPlayedAt);
+        const lastYmdhm = `${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth()+1).padStart(2,'0')}-${String(lastPlayed.getDate()).padStart(2,'0')}-${String(lastPlayed.getHours()).padStart(2,'0')}:${String(lastPlayed.getMinutes()).padStart(2,'0')}`;
+        lastPlayedText = ` • Last played: ${lastYmdhm}`;
+      }
+      
+      left.innerHTML = `<div><strong>${ymdhm}</strong></div>` +
+        `<div class="sid" title="Session ID: ${s.id}">${escapeHtml(name)}</div>`;
       right.className = 'counts';
       const removedText = (s.counts?.removed ?? 0) > 0 ? ` • ${s.counts.removed} removed` : '';
-      right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes${removedText} • status: ${status}`;
+      right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes${removedText} • status: ${status}${lastPlayedText}`;
       const disabledReplay = (s.mistakeIds?.length ?? 0) === 0;
       const actions = document.createElement('div');
       actions.className = 'actions';
@@ -1176,11 +1197,11 @@ function resumeFromSummary(summary) {
 }
 
 function renameSummaryInline(li, summary) {
-  const current = summary.title || '';
+  const current = summary.name || '';
   const input = document.createElement('input');
   input.type = 'text';
   input.value = current;
-  input.placeholder = 'Session title';
+  input.placeholder = 'Session name';
   input.style.width = '100%';
   const leftDiv = li.firstChild;
   if (leftDiv && leftDiv.firstChild) {
@@ -1197,8 +1218,8 @@ function renameSummaryInline(li, summary) {
     input.addEventListener('blur', commit);
   }
   function commit() {
-    const title = input.value.trim();
-    renameSession(summary.id, title);
+    const name = input.value.trim();
+    renameSession(summary.id, name);
     openReplayDialog();
   }
 }
@@ -1288,7 +1309,7 @@ function saveAnnotation() {
     if (enabled) {
       const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot);
+      saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
       const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const ms = Math.round(t1 - t0);
       console.log(`[autosave] ${ms}ms • annotation checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());

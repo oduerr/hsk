@@ -1,1 +1,1 @@
-5.40 New ToneLab - Enhanced Spectrogram Contrast + Playback Line + Manual Scrub Bar 
+5.51 JSON Format Fixes - Locale only in summaries, derived from vocab.csv 
