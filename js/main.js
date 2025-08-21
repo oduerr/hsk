@@ -674,7 +674,8 @@ async function speakGood() {
     if (!card) return;
     
     const level = state.levelLabel || ''; 
-    const result = await speak(card.hanzi || card.pinyin || '', 'zh-CN', { level });
+    const locale = state.sessionLocale || 'zh-CN'; // Get actual session locale
+    const result = await speak(card.hanzi || card.pinyin || '', locale, { level });
     
     // Update button icon based on audio source
     if (btnSpeak) {
