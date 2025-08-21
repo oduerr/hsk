@@ -55,7 +55,7 @@ function pickBrowserVoice() {
   return voice;
 }
 
-async function speakWithBrowser(text, lang='zh-CN') {
+async function speakWithBrowser(text, lang='zh-CN') { // TODO set locale here
   if (!('speechSynthesis' in window)) throw new Error('Browser TTS unavailable');
   stop();
   const u = new SpeechSynthesisUtterance(text);
@@ -72,40 +72,6 @@ async function speakWithBrowser(text, lang='zh-CN') {
   });
 }
 
-async function speakWithOpenAI(text, lang='zh-CN') {
-  const key = localStorage.getItem(KEY_OPENAI) || '';
-  if (!key) throw new Error('No OpenAI key');
-  // Cache key
-  const model = settings.model || 'tts-1';
-  const cacheKey = `${model}|${lang}|${settings.openaiVoice||'alloy'}|${text}`;
-  try {
-    if (settings.cache && ttsCache.has(cacheKey)) {
-      const buf = ttsCache.get(cacheKey);
-      console.info('[tts] openai cache hit', { bytes: buf.byteLength });
-      return playArrayBuffer(buf);
-    }
-    const masked = key.length > 8 ? key.slice(0,3) + '...' + key.slice(-4) : '***';
-    console.info('[tts] openai request', { model, voice: settings.openaiVoice||'alloy', format: 'mp3', key: masked, textPreview: (text||'').slice(0,24) });
-    const resp = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model, voice: settings.openaiVoice || 'alloy', input: text, format: 'mp3' })
-    });
-    if (!resp.ok) {
-      let errText = '';
-      try { errText = await resp.text(); } catch {}
-      console.warn('[tts] openai http error', { status: resp.status, body: errText?.slice(0,120) });
-      throw new Error('OpenAI TTS failed');
-    }
-    const buf = await resp.arrayBuffer();
-    if (settings.cache) ttsCache.set(cacheKey, buf);
-    console.info('[tts] openai ok', { bytes: buf.byteLength, model });
-    return playArrayBuffer(buf);
-  } catch (e) {
-    if (!openaiWarned) { console.warn('OpenAI TTS unavailable, falling back.', e); openaiWarned = true; }
-    throw e;
-  }
-}
 
 async function playArrayBuffer(buf) {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -187,38 +153,6 @@ async function tryPlayCachedOrRemoteWav(hanzi, locale = null, preferredLevelLabe
   return 'none';
 }
 
-// Explicit OpenAI connectivity test (4.21)
-export async function testOpenAITts(sampleText = '学习中文真好！', lang = 'zh-CN') {
-  const started = performance.now();
-  const key = localStorage.getItem(KEY_OPENAI) || '';
-  if (!key) {
-    return { ok: false, reason: 'No API key found. Enter your key and try again.', latencyMs: 0, fallbackUsed: false, keyDetected: false, missingKey: true };
-  }
-  try {
-    // Temporarily bypass cache and fallback
-    const prevCache = settings.cache; const prevEngine = settings.engine; const prevFallback = settings.fallback;
-    settings.cache = false; settings.engine = 'openai'; settings.fallback = false;
-  const model = settings.model || 'tts-1';
-    // Do raw fetch to ensure OpenAI path works
-    const resp = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-    body: JSON.stringify({ model, voice: settings.openaiVoice || 'alloy', input: sampleText, format: 'mp3' })
-    });
-    if (!resp.ok) {
-      let body = ''; try { body = await resp.text(); } catch {}
-      settings.cache = prevCache; settings.engine = prevEngine; settings.fallback = prevFallback;
-      return { ok: false, reason: `HTTP ${resp.status}` , detail: body?.slice(0,200), latencyMs: 0, fallbackUsed: false, keyDetected: true };
-    }
-    const buf = await resp.arrayBuffer();
-    const latency = Math.round(performance.now() - started);
-    await playArrayBuffer(buf);
-    settings.cache = prevCache; settings.engine = prevEngine; settings.fallback = prevFallback;
-    return { ok: true, latencyMs: latency, model, voice: settings.openaiVoice || 'alloy', format: 'mp3', fallbackUsed: false, keyDetected: true };
-  } catch (e) {
-    return { ok: false, reason: String(e?.message || e), latencyMs: 0, fallbackUsed: false, keyDetected: true };
-  }
-}
 
 // Cache helpers (4.22)
 export function getTtsCacheStats() {

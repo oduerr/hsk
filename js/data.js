@@ -82,7 +82,7 @@ export function rowsToCards(rows) {
     const rawPinyin = (r[1] || '').trim();
     const pinyin = rawPinyin.replace(/\s+/g, ' ');
     const english = (r[2] || '').trim();
-    const locale = (r[3] || '').trim() || 'zh-CN'; // Default to zh-CN if missing
+    const locale = (r[3] || '').trim() 
     if (!hanzi || !english) continue;
     const id = fnv1a32(`${hanzi}|${pinyin}|${english}`);
     cards.push({ id, hanzi, pinyin, english, locale });
@@ -119,7 +119,7 @@ export async function discoverAvailableCsvFiles() {
             filename: row[0],
             displayName: row[1],
             description: row[2] || '',
-            locale: row[3] || 'zh-CN', // Read locale from vocab.csv
+            locale: row[3],
             path: `./data/${row[0]}`
           });
         }

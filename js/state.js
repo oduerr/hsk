@@ -184,7 +184,7 @@ export function setLevelLabel(label) {
  * @param {string} locale - BCP-47 locale identifier
  */
 export function setSessionLocale(locale) {
-  state.sessionLocale = locale || 'zh-CN';
+  state.sessionLocale = locale;
 }
 
 /**
@@ -322,7 +322,7 @@ export function createFullSessionSnapshot() {
     mistakeIds,
     annotationCount: Array.isArray(state.session.annotation) ? state.session.annotation.length : 0,
     lastPlayedAt: state.session.lastPlayedAt,
-    locale: state.sessionLocale || 'zh-CN',
+    locale: state.sessionLocale,
     name: state.session.name || null,
     counts: { 
       total: state.order.length, 
@@ -384,7 +384,7 @@ export async function resumeRun(full, opts = {}) {
     lastPlayedAt: full?.lastPlayedAt || startedAt,
   };
   // Restore metadata held outside full sessions
-  state.sessionLocale = state.sessionLocale || 'zh-CN';
+  state.sessionLocale = state.sessionLocale;
   if (typeof full?.name === 'string') {
     state.session.name = full.name;
   }
@@ -405,7 +405,7 @@ export async function resumeRun(full, opts = {}) {
       },
       inProgress: true,
       lastPlayedAt: state.session.lastPlayedAt,
-      locale: state.sessionLocale || 'zh-CN',
+      locale: state.sessionLocale,
       name: full?.name || null
     };
     saveSessionSummary(summary);

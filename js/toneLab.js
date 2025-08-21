@@ -427,7 +427,7 @@ async function loadReferenceAudio(card) {
   try {
     // Get locale from state
     const { state } = await import('./state.js');
-    const locale = state.sessionLocale || 'zh-CN';
+    const locale = state.sessionLocale;
     const audioUrl = getAudioUrl(card.hanzi, locale);
     const response = await fetch(audioUrl);
     

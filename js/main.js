@@ -333,34 +333,6 @@ async function startHskImportSession() {
 }
 
 async function bootstrap() {
-  try {
-    const versionParam = new URLSearchParams(location.search).get('v');
-    const url = versionParam ? `${PATH}?v=${encodeURIComponent(versionParam)}` : PATH;
-    const csvText = await fetchCsvText(url);
-    const rows = parseCsv(csvText);
-    const cards = rowsToCards(rows);
-    console.log('Parsed cards:', cards.slice(0, 5), `... total=${cards.length}`);
-    if (!cards.length) {
-      console.error('No cards parsed. Check CSV file.');
-    }
-    saveDeck(cards);
-    newRun(cards);
-    render();
-    startCountdownIfNeeded();
-  } catch (err) {
-    console.warn('Remote fetch failed, trying LocalStorage deck. Error:', err);
-    const localDeck = loadDeck();
-    if (Array.isArray(localDeck) && localDeck.length) {
-      newRun(localDeck);
-      render();
-      startCountdownIfNeeded();
-    } else {
-      // No deck available - show empty state and let user use vocabulary manager
-      console.log('No deck available. User can use the vocabulary manager button to import HSK files.');
-      // Don't show fallback panel - let the main interface handle this
-      render();
-    }
-  }
   // Initialize speech (4.20)
   try { await initSpeech(); } catch {}
   // Show version/build info: date + latest session or checkpoint id
@@ -425,6 +397,8 @@ async function bootstrap() {
   if (infoSessionTitle) {
     infoSessionTitle.textContent = state.session.name || '—';
   }
+  // Open the session manager
+  openReplayDialog();
 }
 
 function applyMinimalUI(enabled) {
@@ -674,7 +648,7 @@ async function speakGood() {
     if (!card) return;
     
     const level = state.levelLabel || ''; 
-    const locale = state.sessionLocale || 'zh-CN'; // Get actual session locale
+    const locale = state.sessionLocale || 'zh-CN'; // Get actual session locale Here we fall back to Chinese 
     const result = await speak(card.hanzi || card.pinyin || '', locale, { level });
     
     // Update button icon based on audio source
@@ -1163,7 +1137,7 @@ async function startReplayFromSummary(summary) {
   }
   try {
     const { setSessionLocale } = await import('./state.js');
-    setSessionLocale(summary.locale || 'zh-CN');
+    setSessionLocale(summary.locale);
   } catch {}
   newRun(deck, { replayOf: summary.id });
   render();
@@ -1176,7 +1150,7 @@ async function resumeFromSummary(summary) {
   if (!full) { alert('No saved checkpoint found.'); return; }
   try {
     const { setSessionLocale } = await import('./state.js');
-    setSessionLocale(summary.locale || 'zh-CN');
+    setSessionLocale(summary.locale);
   } catch {}
   try {
     await resumeRun(full, { replayOf: full.replayOf || null });
