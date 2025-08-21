@@ -1610,3 +1610,7 @@ Acceptance criteria
 - The session name is not displayed correctly in the session manager and "Untitled Session" is shown. Manully remaning helps but after a reload the name is lost. The same is true for importing via CSV File
 - The locale is not displayed correctly in the session manager and zh-CN is shown. This is especially severe since it is needed to play the correct sound.
 Please carefully look at this issue and try to understand where the name could get lost and the local could get lost. List also all possibilities in a temporary file.
+
+
+### 5.60 toneLab
+To the existing toneLab.js add the functionality to test browser speech-to-text recognition. The basic idea is if I the Web Speech API understands me, my pronunciation probably good enough. I should be able to choose the language between Chinese, Italian, German, French, Finnish, English (US and UK). It's okay if that functionality only works in the Chrome browser.

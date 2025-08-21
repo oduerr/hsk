@@ -13,6 +13,10 @@ let referenceBuffer = null;
 let isRecording = false;
 let currentMode = 'reference'; // 'reference' or 'recorded'
 
+// Speech recognition (Web Speech API)
+let recognition = null;
+let isListening = false;
+
 // Canvas elements
 let spectrogramCanvas = null;
 let spectrogramCtx = null;
@@ -112,6 +116,25 @@ function createToneLabModal() {
         <!-- Status -->
         <div id="toneLabStatus" class="tone-lab-status">Ready</div>
         
+        <!-- Speech-to-Text Test (Web Speech API) -->
+        <div class="tone-lab-stt">
+          <div class="stt-controls">
+            <label for="sttLanguage">STT Language:</label>
+            <select id="sttLanguage" class="tone-lab-select">
+              <option value="zh-CN">Chinese (zh-CN)</option>
+              <option value="it-IT">Italian (it-IT)</option>
+              <option value="de-DE">German (de-DE)</option>
+              <option value="fr-FR">French (fr-FR)</option>
+              <option value="fi-FI">Finnish (fi-FI)</option>
+              <option value="en-US">English (US)</option>
+              <option value="en-GB">English (UK)</option>
+            </select>
+            <button id="btnSttStart" class="tone-lab-btn">🎤 Start STT</button>
+            <button id="btnSttStop" class="tone-lab-btn" disabled>⏹️ Stop STT</button>
+          </div>
+          <div id="sttResult" class="stt-result">Speech-to-text ready (Chrome only)</div>
+        </div>
+        
         <!-- Visualizations -->
         <div class="tone-lab-viz">
           <div class="viz-section">
@@ -178,6 +201,9 @@ function createToneLabModal() {
   
   // Initialize scrub bar
   initializeScrubBar();
+  
+  // Initialize speech recognition controls
+  initStt(true);
   
   console.log('ToneLab modal ready for audio visualization');
 }
@@ -269,6 +295,40 @@ function addToneLabStyles() {
       font-size: 14px;
       color: #6b7280;
     }
+    
+    /* STT section */
+    .tone-lab-stt {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .stt-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .tone-lab-select {
+      padding: 6px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #111827;
+      font-size: 14px;
+    }
+    .stt-result {
+      text-align: center;
+      font-size: 13px;
+      color: #1f2937;
+      min-height: 18px;
+      word-break: break-word;
+    }
+    .stt-success { color: #065f46; }
+    .stt-error { color: #991b1b; }
     
     .tone-lab-viz {
       display: grid;
@@ -398,11 +458,139 @@ function bindEventHandlers() {
   document.getElementById('btnPlayRef')?.addEventListener('click', playReference);
   document.getElementById('btnPlayRec')?.addEventListener('click', playRecording);
   document.getElementById('btnToggleAB')?.addEventListener('click', toggleAB);
+  // STT
+  document.getElementById('btnSttStart')?.addEventListener('click', startStt);
+  document.getElementById('btnSttStop')?.addEventListener('click', stopStt);
+  document.getElementById('sttLanguage')?.addEventListener('change', () => {
+    if (!isListening) initStt(false);
+  });
   document.getElementById('toneLabClose')?.addEventListener('click', () => {
     window.toneLab.closeToneLab();
   });
 }
 
+/**
+ * Initialize Web Speech API recognition UI state
+ */
+function initStt(setDefaultFromSession) {
+  const resultEl = document.getElementById('sttResult');
+  const btnStart = document.getElementById('btnSttStart');
+  const btnStop = document.getElementById('btnSttStop');
+  const select = document.getElementById('sttLanguage');
+
+  if (!resultEl || !btnStart || !btnStop || !select) return;
+
+  // Derive default language if requested
+  if (setDefaultFromSession) {
+    try {
+      import('./state.js').then(({ state }) => {
+        if (state?.sessionLocale && select) {
+          // map session locale to STT language if compatible
+          const preferred = state.sessionLocale;
+          const options = Array.from(select.options).map(o => o.value);
+          if (options.includes(preferred)) select.value = preferred;
+        }
+      }).catch(() => {});
+    } catch {}
+  }
+
+  // Feature-detect
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    resultEl.textContent = 'Speech-to-text not supported in this browser (try Chrome).';
+    resultEl.className = 'stt-result stt-error';
+    btnStart.disabled = true;
+    btnStop.disabled = true;
+    return;
+  }
+
+  // Not actively listening until user starts
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+  resultEl.textContent = 'Speech-to-text ready (Chrome only)';
+  resultEl.className = 'stt-result';
+}
+
+/**
+ * Start STT recognition
+ */
+function startStt() {
+  const resultEl = document.getElementById('sttResult');
+  const btnStart = document.getElementById('btnSttStart');
+  const btnStop = document.getElementById('btnSttStop');
+  const select = document.getElementById('sttLanguage');
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+
+  try {
+    recognition = new SR();
+    recognition.lang = (select && select.value) || 'zh-CN';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    let finalText = '';
+    resultEl.textContent = 'Listening…';
+    resultEl.className = 'stt-result';
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        if (res.isFinal) {
+          finalText += res[0].transcript;
+        } else {
+          interim += res[0].transcript;
+        }
+      }
+      const combined = finalText + (interim ? ` (${interim})` : '');
+      resultEl.textContent = combined.trim() || '…';
+    };
+
+    recognition.onerror = (e) => {
+      resultEl.textContent = `STT error: ${e.error || 'unknown'}`;
+      resultEl.className = 'stt-result stt-error';
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      isListening = false;
+    };
+
+    recognition.onend = () => {
+      // Ended by user or platform
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      isListening = false;
+      if (resultEl.textContent && resultEl.textContent !== 'Listening…') {
+        resultEl.className = 'stt-result stt-success';
+      }
+    };
+
+    recognition.start();
+    isListening = true;
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+  } catch (err) {
+    resultEl.textContent = 'Failed to start STT';
+    resultEl.className = 'stt-result stt-error';
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    isListening = false;
+  }
+}
+
+/**
+ * Stop STT recognition
+ */
+function stopStt() {
+  const btnStart = document.getElementById('btnSttStart');
+  const btnStop = document.getElementById('btnSttStop');
+  if (recognition && isListening) {
+    try { recognition.stop(); } catch {}
+  }
+  isListening = false;
+  if (btnStart) btnStart.disabled = false;
+  if (btnStop) btnStop.disabled = true;
+}
 // Helper function to get audio URL with locale support
 function getAudioUrl(hanzi, locale = null) {
   const fname = encodeURIComponent(hanzi) + '.wav';
