@@ -25,7 +25,7 @@ import { shuffle, clamp, fnv1a32 } from './util.js';
 
 /** @type {RunState} */
 export let state = {
-  deck: [],
+  deck: [], // Called cards in JSON file
   order: [],
   index: 0,
   face: 'front',
@@ -290,25 +290,25 @@ export function removeCard() {
  */
 export function createFullSessionSnapshot() {
   console.log('createFullSessionSnapshot', state.session.id);
-  if (!isFinished()) return null;
-  if (state.session.finishedAt) return null;
-  const finishedAt = new Date().toISOString();
-  state.session.finishedAt = finishedAt;
-  state.session.events.push({ type: 'finish', at: finishedAt, index: state.index });
+  // Allow snapshot anytime; if truly finished and not yet marked, finalize timestamps
+  if (!state.session.finishedAt && isFinished()) {
+    const finishedAt = new Date().toISOString();
+    state.session.finishedAt = finishedAt;
+    state.session.events.push({ type: 'finish', at: finishedAt, index: state.index });
+  }
 
   const mistakeIds = Array.from(state.mistakes);
   const removedCount = state.session.events.filter(e => e.type === 'remove').length;
   const full = {
     id: state.session.id,
     startedAt: state.session.startedAt,
-    finishedAt,
+    finishedAt: state.session.finishedAt || null,
     cards: state.deck,
     order: state.order,
     events: state.session.events,
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
     lastPlayedAt: state.session.lastPlayedAt,
-    locale: state.session.locale,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -318,11 +318,12 @@ export function createFullSessionSnapshot() {
   const summary = {
     id: state.session.id,
     startedAt: state.session.startedAt,
-    finishedAt,
+    finishedAt: state.session.finishedAt || null,
     mistakeIds,
     annotationCount: Array.isArray(state.session.annotation) ? state.session.annotation.length : 0,
     lastPlayedAt: state.session.lastPlayedAt,
-    locale: state.session.locale,
+    locale: state.sessionLocale || 'zh-CN',
+    name: state.session.name || null,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -348,7 +349,7 @@ export function getFullSessionSnapshot() {
     mistakeIds,
     annotation: Array.isArray(state.session.annotation) ? state.session.annotation.slice() : [],
     lastPlayedAt: state.session.lastPlayedAt,
-    // locale: state.session.locale,
+    name: state.session.name || null,
     counts: { 
       total: state.order.length, 
       mistakes: mistakeIds.length,
@@ -381,8 +382,12 @@ export async function resumeRun(full, opts = {}) {
     replayOf: opts?.replayOf || null,
     annotation: Array.isArray(full?.annotation) ? full.annotation.slice() : [],
     lastPlayedAt: full?.lastPlayedAt || startedAt,
-    locale: full?.locale || 'zh-CN',
   };
+  // Restore metadata held outside full sessions
+  state.sessionLocale = state.sessionLocale || 'zh-CN';
+  if (typeof full?.name === 'string') {
+    state.session.name = full.name;
+  }
   
   // Auto-save the loaded session so it appears in the replay list
   // This ensures imported/loaded sessions are automatically available for replay
@@ -400,7 +405,7 @@ export async function resumeRun(full, opts = {}) {
       },
       inProgress: true,
       lastPlayedAt: state.session.lastPlayedAt,
-      locale: state.session.locale,
+      locale: state.sessionLocale || 'zh-CN',
       name: full?.name || null
     };
     saveSessionSummary(summary);

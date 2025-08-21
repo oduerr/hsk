@@ -1016,31 +1016,6 @@ const dlgImportBtn = /** @type {HTMLButtonElement} */(document.getElementById('d
 const dlgImportInput = /** @type {HTMLInputElement} */(document.getElementById('dlgImportInput'));
 //const dlgNewSession = /** @type {HTMLButtonElement} */(document.getElementById('dlgNewSession'));
 
-// dlgNewSession?.addEventListener('click', () => {
-//   try {
-//     // Start a new session with the current deck
-//     if (state.deck.length > 0) {
-//       newRun(state.deck);
-//       render();
-//       startCountdownIfNeeded();
-//       closeReplayDialog();
-//     } else {
-//       // If no deck loaded, try to load from storage
-//       const deck = loadDeck();
-//       if (Array.isArray(deck) && deck.length > 0) {
-//         newRun(deck);
-//         render();
-//         startCountdownIfNeeded();
-//         closeReplayDialog();
-//       } else {
-//         alert('No vocabulary deck available. Please use the 📚 button to import HSK files first.');
-//       }
-//     }
-//   } catch (e) {
-//     console.error('Failed to start new session:', e);
-//     alert('Failed to start new session. Check console.');
-//   }
-// });
 
 dlgExport?.addEventListener('click', () => {
   try { 
@@ -1089,6 +1064,7 @@ function openReplayDialog() {
   const summaries = loadSessionSummaries().slice().sort((a, b) => {
     return (b.startedAt || '').localeCompare(a.startedAt || '');
   });
+
   replayList.innerHTML = '';
   if (!summaries.length) {
     replayEmpty.hidden = false;
@@ -1105,7 +1081,7 @@ function openReplayDialog() {
       const progressed = (s.finishedAt ? finished : Math.min(finished, (loadFullSession(s.id)?.events || []).filter(e => e.type==='next').length));
       const status = s.finishedAt ? 'complete' : 'incomplete';
       const name = s.name || 'Untitled Session';
-      
+
       // Format lastPlayedAt if available
       let lastPlayedText = '';
       if (s.lastPlayedAt) {
@@ -1113,9 +1089,16 @@ function openReplayDialog() {
         const lastYmdhm = `${lastPlayed.getFullYear()}-${String(lastPlayed.getMonth()+1).padStart(2,'0')}-${String(lastPlayed.getDate()).padStart(2,'0')}-${String(lastPlayed.getHours()).padStart(2,'0')}:${String(lastPlayed.getMinutes()).padStart(2,'0')}`;
         lastPlayedText = ` • Last played: ${lastYmdhm}`;
       }
-      
+
+      // Add locale info if available
+      let localeText = '';
+      if (s.locale) {
+        localeText = ` • Locale: ${escapeHtml(s.locale)}`;
+      }
+
       left.innerHTML = `<div><strong>${ymdhm}</strong></div>` +
-        `<div class="sid" title="Session ID: ${s.id}">${escapeHtml(name)}</div>`;
+        `<div class="sid" title="Session ID: ${s.id}">${escapeHtml(name)}</div>` +
+        (localeText ? `<div class="locale">${localeText}</div>` : '');
       right.className = 'counts';
       const removedText = (s.counts?.removed ?? 0) > 0 ? ` • ${s.counts.removed} removed` : '';
       right.textContent = `${progressed}/${finished} • ${(s.counts?.mistakes ?? 0)} mistakes${removedText} • status: ${status}${lastPlayedText}`;
@@ -1163,7 +1146,7 @@ function openReplayDialog() {
 
 function closeReplayDialog() { replayDialog.hidden = true; }
 
-function startReplayFromSummary(summary) {
+async function startReplayFromSummary(summary) {
   const full = loadFullSession(summary.id);
   // Set the name to "replay from" and then use the original session name.
   if (full && full.name) {
@@ -1178,23 +1161,32 @@ function startReplayFromSummary(summary) {
     alert('This session has no mistakes to replay.');
     return;
   }
+  try {
+    const { setSessionLocale } = await import('./state.js');
+    setSessionLocale(summary.locale || 'zh-CN');
+  } catch {}
   newRun(deck, { replayOf: summary.id });
   render();
   startCountdownIfNeeded();
   closeReplayDialog();
 }
 
-function resumeFromSummary(summary) {
+async function resumeFromSummary(summary) {
   const full = loadFullSession(summary.id);
   if (!full) { alert('No saved checkpoint found.'); return; }
-  resumeRun(full, { replayOf: full.replayOf || null }).then(() => {
+  try {
+    const { setSessionLocale } = await import('./state.js');
+    setSessionLocale(summary.locale || 'zh-CN');
+  } catch {}
+  try {
+    await resumeRun(full, { replayOf: full.replayOf || null });
     render();
     startCountdownIfNeeded();
     closeReplayDialog();
-  }).catch(err => {
+  } catch (err) {
     console.error('Failed to resume session:', err);
     alert('Failed to resume session. Check console.');
-  });
+  }
 }
 
 function renameSummaryInline(li, summary) {

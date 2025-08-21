@@ -1605,3 +1605,8 @@ Acceptance criteria
 
 #### 5.51 Fixes ✅ COMPLETED
 - The locale must not be stored in the sessions section of the JSON Format, just in the summaries section. So, reading the cards, importing the cards should write into the summary. That is in the file vocab.csv there MUST be a locale column. And it should now read.
+
+#### 5.52 Bug in Session Name and Locale
+- The session name is not displayed correctly in the session manager and "Untitled Session" is shown. Manully remaning helps but after a reload the name is lost. The same is true for importing via CSV File
+- The locale is not displayed correctly in the session manager and zh-CN is shown. This is especially severe since it is needed to play the correct sound.
+Please carefully look at this issue and try to understand where the name could get lost and the local could get lost. List also all possibilities in a temporary file.

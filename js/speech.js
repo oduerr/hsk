@@ -161,7 +161,7 @@ export function getAudioUrl(hanzi, locale = null) {
 async function tryPlayCachedOrRemoteWav(hanzi, locale = null, preferredLevelLabel = null) {
   try {
     const url = getAudioUrl(hanzi, locale);
-    
+    console.info('[tts] getAudioUrl', { url });
     const cache = await getAudioCache();
     if (cache) {
       const hit = await cache.match(url);

@@ -94,7 +94,7 @@ export async function saveCheckpoint(fullSnapshot) {
     inProgress: !fullSnapshot.finishedAt,
     lastPlayedAt: fullSnapshot.lastPlayedAt || fullSnapshot.startedAt,
     locale: locale,
-    name: fullSnapshot.name || null,
+    name: state.session?.name || null,
     // Note: title field is removed, use name instead
   };
   saveSessionSummary(summary);
@@ -205,7 +205,7 @@ export async function exportAllSessionsFile(currentFullSession = null) {
         inProgress: !currentFullSession.finishedAt,
         lastPlayedAt: currentFullSession.lastPlayedAt || currentFullSession.startedAt,
         locale: locale,
-        name: currentFullSession.name || null,
+        name: state.session?.name || null,
       };
       summaries.push(summary);
       sessions.push(currentFullSession);
