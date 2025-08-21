@@ -1,5 +1,11 @@
 # HSK Flashcards (Offline HTML/JS)
 
+## Disclaimer
+
+This is a work in progress! Probably too much have been done with AI coding Agents. 
+The Data Model is quite patchy, it works but before adding new features to the Data Model a thorough review is needed. 
+
+
 Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow: you see English first; on Reveal you get Hanzi + Pinyin. No build tools or servers required.
 
 ## Quick start

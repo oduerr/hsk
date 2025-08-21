@@ -25,5 +25,11 @@ python dev_tools/make_tts_from_csv.py data/chinese_oliver.csv --out dev_tools/au
 python dev_tools/transfer.py data/chinese_oliver.csv dev_tools/audio_chinese_oliver_wo_pinyin data/recordings/zh-CN
 ```
 
-
+#### Creating WAV Files for Chinese Oliver:
+```
+python dev_tools/make_tts_from_csv.py data/eng_oliver.csv --out dev_tools/audio_eng_oliver --model gpt-4o-mini-tts --voice alloy --skip
+```
+```
+python dev_tools/transfer.py data/eng_oliver.csv  dev_tools/audio_eng_oliver data/recordings/en-US
+```
 
