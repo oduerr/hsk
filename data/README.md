@@ -10,6 +10,11 @@ Create WAV-Files for the HSK1 level:
 python dev_tools/make_tts_from_csv.py data/hsk5.csv --out dev_tools/audio_chinese_hsk5_wo_pinyin --model gpt-4o-mini-tts --voice alloy --skip
 ```
 
+```
+python dev_tools/make_tts_from_csv.py data/chinese_oliver.csv --out dev_tools/audio_chinese_oliver_wo_pinyin --model gpt-4o-mini-tts --voice alloy --skip
+```
+
+
 Moving the files to the data directory
 ```
 python dev_tools/transfer.py data/hsk1.csv dev_tools/audio_chinese_hsk1_wo_pinyin data/recordings
