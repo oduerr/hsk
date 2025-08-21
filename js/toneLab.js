@@ -403,6 +403,18 @@ function bindEventHandlers() {
   });
 }
 
+// Helper function to get audio URL with locale support
+function getAudioUrl(hanzi, locale = null) {
+  const fname = encodeURIComponent(hanzi) + '.wav';
+  
+  // Try locale-specific directory first, then fallback to general recordings
+  if (locale) {
+    return `./data/recordings/${locale}/${fname}`;
+  } else {
+    return `./data/recordings/${fname}`;
+  }
+}
+
 /**
  * Load reference audio for the card
  */
@@ -413,7 +425,10 @@ async function loadReferenceAudio(card) {
   }
 
   try {
-    const audioUrl = `./data/recordings/${encodeURIComponent(card.hanzi)}.wav`;
+    // Get locale from state
+    const { state } = await import('./state.js');
+    const locale = state.sessionLocale || 'zh-CN';
+    const audioUrl = getAudioUrl(card.hanzi, locale);
     const response = await fetch(audioUrl);
     
     if (response.ok) {

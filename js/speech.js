@@ -120,10 +120,10 @@ export async function speak(text, lang='zh-CN', opts = {}) {
   stop();
   try {
     const preferredLevel = typeof opts?.level === 'string' ? opts.level : null;
-    console.info('[tts] speak', { text, preferredLevel });
+    console.info('[tts] speak', { text, preferredLevel, lang });
     
     // Try WAV first
-    const played = await tryPlayCachedOrRemoteWav(text, preferredLevel);
+    const played = await tryPlayCachedOrRemoteWav(text, lang, preferredLevel);
     if (played !== 'none') {
       return { source: played }; // Pre-recorded WAV file
     }
@@ -144,12 +144,23 @@ function extractLevelDigit(label) {
   return m ? m[1] : null;
 }
 
-// NEW: Simple, direct audio lookup
-async function tryPlayCachedOrRemoteWav(hanzi, preferredLevelLabel = null) {
+// Helper function to get audio URL with locale support
+export function getAudioUrl(hanzi, locale = null) {
+  const fname = encodeURIComponent(hanzi) + '.wav';
+  const base = location.origin + location.pathname.replace(/\/?[^/]*$/, '/');
+  
+  // Try locale-specific directory first, then fallback to general recordings
+  if (locale) {
+    return new URL(`./data/recordings/${locale}/${fname}`, base).toString();
+  } else {
+    return new URL(`./data/recordings/${fname}`, base).toString();
+  }
+}
+
+// NEW: Simple, direct audio lookup with locale support
+async function tryPlayCachedOrRemoteWav(hanzi, locale = null, preferredLevelLabel = null) {
   try {
-    const fname = encodeURIComponent(hanzi) + '.wav';
-    const base = location.origin + location.pathname.replace(/\/?[^/]*$/, '/');
-    const url = new URL(`./data/recordings/${fname}`, base).toString();
+    const url = getAudioUrl(hanzi, locale);
     
     const cache = await getAudioCache();
     if (cache) {
