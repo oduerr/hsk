@@ -29,6 +29,45 @@ let pitchData = [];
 const SPECTROGRAM_HISTORY = 200;
 const PITCH_HISTORY = 180;
 
+// Centralized spectrogram configuration and shared metadata to keep
+// computation and visualization in sync at all times
+const SPECTROGRAM_CONFIG = {
+  minFreq: 80,       // Hz - lower bound for speech fundamentals
+  maxFreq: 4000,     // Hz - upper bound covering key formants/sibilants
+  fftSize: 4096,     // FFT window size for STFT (power of two)
+  hopSize: 512       // hop size between frames
+};
+
+// This metadata is updated whenever we compute or grab a spectrum slice
+// and is used by the renderer to map bins <-> frequencies robustly
+let spectrogramMeta = {
+  sampleRate: 48000,
+  fftSize: SPECTROGRAM_CONFIG.fftSize,
+  binStart: 0,      // inclusive DFT bin index corresponding to minFreq
+  binEnd: 0,        // inclusive DFT bin index corresponding to maxFreq
+  numBins: 0,       // derived: binEnd - binStart + 1
+  minFreq: SPECTROGRAM_CONFIG.minFreq,
+  maxFreq: SPECTROGRAM_CONFIG.maxFreq
+};
+
+// Keep metadata in sync for a given sample rate and fft size
+function updateSpectrogramMeta(sampleRate, fftSize) {
+  const nyquist = sampleRate / 2;
+  const binsHalf = Math.floor(fftSize / 2);
+  const binHz = nyquist / binsHalf; // Hz per bin in positive spectrum
+
+  const minBin = Math.max(0, Math.floor(SPECTROGRAM_CONFIG.minFreq / binHz));
+  const maxBin = Math.min(binsHalf, Math.floor(SPECTROGRAM_CONFIG.maxFreq / binHz));
+
+  spectrogramMeta.sampleRate = sampleRate;
+  spectrogramMeta.fftSize = fftSize;
+  spectrogramMeta.binStart = minBin;
+  spectrogramMeta.binEnd = maxBin;
+  spectrogramMeta.numBins = Math.max(0, maxBin - minBin + 1);
+  spectrogramMeta.minFreq = SPECTROGRAM_CONFIG.minFreq;
+  spectrogramMeta.maxFreq = SPECTROGRAM_CONFIG.maxFreq;
+}
+
 // Tone contour definitions
 const TONE_CONTOURS = {
   1: { name: 'High Level', color: '#10b981', points: [0.8, 0.8, 0.8, 0.8, 0.8] },
@@ -653,8 +692,10 @@ async function startRecording() {
 
     source = audioCtx.createMediaStreamSource(stream);
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
+    // Use centralized FFT size for consistent spectrogram bins
+    analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
     source.connect(analyser);
+    updateSpectrogramMeta(audioCtx.sampleRate, analyser.fftSize);
 
     // Setup recording
     const recorder = audioCtx.createScriptProcessor(4096, 1, 1);
@@ -918,14 +959,15 @@ function visualizeAudioBuffer(buffer, mode) {
   
   const data = buffer.getChannelData(0);
   const sampleRate = buffer.sampleRate;
-  const frameSize = 1024;
-  const hopSize = 256;
+  updateSpectrogramMeta(sampleRate, SPECTROGRAM_CONFIG.fftSize);
+  const frameSize = SPECTROGRAM_CONFIG.fftSize;
+  const hopSize = SPECTROGRAM_CONFIG.hopSize;
   
   // Process audio in frames
   for (let i = 0; i < data.length - frameSize; i += hopSize) {
     const frame = data.slice(i, i + frameSize);
     
-    // Compute spectrum for spectrogram
+    // Compute spectrum for spectrogram (positive bins within configured range)
     const spectrum = computeSpectrum(frame);
     spectrogramData.push(spectrum);
     
@@ -968,13 +1010,17 @@ function visualizeRecording() {
 
   const bufferLength = analyser.fftSize;
   const timeData = new Float32Array(bufferLength);
-  const freqData = new Uint8Array(analyser.frequencyBinCount);
+  const fullFreqData = new Uint8Array(analyser.frequencyBinCount);
   
   analyser.getFloatTimeDomainData(timeData);
-  analyser.getByteFrequencyData(freqData);
+  analyser.getByteFrequencyData(fullFreqData);
+  // Slice to our configured min/max frequency range using current metadata
+  const start = spectrogramMeta.binStart;
+  const end = spectrogramMeta.binEnd;
+  const freqData = Array.from(fullFreqData.slice(start, end + 1));
 
   // Add to spectrogram data
-  spectrogramData.push(Array.from(freqData));
+  spectrogramData.push(freqData);
   if (spectrogramData.length > SPECTROGRAM_HISTORY) {
     spectrogramData.shift();
   }
@@ -1061,7 +1107,7 @@ function drawSpectrogram(playbackProgress = null) {
   // Normalize factor - boost weak signals and reduce strong ones
   const normalizeFactor = maxIntensity > 0 ? (255 / maxIntensity) * 2 : 1;
   
-  // Draw spectrogram with enhanced contrast
+  // Draw spectrogram with enhanced contrast and logarithmic frequency mapping
   for (let t = 0; t < timeSlices; t++) {
     const slice = spectrogramData[t];
     if (!slice) continue;
@@ -1082,23 +1128,76 @@ function drawSpectrogram(playbackProgress = null) {
         const b = Math.floor(intensity * 120);
         
         ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(
-          t * sliceWidth,
-          canvas.height - (f + 1) * binHeight,
-          sliceWidth,
-          binHeight
-        );
+        
+        // Map current bin to logarithmic frequency scale (low at bottom, high at top)
+        // Use log scale: y = log(freq) / log(maxFreq/minFreq) * canvas.height
+        const minFreq = spectrogramMeta.minFreq;
+        const maxFreq = spectrogramMeta.maxFreq;
+        const logMin = Math.log(minFreq);
+        const logMax = Math.log(maxFreq);
+        const logRange = logMax - logMin;
+        
+        // Calculate frequency for this bin
+        const freq = minFreq + (f / freqBins) * (maxFreq - minFreq);
+        const logFreq = Math.log(freq);
+        const normalizedLogFreq = (logFreq - logMin) / logRange;
+        
+        // Invert so low frequencies are at bottom
+        const yTop = canvas.height - normalizedLogFreq * canvas.height;
+        
+        ctx.fillRect(t * sliceWidth, yTop, sliceWidth, binHeight);
       }
     }
   }
   
-  // Draw frequency labels
+  // Draw frequency labels using logarithmic scale to match data orientation
   ctx.fillStyle = '#ffffff';
   ctx.font = '10px monospace';
   ctx.textAlign = 'right';
   for (let i = 0; i <= 5; i++) {
-    const y = canvas.height - (i / 5) * canvas.height;
-    ctx.fillText(`${Math.round(8000 * (1 - i / 5))}Hz`, canvas.width - 5, y + 3);
+    const y = (i / 5) * canvas.height;
+    
+    // Calculate frequency using logarithmic scale
+    const minFreq = spectrogramMeta.minFreq;
+    const maxFreq = spectrogramMeta.maxFreq;
+    const logMin = Math.log(minFreq);
+    const logMax = Math.log(maxFreq);
+    const logRange = logMax - logMin;
+    
+    // Map y position to logarithmic frequency
+    const normalizedLogFreq = (canvas.height - y) / canvas.height;
+    const logFreq = logMin + normalizedLogFreq * logRange;
+    const freq = Math.exp(logFreq);
+    
+    const label = freq >= 1000 ? `${(freq/1000).toFixed(1)}kHz` : `${Math.round(freq)}Hz`;
+    ctx.fillText(label, canvas.width - 5, y + 3);
+  }
+  
+  // Draw time markers every 500ms on x-axis
+  if (spectrogramData.length > 0) {
+    const totalDuration = (spectrogramData.length * SPECTROGRAM_CONFIG.hopSize) / spectrogramMeta.sampleRate;
+    const timeStep = 0.5; // 500ms intervals
+    const pixelsPerSecond = canvas.width / totalDuration;
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    
+    for (let t = 0; t <= totalDuration; t += timeStep) {
+      const x = t * pixelsPerSecond;
+      if (x <= canvas.width) {
+        // Draw vertical line
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+        
+        // Draw time label
+        ctx.fillText(`${t.toFixed(1)}s`, x, canvas.height - 5);
+      }
+    }
   }
   
   // Draw mode label
@@ -1260,6 +1359,33 @@ function drawPitchContour(playbackProgress = null) {
       ctx.textAlign = 'left';
       ctx.fillText(`Min: ${Math.round(minPitch)}Hz`, 10, canvas.height - 30);
       ctx.fillText(`Max: ${Math.round(maxPitch)}Hz`, 10, canvas.height - 15);
+      
+      // Draw time markers every 500ms on x-axis
+      if (pitchData.length > 0) {
+        const totalDuration = (pitchData.length * SPECTROGRAM_CONFIG.hopSize) / spectrogramMeta.sampleRate;
+        const timeStep = 0.5; // 500ms intervals
+        const pixelsPerSecond = canvas.width / totalDuration;
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        
+        for (let t = 0; t <= totalDuration; t += timeStep) {
+          const x = t * pixelsPerSecond;
+          if (x <= canvas.width) {
+            // Draw vertical line
+            ctx.strokeStyle = '#1f2937';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+            
+            // Draw time label
+            ctx.fillText(`${t.toFixed(1)}s`, x, canvas.height - 5);
+          }
+        }
+      }
     }
   } else {
     // Draw placeholder text
@@ -1580,39 +1706,46 @@ function cleanup() {
 }
 
 /**
- * Compute spectrum for a frame of audio data
+ * Compute spectrum for a frame of audio data using a discrete Fourier transform
+ * limited to the configured [minFreq, maxFreq] band. Returns magnitudes in 0-255.
  */
 function computeSpectrum(timeData) {
-  const fftSize = Math.min(timeData.length, 256);
-  const spectrum = new Array(fftSize / 2).fill(0);
-  
-  // Enhanced energy-based spectrum with better frequency distribution
-  for (let i = 0; i < spectrum.length; i++) {
-    let energy = 0;
-    const binSize = Math.floor(timeData.length / spectrum.length);
-    const start = i * binSize;
-    const end = Math.min(start + binSize, timeData.length);
-    
-    // Apply windowing for better frequency resolution
-    for (let j = start; j < end; j++) {
-      const window = 0.5 - 0.5 * Math.cos(2 * Math.PI * (j - start) / (end - start));
-      energy += (timeData[j] * window) * (timeData[j] * window);
-    }
-    
-    // Normalize and apply frequency weighting for better visibility
-    const normalizedEnergy = Math.sqrt(energy / binSize);
-    
-    // Boost lower frequencies slightly for better visibility
-    const freqBoost = 1 + (0.3 * (1 - i / spectrum.length));
-    
-    spectrum[i] = Math.min(255, normalizedEnergy * 255 * freqBoost);
+  const N = Math.min(timeData.length, SPECTROGRAM_CONFIG.fftSize);
+  const sampleRate = getAudioContext().sampleRate || spectrogramMeta.sampleRate;
+  updateSpectrogramMeta(sampleRate, N);
+
+  const half = Math.floor(N / 2);
+  const outBins = new Array(spectrogramMeta.numBins).fill(0);
+
+  // Hann window (precompute once per call)
+  const window = new Float32Array(N);
+  for (let n = 0; n < N; n++) {
+    window[n] = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (N - 1)));
   }
-  
-  return spectrum;
+
+  // DFT for bins within desired range. Use k-index directly for efficiency.
+  const kStart = spectrogramMeta.binStart;
+  const kEnd = Math.min(half, spectrogramMeta.binEnd);
+  const scale = 255 * 2 / N; // visual scaling factor
+
+  for (let k = kStart; k <= kEnd; k++) {
+    let real = 0;
+    let imag = 0;
+    for (let n = 0; n < N; n++) {
+      const x = timeData[n] * window[n];
+      const phi = (2 * Math.PI * k * n) / N;
+      real += x * Math.cos(phi);
+      imag += x * Math.sin(phi);
+    }
+    const mag = Math.sqrt(real * real + imag * imag);
+    outBins[k - kStart] = Math.max(0, Math.min(255, mag * scale));
+  }
+
+  return outBins;
 }
 
 /**
- * Simple pitch estimation using autocorrelation
+ * Simple pitch estimation using autocorrelation in a speech-relevant band
  */
 function estimatePitch(buffer, sampleRate) {
   const bufferSize = buffer.length;
@@ -1621,8 +1754,10 @@ function estimatePitch(buffer, sampleRate) {
   // Find the best autocorrelation
   let bestOffset = -1;
   let bestCorrelation = 0;
-  const minOffset = Math.floor(sampleRate / 300); // ~300Hz max
-  const maxOffset = Math.floor(sampleRate / 80);  // ~80Hz min
+  const maxPitchHz = 500; // upper voice limit
+  const minPitchHz = 70;  // lower voice limit
+  const minOffset = Math.floor(sampleRate / maxPitchHz);
+  const maxOffset = Math.floor(sampleRate / minPitchHz);
   
   for (let offset = minOffset; offset < Math.min(maxOffset, bufferSize / 2); offset++) {
     let correlation = 0;
@@ -1637,7 +1772,7 @@ function estimatePitch(buffer, sampleRate) {
     }
   }
   
-  if (bestCorrelation > 0.3 && bestOffset > 0) {
+  if (bestCorrelation > 0.45 && bestOffset > 0) {
     return sampleRate / bestOffset;
   }
   
