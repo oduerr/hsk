@@ -2,11 +2,10 @@
 
 ## Disclaimer
 
-This is a work in progress! Probably too much have been done with AI coding Agents. 
-The Data Model is quite patchy, it works but before adding new features to the Data Model a thorough review is needed. 
+This is a work in progress! Probably too much have been done with AI coding Agents.
+The Data Model is quite patchy, it (kind of) works but before adding new features to the Data Model a thorough review is needed
 
-
-Lightweight, offline flashcard app for Chinese HSK vocabulary. Front-first flow: you see English first; on Reveal you get Hanzi + Pinyin. No build tools or servers required.
+_This is an experimental learning project; it stores all data locally in your browser and uses some third-party APIs (see [Privacy](#privacy))._
 
 ## Quick start
 
@@ -108,7 +107,11 @@ data/
 
 ## Privacy
 
-- All data lives in your browser’s LocalStorage. OpenAI TTS calls are only made if you choose that engine and provide a key.
+All learning data (sessions, progress, vocabulary) is stored locally in your browser.  
+The app has no backend server and does not transmit your personal data.  
+
+Some optional features (e.g. speech recognition) use third-party browser APIs such as the Google Web Speech API.  
+In those cases, audio may be processed by the browser provider’s servers. The app itself never stores or sends speech data externally.
 
 ## Troubleshooting
 

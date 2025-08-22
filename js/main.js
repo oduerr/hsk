@@ -30,10 +30,7 @@ const buildInfo = /** @type {HTMLElement} */(document.getElementById('buildInfo'
 const infoVersionTxt = /** @type {HTMLElement} */(document.getElementById('infoVersionTxt'));
 const infoAudioCacheSize = /** @type {HTMLElement} */(document.getElementById('infoAudioCacheSize'));
 const infoSessionsSize = /** @type {HTMLElement} */(document.getElementById('infoSessionsSize'));
-const infoCheckpointId = /** @type {HTMLElement} */(document.getElementById('infoCheckpointId'));
-const infoSessionId = /** @type {HTMLElement} */(document.getElementById('infoSessionId'));
 const infoSessionTitle = /** @type {HTMLElement} */(document.getElementById('infoSessionTitle'));
-const infoLastSave = /** @type {HTMLElement} */(document.getElementById('infoLastSave'));
 const btnBack = /** @type {HTMLButtonElement} */(document.getElementById('btnBack'));
 const btnCorrect = /** @type {HTMLButtonElement} */(document.getElementById('btnCorrect'));
 const btnUndo = /** @type {HTMLButtonElement} */(document.getElementById('btnUndo'));
@@ -347,7 +344,6 @@ async function bootstrap() {
     } catch {}
     buildInfo.textContent = `${versionLabel} • ${new Date().toLocaleString()}${lastId ? ` • last checkpoint: ${lastId}` : ''}`;
     if (infoVersionTxt) infoVersionTxt.textContent = versionLabel;
-    if (infoCheckpointId) infoCheckpointId.textContent = lastId || '—';
   } catch {}
   // Load settings
   try {
@@ -609,8 +605,6 @@ function onKeyDown(e) {
             const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const ms = Math.round(t1 - t0);
             console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-            if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
-            if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
           }
         } catch (e) { console.error('[autosave] failed', e); }
         
@@ -719,8 +713,6 @@ btnRemoveCard?.addEventListener('click', () => {
           const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
           const ms = Math.round(t1 - t0);
           console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-          if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
-          if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
         }
       } catch (e) { console.error('[autosave] failed', e); }
       
@@ -1280,8 +1272,6 @@ function saveAnnotation() {
       const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const ms = Math.round(t1 - t0);
       console.log(`[autosave] ${ms}ms • annotation checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
-      if (infoLastSave) infoLastSave.textContent = new Date().toLocaleString();
-      if (infoSessionId) infoSessionId.textContent = snapshot?.id || '—';
     }
   } catch (e) { console.error('[autosave] failed', e); }
 }
