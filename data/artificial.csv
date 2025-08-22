@@ -1,0 +1,13 @@
+hanzi,pinyin,english
+sinoid-t1,siːnɔɪd tiː wʌn,"Flat tone, steady pitch like a calm horizon"
+sinoid-t2,siːnɔɪd tiː tuː,"Rising tone, steadily climbing like a question"
+sinoid-t3,siːnɔɪd tiː θriː,"Dipping tone, falls then rises like a swing"
+sinoid-t4,siːnɔɪd tiː fɔːr,"Falling tone, dropping sharply like a command"
+sinoid-t2-vib,siːnɔɪd tiː tuː vɪb,Rising tone with vibrato shimmer
+sinoid-step,siːnɔɪd stɛp,"Step tone, jumps to a higher register halfway"
+sinoid-t4-rich,siːnɔɪd tiː fɔːr rɪʧ,Falling tone with added harmonics (overtone-rich)
+sinoid-steps-250,siːnɔɪd stɛps tuː fɪfti,"250 ms steps: 500 ms silence, then 220↔440 Hz swaps every 250 ms, then 500 ms silence"
+sinoid-steps-250-clicks,siːnɔɪd stɛps tuː fɪfti klɪks,250 ms steps with boundary clicks for timing markers
+sinoid-steps-500,siːnɔɪd stɛps faɪv hʌndrəd,"500 ms steps: 500 ms silence, 220→440→220 Hz, each 500 ms, then 500 ms silence"
+sinoid-staircase,siːnɔɪd stɛəkeɪs,250 ms staircase: 200→240→280→320→360→400→360→...→200 Hz
+sinoid-pulse-train,siːnɔɪd pʌls treɪn,Pulse train at 4 Hz: (200 ms tone @ 300 Hz + 50 ms silence) × 8 after 300 ms silence
