@@ -102,6 +102,9 @@ let playbackBuffer = null;      // current AudioBuffer being played
 let playbackOffsetSec = 0;      // offset seconds at playback start
 let pausedAtSec = 0;            // last paused position in seconds
 
+// Track which input feeds the analyser
+let analyserSourceType = null;  // 'mic' | 'playback' | null
+
 /**
  * Public API - Open tone lab for a card
  */
@@ -690,6 +693,7 @@ async function loadReferenceAudio(card) {
   }
 
   try {
+    setStatus('Loading reference audio...');
     // Get locale from state
     const { state } = await import('./state.js');
     const locale = state.sessionLocale;
@@ -699,6 +703,12 @@ async function loadReferenceAudio(card) {
     if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
       const audioCtx = getAudioContext();
+      
+      // Resume audio context if suspended
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+      
       referenceBuffer = await audioCtx.decodeAudioData(arrayBuffer);
       setStatus('Reference audio loaded');
       document.getElementById('btnPlayRef').disabled = false;
@@ -732,10 +742,13 @@ async function startRecording() {
     });
 
     source = audioCtx.createMediaStreamSource(stream);
-    analyser = audioCtx.createAnalyser();
+    if (!analyser) analyser = audioCtx.createAnalyser();
     // Use centralized FFT size for consistent spectrogram bins
     analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
+    try { source.disconnect(); } catch {}
     source.connect(analyser);
+    analyserSourceType = 'mic';
+    console.log('Analyser source: mic');
     updateSpectrogramMeta(audioCtx.sampleRate, analyser.fftSize);
 
     // Setup recording
@@ -766,11 +779,8 @@ async function startRecording() {
     const autoStart = document.getElementById('sttAutoStart');
     if (!autoStart || autoStart.checked) startASR();
     
-    // Start visualization
-    spectrogramData = [];
-    pitchData = [];
-    if (reqId) cancelAnimationFrame(reqId);
-    visualizeRecording();
+    // Start real-time analyser loop
+    startAnalyserLoop();
 
   } catch (error) {
     setStatus('Microphone access denied or unavailable');
@@ -891,7 +901,10 @@ function stopPlayback() {
     playbackSource = null;
   }
   isPlaying = false;
-  if (playbackAnimationId) { cancelAnimationFrame(playbackAnimationId); playbackAnimationId = null; }
+  if (playbackAnimationId) {
+    cancelAnimationFrame(playbackAnimationId);
+    playbackAnimationId = null;
+  }
   stopPlaybackLine();
 }
 
@@ -900,9 +913,34 @@ function stopPlayback() {
  */
 function startPlayback(buffer, sourceType, offsetSec = 0) {
   const audioCtx = getAudioContext();
+  
+  // Resume audio context if suspended
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => {
+      // Continue with playback after resume
+      continueStartPlayback(buffer, sourceType, offsetSec, audioCtx);
+    }).catch(err => {
+      console.error('Failed to resume audio context:', err);
+      setStatus('Audio context error');
+    });
+    return;
+  }
+  
+  continueStartPlayback(buffer, sourceType, offsetSec, audioCtx);
+}
+
+function continueStartPlayback(buffer, sourceType, offsetSec, audioCtx) {
   const node = audioCtx.createBufferSource();
   node.buffer = buffer;
-  node.connect(audioCtx.destination);
+  // Ensure analyser exists and route playback through analyser for live updates
+  if (!analyser) analyser = audioCtx.createAnalyser();
+  analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
+  try { analyser.disconnect(); } catch {}
+  try { node.disconnect(); } catch {}
+  node.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  analyserSourceType = 'playback';
+  console.log('Analyser source: playback');
 
   node.onerror = (e) => {
     console.error('Playback audio error:', e);
@@ -921,22 +959,30 @@ function startPlayback(buffer, sourceType, offsetSec = 0) {
   currentAudioSource = sourceType;
   currentMode = sourceType === 'reference' ? 'reference' : 'recorded';
 
-  // Visualize buffer
-  visualizeAudioBuffer(buffer, sourceType);
-  enableScrubBarControls();
-
-  // Start ASR if enabled BEFORE audio begins
-  const autoStart = document.getElementById('sttAutoStart');
-  stopASR();
-  if (!autoStart || autoStart.checked) startASR();
-
-  // Start audio
+  // Start audio immediately for responsive playback
   playbackOffsetSec = Math.max(0, Math.min(offsetSec || 0, buffer.duration));
-  try { node.start(0, playbackOffsetSec); } catch (e) { try { node.start(0); } catch {} }
+  try { 
+    node.start(0, playbackOffsetSec); 
+  } catch (e) { 
+    try { node.start(0); } catch {} 
+  }
 
   // Start line animation with offset
   setStatus(sourceType === 'reference' ? 'Playing reference audio' : 'Playing your recording');
   startPlaybackLine(buffer.duration, playbackOffsetSec);
+  
+  // Enable scrub bar controls
+  enableScrubBarControls();
+
+  // Start ASR if enabled AFTER audio begins (to avoid conflicts)
+  const autoStart = document.getElementById('sttAutoStart');
+  if (!autoStart || autoStart.checked) {
+    // Small delay to ensure audio is playing
+    setTimeout(() => startASR(), 100);
+  }
+
+  // Start analyser loop for live updates during playback
+  startAnalyserLoop();
 }
 
 /**
@@ -1054,7 +1100,7 @@ function toggleAB() {
  * Real-time visualization during recording
  */
 function visualizeRecording() {
-  if (!isRecording || !analyser) return;
+  if (!analyser) return;
 
   const bufferLength = analyser.fftSize;
   const timeData = new Float32Array(bufferLength);
@@ -1086,11 +1132,19 @@ function visualizeRecording() {
     console.log('Pitch data:', pitchData.length, 'values, last pitch:', pitch);
   }
 
-  // Update visualizations (no playback progress during live recording)
+  // Update visualizations (progress is driven by playback animation for playback)
   drawSpectrogram();
   drawPitchContour();
 
   reqId = requestAnimationFrame(visualizeRecording);
+}
+
+/**
+ * Start a continuous analyser loop for whichever source is connected
+ */
+function startAnalyserLoop() {
+  if (reqId) cancelAnimationFrame(reqId);
+  visualizeRecording();
 }
 
 /**
