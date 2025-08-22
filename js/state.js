@@ -392,23 +392,8 @@ export async function resumeRun(full, opts = {}) {
   // Auto-save the loaded session so it appears in the replay list
   // This ensures imported/loaded sessions are automatically available for replay
   try {
-    const { saveSessionSummary } = await import('./storage.js');
-    const summary = {
-      id: state.session.id,
-      startedAt: state.session.startedAt,
-      finishedAt: null,
-      mistakeIds: Array.from(state.mistakes),
-      counts: { 
-        total: state.order.length, 
-        mistakes: state.mistakes.size,
-        removed: state.session.events.filter(e => e.type === 'remove').length
-      },
-      inProgress: true,
-      lastPlayedAt: state.session.lastPlayedAt,
-      locale: state.sessionLocale,
-      name: full?.name || null
-    };
-    saveSessionSummary(summary);
+    const { persistSession } = await import('./storage.js');
+    persistSession(state, { reason: 'resume' });
   } catch (err) {
     console.warn('Failed to auto-save loaded session:', err);
   }

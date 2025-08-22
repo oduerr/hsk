@@ -2,7 +2,7 @@ import { discoverAvailableCsvFiles } from './data.js';
 import './toneLab.js';
 import { initSpeech, speak, setSettings as setTtsSettings } from './speech.js';
 import { state, newRun, reveal, nextCard, markMistake, setAutoReveal, createFullSessionSnapshot, getFullSessionSnapshot, resumeRun, prevCard, unmarkMistake, unreveal, markAnnotation, currentCard, removeCard, removeAnnotation } from './state.js';
-import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel, loadTtsSettings, saveTtsSettings, loadTtsVoice, saveTtsVoice, computeSessionsSizeBytes, loadVersionFile } from './storage.js';
+import { saveFullSession, saveSessionSummary, exportAllSessionsFile, loadSessionSummaries, loadFullSession, importSessionsFromObject, loadDeck, saveDeck, saveCheckpoint, loadLastCheckpointId, renameSession, deleteSession, loadSettings, saveSettings, saveLastLevel, loadLastLevel, loadTtsSettings, saveTtsSettings, loadTtsVoice, saveTtsVoice, computeSessionsSizeBytes, loadVersionFile, persistSession, saveCheckpointFromState } from './storage.js';
 import { CONFIG } from './config.js';
 import { render, showCountdown, updateCountdown, hideCountdown, flashMistake } from './ui.js';
 import { createVocabularyManager } from './vocabularyManager.js';
@@ -439,15 +439,7 @@ function onNext() {
   nextCard();
   render();
   startCountdownIfNeeded();
-  const finalized = createFullSessionSnapshot();
-  if (finalized) {
-    try {
-      saveFullSession(finalized.full);
-      saveSessionSummary(finalized.summary);
-    } catch (e) {
-      console.error('Failed saving session:', e);
-    }
-  }
+  try { persistSession(state, { reason: 'next' }); } catch (e) { console.error('Failed saving session:', e); }
 }
 
 function onMistake() {
@@ -468,11 +460,10 @@ function onMistake() {
     const enabled = !!(settingsAutosave && settingsAutosave.checked);
     if (enabled) {
       const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
+      saveCheckpointFromState();
       const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const ms = Math.round(t1 - t0);
-      console.log(`[autosave] ${ms}ms • checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+      console.log(`[autosave] ${ms}ms • checkpoint at`, new Date().toISOString());
     }
   } catch (e) { console.error('[autosave] failed', e); }
 }
@@ -600,11 +591,10 @@ function onKeyDown(e) {
           const enabled = !!(settingsAutosave && settingsAutosave.checked);
           if (enabled) {
             const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-            const snapshot = getFullSessionSnapshot();
-            saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
+            saveCheckpointFromState();
             const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             const ms = Math.round(t1 - t0);
-            console.log(`[autosave] ${ms}ms • card removal checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+            console.log(`[autosave] ${ms}ms • card removal checkpoint at`, new Date().toISOString());
           }
         } catch (e) { console.error('[autosave] failed', e); }
         
@@ -966,8 +956,7 @@ if (btnExport) {
 // Save progress / checkpoint
 btnSaveProgress?.addEventListener('click', () => {
   try {
-    const snapshot = getFullSessionSnapshot();
-    saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
+    saveCheckpointFromState();
     alert('Progress saved to LocalStorage. You can export or resume later.');
   } catch (e) {
     console.error('Save progress failed:', e);
@@ -1023,8 +1012,7 @@ replayDialog?.addEventListener('click', (e) => {
 
 function openReplayDialog() {
   // Save the current session as a checkpoint
-  const snapshot = getFullSessionSnapshot();
-  saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
+  saveCheckpointFromState();
 
   // Load the session summaries
   const summaries = loadSessionSummaries().slice().sort((a, b) => {
@@ -1267,11 +1255,10 @@ function saveAnnotation() {
     const enabled = !!(settingsAutosave && settingsAutosave.checked);
     if (enabled) {
       const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-      const snapshot = getFullSessionSnapshot();
-      saveCheckpoint(snapshot).catch(err => console.warn('Failed to save checkpoint:', err));
+      saveCheckpointFromState();
       const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
       const ms = Math.round(t1 - t0);
-      console.log(`[autosave] ${ms}ms • annotation checkpoint ${snapshot?.id || ''} at`, new Date().toISOString());
+      console.log(`[autosave] ${ms}ms • annotation checkpoint at`, new Date().toISOString());
     }
   } catch (e) { console.error('[autosave] failed', e); }
 }

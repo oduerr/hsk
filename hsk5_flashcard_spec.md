@@ -1614,3 +1614,41 @@ Please carefully look at this issue and try to understand where the name could g
 
 ### 5.60 toneLab
 To the existing toneLab.js add the functionality to test browser speech-to-text recognition. The basic idea is if I the Web Speech API understands me, my pronunciation probably good enough. I should be able to choose the language between Chinese, Italian, German, French, Finnish, English (US and UK). It's okay if that functionality only works in the Chrome browser.
+
+
+### 5.70 Centralize Session Saving
+
+Goal
+Create a single, canonical function that persists the current in-memory app state into the session/persistence layer. Remove/replace all scattered writes.
+
+What to build
+	•	Add persistSession(state, options?) in storage.js (or a small new persistence.js if cleaner).
+	•	Input: the live state object (and optional flags like { reason: 'auto'|'manual'|'checkpoint' }).
+	•	Output: { summaryUpdated: boolean, sessionId: string }.
+	•	Responsibilities:
+	•	Construct/update the full session record from state (events, counts, mistakeIds, order, cards, replayOf, etc.).
+	•	Maintain the summary mirror (id, name, startedAt, finishedAt, lastPlayedAt, counts, inProgress, locale).
+	•	De-duplicate and validate before write.
+	•	Write to localStorage using existing keys.
+	•	Add a thin wrapper saveCheckpointFromState() that calls persistSession(state, { reason: 'checkpoint' }).
+
+Refactor
+	•	Replace all direct calls that write sessions/summaries/checkpoints (e.g. saveFullSession, saveSessionSummary, saveCheckpoint) in UI/event handlers with one call to persistSession(...).
+	•	Typical call sites: after next/reveal/unreveal/mistake/unmistake/finish/resume/import.
+
+Minimal tests
+	•	Add a small test (Vitest) that:
+	1.	builds a mock state,
+	2.	calls persistSession(state),
+	3.	asserts one summary and one full session were written with correct id, counts, lastPlayedAt, inProgress.
+
+Acceptance criteria
+	•	One exported function (persistSession) is the only path to write session/summary/checkpoint data.
+	•	Grep shows no remaining direct localStorage writes for sessions/summaries outside this function.
+	•	Core flows still work (new run, next, reveal, mark/unmark mistake, finish, resume, import), and lastPlayedAt updates.
+	•	No console errors.
+
+Notes / guardrails
+	•	Do not change state shape; only centralize saving.
+	•	Keep public function names stable for now.
+	•	If adding the new file persistence.js, update imports in a single place (main.js or storage.js) and re-export for minimal churn.

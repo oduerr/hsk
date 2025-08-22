@@ -313,3 +313,101 @@ export function importSessionsFromObject(obj) {
 }
 
 
+/**
+ * Centralized persistence API for sessions.
+ * Builds full snapshot and summary from the provided live state and writes both.
+ * @param {object} appState - The live state object from state.js
+ * @param {{ reason?: 'auto'|'manual'|'checkpoint'|'resume'|'import'|'next'|'reveal'|'unreveal' }} [options]
+ * @returns {{ summaryUpdated: boolean, sessionId: string }}
+ */
+export function persistSession(appState, options = {}) {
+  try {
+    if (!appState || !appState.session || !appState.session.id) {
+      return { summaryUpdated: false, sessionId: '' };
+    }
+
+    // Build full snapshot from live state
+    const mistakeIds = Array.isArray(appState.mistakes)
+      ? appState.mistakes.slice()
+      : (appState.mistakes instanceof Set ? Array.from(appState.mistakes) : []);
+    const removedCount = Array.isArray(appState.session.events)
+      ? appState.session.events.filter(e => e && e.type === 'remove').length
+      : 0;
+
+    const full = {
+      id: appState.session.id,
+      startedAt: appState.session.startedAt,
+      finishedAt: appState.session.finishedAt || null,
+      cards: Array.isArray(appState.deck) ? appState.deck : [],
+      order: Array.isArray(appState.order) ? appState.order : [],
+      events: Array.isArray(appState.session.events) ? appState.session.events : [],
+      mistakeIds,
+      annotation: Array.isArray(appState.session.annotation) ? appState.session.annotation.slice() : [],
+      lastPlayedAt: appState.session.lastPlayedAt || appState.session.startedAt,
+      name: appState.session.name || null,
+      counts: {
+        total: Array.isArray(appState.order) ? appState.order.length : 0,
+        mistakes: mistakeIds.length,
+        removed: removedCount
+      }
+    };
+
+    // Compute summary mirror
+    const summary = {
+      id: full.id,
+      startedAt: full.startedAt,
+      finishedAt: full.finishedAt || null,
+      mistakeIds: full.mistakeIds || [],
+      counts: full.counts,
+      inProgress: !full.finishedAt,
+      lastPlayedAt: full.lastPlayedAt,
+      locale: appState.sessionLocale || 'zh-CN',
+      name: full.name || null
+    };
+
+    // Determine if summary changes
+    const existing = loadSessionSummaries();
+    const prev = existing.find((s) => s && s.id === summary.id) || null;
+    const stable = (x) => x ? {
+      id: x.id,
+      startedAt: x.startedAt,
+      finishedAt: x.finishedAt || null,
+      mistakeIds: Array.isArray(x.mistakeIds) ? x.mistakeIds : [],
+      counts: x.counts || { total: 0, mistakes: 0, removed: 0 },
+      inProgress: typeof x.inProgress === 'boolean' ? x.inProgress : !x.finishedAt,
+      lastPlayedAt: x.lastPlayedAt,
+      locale: x.locale,
+      name: x.name || null
+    } : null;
+    const summaryUpdated = JSON.stringify(stable(prev)) !== JSON.stringify(stable(summary));
+
+    // Write full and summary
+    saveFullSession(full);
+    saveSessionSummary(summary);
+
+    // Update last checkpoint id if requested
+    if (options && options.reason === 'checkpoint') {
+      try { saveLastCheckpointId(full.id); } catch {}
+    }
+
+    return { summaryUpdated, sessionId: full.id };
+  } catch (err) {
+    console.warn('persistSession failed:', err);
+    return { summaryUpdated: false, sessionId: '' };
+  }
+}
+
+/**
+ * Thin wrapper to save a checkpoint directly from current state (imported lazily).
+ * @returns {{ summaryUpdated: boolean, sessionId: string }}
+ */
+export async function saveCheckpointFromState() {
+  try {
+    const { state } = await import('./state.js');
+    return persistSession(state, { reason: 'checkpoint' });
+  } catch (err) {
+    console.warn('saveCheckpointFromState failed:', err);
+    return { summaryUpdated: false, sessionId: '' };
+  }
+}
+
