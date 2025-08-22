@@ -16,6 +16,7 @@ let currentMode = 'reference'; // 'reference' or 'recorded'
 // Speech recognition (Web Speech API)
 let recognition = null;
 let isListening = false;
+let asrSessionActive = false;
 
 // Canvas elements
 let spectrogramCanvas = null;
@@ -95,6 +96,12 @@ let loopStart = 0;
 let loopEnd = 1;
 let isLooping = false;
 
+// Playback node management (for seeking/pausing/resuming)
+let playbackSource = null;      // current AudioBufferSourceNode
+let playbackBuffer = null;      // current AudioBuffer being played
+let playbackOffsetSec = 0;      // offset seconds at playback start
+let pausedAtSec = 0;            // last paused position in seconds
+
 /**
  * Public API - Open tone lab for a card
  */
@@ -155,7 +162,7 @@ function createToneLabModal() {
         <!-- Status -->
         <div id="toneLabStatus" class="tone-lab-status">Ready</div>
         
-        <!-- Speech-to-Text Test (Web Speech API) -->
+        <!-- Speech-to-Text (Web Speech API) -->
         <div class="tone-lab-stt">
           <div class="stt-controls">
             <label for="sttLanguage">STT Language:</label>
@@ -168,10 +175,14 @@ function createToneLabModal() {
               <option value="en-US">English (US)</option>
               <option value="en-GB">English (UK)</option>
             </select>
+            <label for="sttAutoStart" class="stt-checkbox-label">
+              <input type="checkbox" id="sttAutoStart" checked /> Auto-start STT
+            </label>
             <button id="btnSttStart" class="tone-lab-btn">🎤 Start STT</button>
             <button id="btnSttStop" class="tone-lab-btn" disabled>⏹️ Stop STT</button>
           </div>
           <div id="sttResult" class="stt-result">Speech-to-text ready (Chrome only)</div>
+          <div id="sttListeningIndicator" class="stt-listening-indicator"></div>
         </div>
         
         <!-- Visualizations -->
@@ -361,13 +372,17 @@ function addToneLabStyles() {
     }
     .stt-result {
       text-align: center;
-      font-size: 13px;
+      font-size: 39px;
       color: #1f2937;
-      min-height: 18px;
+      min-height: 54px;
       word-break: break-word;
+      font-weight: 500;
     }
     .stt-success { color: #065f46; }
     .stt-error { color: #991b1b; }
+    .stt-checkbox-label { display: inline-flex; align-items: center; gap: 6px; }
+    .stt-listening-indicator { text-align: center; font-size: 12px; color: #ef4444; min-height: 16px; margin-top: 4px; }
+    .stt-listening-indicator.listening::before { content: '🔴 '; animation: pulse 1s infinite; }
     
     .tone-lab-viz {
       display: grid;
@@ -551,84 +566,107 @@ function initStt(setDefaultFromSession) {
 }
 
 /**
- * Start STT recognition
+ * Start STT recognition (manual button wrapper) -> guarded ASR
  */
 function startStt() {
+  startASR();
+}
+
+/**
+ * Stop STT recognition (manual button wrapper)
+ */
+function stopStt() {
+  stopASR();
+}
+
+/**
+ * Guarded ASR start/stop helpers
+ */
+function stopASR() {
+  const btnStart = document.getElementById('btnSttStart');
+  const btnStop = document.getElementById('btnSttStop');
+  const indicator = document.getElementById('sttListeningIndicator');
+  if (recognition && isListening) {
+    try { recognition.onresult = null; recognition.onend = null; recognition.onerror = null; recognition.stop(); } catch {}
+  }
+  isListening = false;
+  asrSessionActive = false;
+  if (btnStart) btnStart.disabled = false;
+  if (btnStop) btnStop.disabled = true;
+  if (indicator) {
+    indicator.textContent = '';
+    indicator.className = 'stt-listening-indicator';
+  }
+}
+
+function startASR() {
+  // Ensure single session
+  if (asrSessionActive) stopASR();
+
   const resultEl = document.getElementById('sttResult');
   const btnStart = document.getElementById('btnSttStart');
   const btnStop = document.getElementById('btnSttStop');
   const select = document.getElementById('sttLanguage');
+  const indicator = document.getElementById('sttListeningIndicator');
+
+  if (!resultEl || !btnStart || !btnStop || !select) return;
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
+  if (!SR) {
+    resultEl.textContent = 'Speech-to-text not supported in this browser (try Chrome).';
+    resultEl.className = 'stt-result stt-error';
+    return;
+  }
 
   try {
+    // Clear transcript UI on auto-start
+    resultEl.textContent = 'Listening...';
+    resultEl.className = 'stt-result';
+    if (indicator) {
+      indicator.textContent = 'Listening...';
+      indicator.className = 'stt-listening-indicator listening';
+    }
+
     recognition = new SR();
-    recognition.lang = (select && select.value) || 'zh-CN';
+    recognition.lang = select.value || 'zh-CN';
     recognition.interimResults = true;
     recognition.continuous = true;
 
     let finalText = '';
-    resultEl.textContent = 'Listening…';
-    resultEl.className = 'stt-result';
-
     recognition.onresult = (event) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
-        if (res.isFinal) {
-          finalText += res[0].transcript;
-        } else {
-          interim += res[0].transcript;
-        }
+        if (res.isFinal) finalText += res[0].transcript; else interim += res[0].transcript;
       }
-      const combined = finalText + (interim ? ` (${interim})` : '');
-      resultEl.textContent = combined.trim() || '…';
+      const combined = (finalText + (interim ? ` (${interim})` : '')).trim();
+      resultEl.textContent = combined || 'Listening...';
+      if (indicator) {
+        indicator.textContent = 'Listening...';
+        indicator.className = 'stt-listening-indicator listening';
+      }
     };
 
     recognition.onerror = (e) => {
       resultEl.textContent = `STT error: ${e.error || 'unknown'}`;
       resultEl.className = 'stt-result stt-error';
-      btnStart.disabled = false;
-      btnStop.disabled = true;
-      isListening = false;
+      stopASR();
     };
 
     recognition.onend = () => {
-      // Ended by user or platform
-      btnStart.disabled = false;
-      btnStop.disabled = true;
-      isListening = false;
-      if (resultEl.textContent && resultEl.textContent !== 'Listening…') {
-        resultEl.className = 'stt-result stt-success';
-      }
+      if (asrSessionActive) stopASR();
     };
 
     recognition.start();
     isListening = true;
+    asrSessionActive = true;
     btnStart.disabled = true;
     btnStop.disabled = false;
   } catch (err) {
     resultEl.textContent = 'Failed to start STT';
     resultEl.className = 'stt-result stt-error';
-    btnStart.disabled = false;
-    btnStop.disabled = true;
-    isListening = false;
+    stopASR();
   }
-}
-
-/**
- * Stop STT recognition
- */
-function stopStt() {
-  const btnStart = document.getElementById('btnSttStart');
-  const btnStop = document.getElementById('btnSttStop');
-  if (recognition && isListening) {
-    try { recognition.stop(); } catch {}
-  }
-  isListening = false;
-  if (btnStart) btnStart.disabled = false;
-  if (btnStop) btnStop.disabled = true;
 }
 // Helper function to get audio URL with locale support
 function getAudioUrl(hanzi, locale = null) {
@@ -679,6 +717,9 @@ async function loadReferenceAudio(card) {
 async function startRecording() {
   try {
     console.log('Starting recording...');
+    // Stop any playback and guard ASR lifecycle
+    stopPlayback();
+    stopASR();
     const audioCtx = getAudioContext();
     
     stream = await navigator.mediaDevices.getUserMedia({
@@ -721,6 +762,9 @@ async function startRecording() {
     updateRecordingUI(true);
     setStatus('Recording... Speak now!');
     console.log('Recording started successfully');
+    // Start ASR if enabled
+    const autoStart = document.getElementById('sttAutoStart');
+    if (!autoStart || autoStart.checked) startASR();
     
     // Start visualization
     spectrogramData = [];
@@ -785,6 +829,8 @@ function stopRecording() {
 
     // Cleanup after processing
     cleanup();
+    // Stop ASR at the end of recording
+    stopASR();
     
   } catch (error) {
     setStatus('Failed to process recording');
@@ -802,38 +848,10 @@ function playReference() {
   }
 
   try {
-    const audioCtx = getAudioContext();
-    const source = audioCtx.createBufferSource();
-    source.buffer = referenceBuffer;
-    source.connect(audioCtx.destination);
-    
-    // Add error handling
-    source.onerror = (e) => {
-      console.error('Reference audio error:', e);
-      setStatus('Reference audio error');
-      stopPlaybackLine();
-    };
-    
-    source.onended = () => {
-      console.log('Reference audio playback ended');
-      setStatus('Reference audio finished');
-      stopPlaybackLine();
-    };
-    
-    source.start();
-    
-    currentMode = 'reference';
-    currentAudioSource = 'reference';
-    setStatus('Playing reference audio');
-    
-    // Start playback line animation
-    startPlaybackLine(referenceBuffer.duration);
-    
-    // Visualize reference audio
-    visualizeAudioBuffer(referenceBuffer, 'reference');
-    
-    // Enable scrub bar controls
-    enableScrubBarControls();
+    // Lifecycle: stop playback + ASR, then start
+    stopPlayback();
+    stopASR();
+    startPlayback(referenceBuffer, 'reference', (scrubProgress || 0) * referenceBuffer.duration);
     
   } catch (error) {
     setStatus('Failed to play reference audio');
@@ -852,39 +870,10 @@ function playRecording() {
   }
 
   try {
-    console.log('Playing recorded buffer:', recordedBuffer.length, 'samples, duration:', recordedBuffer.duration);
-    
-    const audioCtx = getAudioContext();
-    const source = audioCtx.createBufferSource();
-    source.buffer = recordedBuffer;
-    source.connect(audioCtx.destination);
-    
-    // Add error handling
-    source.onerror = (e) => {
-      console.error('Audio source error:', e);
-      setStatus('Audio playback error');
-    };
-    
-    source.onended = () => {
-      console.log('Recording playback ended');
-      setStatus('Recording playback finished');
-      stopPlaybackLine();
-    };
-    
-    source.start();
-    
-    currentMode = 'recorded';
-    currentAudioSource = 'recorded';
-    setStatus('Playing your recording');
-    
-    // Start playback line animation
-    startPlaybackLine(recordedBuffer.duration);
-    
-    // Visualize recorded audio
-    visualizeAudioBuffer(recordedBuffer, 'recorded');
-    
-    // Enable scrub bar controls
-    enableScrubBarControls();
+    // Lifecycle: stop playback + ASR, then start
+    stopPlayback();
+    stopASR();
+    startPlayback(recordedBuffer, 'recorded', (scrubProgress || 0) * recordedBuffer.duration);
     
   } catch (error) {
     setStatus('Failed to play recording');
@@ -893,15 +882,74 @@ function playRecording() {
 }
 
 /**
+ * Stop current playback (audio + animation)
+ */
+function stopPlayback() {
+  if (playbackSource) {
+    try { playbackSource.onended = null; playbackSource.stop(0); } catch {}
+    try { playbackSource.disconnect(); } catch {}
+    playbackSource = null;
+  }
+  isPlaying = false;
+  if (playbackAnimationId) { cancelAnimationFrame(playbackAnimationId); playbackAnimationId = null; }
+  stopPlaybackLine();
+}
+
+/**
+ * Start playback with optional offset, wire ASR lifecycle and visuals
+ */
+function startPlayback(buffer, sourceType, offsetSec = 0) {
+  const audioCtx = getAudioContext();
+  const node = audioCtx.createBufferSource();
+  node.buffer = buffer;
+  node.connect(audioCtx.destination);
+
+  node.onerror = (e) => {
+    console.error('Playback audio error:', e);
+    setStatus('Audio playback error');
+    stopPlayback();
+  };
+  node.onended = () => {
+    setStatus('Playback finished');
+    stopPlaybackLine();
+    stopASR();
+  };
+
+  // Set state
+  playbackSource = node;
+  playbackBuffer = buffer;
+  currentAudioSource = sourceType;
+  currentMode = sourceType === 'reference' ? 'reference' : 'recorded';
+
+  // Visualize buffer
+  visualizeAudioBuffer(buffer, sourceType);
+  enableScrubBarControls();
+
+  // Start ASR if enabled BEFORE audio begins
+  const autoStart = document.getElementById('sttAutoStart');
+  stopASR();
+  if (!autoStart || autoStart.checked) startASR();
+
+  // Start audio
+  playbackOffsetSec = Math.max(0, Math.min(offsetSec || 0, buffer.duration));
+  try { node.start(0, playbackOffsetSec); } catch (e) { try { node.start(0); } catch {} }
+
+  // Start line animation with offset
+  setStatus(sourceType === 'reference' ? 'Playing reference audio' : 'Playing your recording');
+  startPlaybackLine(buffer.duration, playbackOffsetSec);
+}
+
+/**
  * Start playback line animation
  */
-function startPlaybackLine(duration) {
+function startPlaybackLine(duration, offsetSec = 0) {
   if (playbackAnimationId) {
     cancelAnimationFrame(playbackAnimationId);
   }
   
   playbackStartTime = Date.now();
   playbackDuration = duration * 1000; // Convert to milliseconds
+  playbackOffsetSec = offsetSec || 0;
   isPlaying = true;
   
   animatePlaybackLine();
@@ -928,8 +976,9 @@ function stopPlaybackLine() {
 function animatePlaybackLine() {
   if (!isPlaying) return;
   
-  const elapsed = Date.now() - playbackStartTime;
-  const progress = Math.min(elapsed / playbackDuration, 1);
+  const elapsedMs = Date.now() - playbackStartTime;
+  const totalSec = playbackDuration / 1000;
+  const progress = Math.min(1, (playbackOffsetSec + (elapsedMs / 1000)) / totalSec);
   
   // Update scrub bar position
   updateScrubBar(progress, playbackDuration / 1000);
@@ -995,11 +1044,10 @@ function visualizeAudioBuffer(buffer, mode) {
  * Toggle between reference and recorded audio
  */
 function toggleAB() {
-  if (currentMode === 'reference') {
-    playRecording();
-  } else {
-    playReference();
-  }
+  // stop playback then ASR (guard)
+  stopPlayback();
+  stopASR();
+  if (currentMode === 'reference') playRecording(); else playReference();
 }
 
 /**
@@ -1596,6 +1644,11 @@ function pausePlayback() {
   
   isPaused = true;
   isPlaying = false;
+  // snapshot paused position from current scrub progress
+  pausedAtSec = (playbackDuration / 1000) * (Math.max(0, Math.min(1, scrubProgress)) || 0);
+  // stop audio node
+  if (playbackSource) { try { playbackSource.stop(0); } catch {} }
+  playbackSource = null;
   
   if (playbackAnimationId) {
     cancelAnimationFrame(playbackAnimationId);
@@ -1616,17 +1669,12 @@ function pausePlayback() {
  * Resume playback
  */
 function resumePlayback() {
-  if (!isPaused || !currentAudioSource) return;
-  
+  if (!currentAudioSource || !playbackBuffer) return;
+  // If scrubbed, prefer scrub position; else use pausedAtSec
+  const desiredSec = (Math.max(0, Math.min(1, scrubProgress)) || 0) * playbackBuffer.duration;
   isPaused = false;
-  isPlaying = true;
-  
-  // Resume from current scrub position
-  const elapsed = scrubProgress * playbackDuration;
-  playbackStartTime = Date.now() - elapsed;
-  
-  animatePlaybackLine();
-  
+  // restart playback from desired position using the same source type
+  startPlayback(playbackBuffer, currentAudioSource, desiredSec);
   // Update button states
   const btnPause = document.getElementById('btnPause');
   const btnResume = document.getElementById('btnResume');
