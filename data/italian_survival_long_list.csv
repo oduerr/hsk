@@ -1,5 +1,7 @@
 Italian,IPA,German Description
 Pane,ˈpaːne,Brot
+Pasta,ˈpasta,Nudeln
+Pizza,ˈpit.tsa,Pizza
 Riso,ˈriːzo,Reis
 Pollo,ˈpol.lo,Huhn
 Carne,ˈkar.ne,Fleisch
@@ -67,6 +69,11 @@ Grappa,ˈɡrap.pa,Grappa
 Antipasto,antiˈpaːsto,Vorspeise
 Bruschetta,bruˈsket.ta,Brot mit Belag
 Prosciutto crudo,proˈʃut.to ˈkruːdo,Rohschinken
+Carpaccio,karˈpat.tʃo,Rohes Rindfleisch dünn geschnitten
+Minestrone,mi.neˈstroːne,Gemüsesuppe
+Lasagne,laˈzaɲ.ɲe,Lasagne
+Risotto,riˈzɔt.to,Risotto
+Spaghetti,spaˈɡet.ti,Spaghetti
 Tagliatelle,taʎʎaˈtɛl.le,Tagliatelle
 Ravioli,raˈvjɔːli,Ravioli
 Tortellini,tor.telˈliːni,Tortellini
@@ -78,10 +85,12 @@ Cotoletta,kotoˈlet.ta,Schnitzel
 Bistecca,biˈstek.ka,Steak
 Frittata,fritˈtaːta,Omelett
 Panino,paˈniːno,Brötchen / Sandwich
+Tramezzino,tra.metˈtsiːno,Dreieckssandwich
 Dolce,ˈdol.tʃe,Dessert / Süßigkeit
 Gelato,dʒeˈlaːto,Eis
 Tiramisù,tira.miˈsu,Tiramisù
 Panna cotta,ˌpanna ˈkɔt.ta,Panna cotta
+Cannolo,kanˈnɔːlo,Cannolo (gefülltes Gebäck)
 Sfogliatella,sfoʎʎaˈtel.la,Sfogliatella (Blätterteiggebäck)
 Conto,ˈkɔn.to,Rechnung
 Menù,meˈnu,Speisekarte
@@ -94,14 +103,29 @@ Per me…,per me,Für mich…
 Posso avere…?,ˈpɔs.so aˈveːre, Kann ich … haben?
 È buono!,ɛ ˈbwɔːno,Es ist lecker!
 Delizioso,de.liˈtsjoːzo,Köstlich!
+Italian,IPA,German Description
+Spaghetti,spaˈɡet.ti,Spaghetti (lange dünne Nudeln)
+Linguine,liŋˈɡwiːne,Linguine (flache Spaghetti)
+Tagliatelle,taʎʎaˈtɛl.le,Tagliatelle (flache Bandnudeln)
+Fettuccine,fet.tutˈtʃiːne,Fettuccine (breite Bandnudeln)
+Pappardelle,papparˈdɛl.le,Pappardelle (sehr breite Nudeln)
+Lasagne,laˈzaɲ.ɲe,Lasagneblätter
+Cannelloni,kan.neˈlɔːni,Cannelloni (gefüllte Röhrennudeln)
+Ravioli,raˈvjɔːli,Ravioli (gefüllte Nudeltaschen)
+Tortellini,tor.telˈliːni,Tortellini (kleine gefüllte Nudeln)
 Gnocchi,ˈɲɔk.ki,Gnocchi (Kartoffelklößchen)
 Orecchiette,orekˈkjɛt.te,Orecchiette (muschelförmige Nudeln, „Öhrchen“)
+Fusilli,fuˈzil.li,Fusilli (Spiralnudeln)
 Penne,ˈpen.ne,Penne (schräg geschnittene Röhrennudeln)
 Rigatoni,ri.ɡaˈtoːni,Rigatoni (geriffelte Röhrennudeln)
 Conchiglie,konˈkiʎʎe,Muschelnudeln
 Farfalle,farˈfal.le,Schmetterlingsnudeln („Farfalle“ = Schmetterling)
+Bucatini,bu.kaˈtiːni,Bucatini (dicke Spaghetti mit Loch)
+Ziti,ˈdziːti,Ziti (lange Röhrennudeln)
 Paccheri,ˈpak.keri,Paccheri (große Röhrennudeln)
+Trofie,ˈtrɔːfje,Trofie (kurze gedrehte Nudeln, aus Ligurien)
 Bigoli,ˈbiːɡoli,Bigoli (dicke Spaghetti aus Venetien)
+Cavatelli,kavaˈtɛl.li,Kleine Muschelnudeln (oft handgemacht)
 Pici,ˈpiːtʃi,Pici (dicke toskanische Nudeln)
 Basilico,baˈziːliko,Basilikum
 Origano,oˈriɡano,Oregano
