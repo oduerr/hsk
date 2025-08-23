@@ -626,18 +626,25 @@ async function loadReferenceAudio(card) {
 /**
  * Start recording user audio
  */
+function waitNextTick(ms = 30) {
+  return new Promise(r => requestAnimationFrame(() => setTimeout(r, ms)));
+}
+
 async function startRecording() {
   try {
     console.log('Starting recording...');
     // Stop any playback and guard ASR lifecycle
     stopPlayback();
     stopASR();
+    await waitNextTick(30);  
+
+
     const audioCtx = getAudioContext();
     
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: false
       }
@@ -654,22 +661,11 @@ async function startRecording() {
     updateSpectrogramMeta(audioCtx.sampleRate, analyser.fftSize);
 
     // Setup recording
-    const recorder = audioCtx.createScriptProcessor(4096, 1, 1);
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
     const chunks = [];
-    source.connect(recorder);
-    
-    // Silent output to prevent feedback
-    const silent = audioCtx.createGain();
-    silent.gain.value = 0;
-    recorder.connect(silent);
-    silent.connect(audioCtx.destination);
-
-    recorder.onaudioprocess = (e) => {
-      chunks.push(e.inputBuffer.getChannelData(0).slice());
-    };
-
-    // Store recorder for cleanup
-    source._recorder = recorder;
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.start();
+    source._mediaRecorder = mediaRecorder;
     source._chunks = chunks;
 
     isRecording = true;
@@ -706,34 +702,29 @@ function stopRecording() {
     }
 
     // Process recorded audio
-    if (source && source._chunks) {
-      const chunks = source._chunks;
-      console.log('Processing recorded chunks:', chunks.length, 'chunks');
-      
-      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      console.log('Total recorded length:', totalLength, 'samples');
-      
-      const recordedData = new Float32Array(totalLength);
-      
-      let offset = 0;
-      for (const chunk of chunks) {
-        recordedData.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      // Create audio buffer
-      const audioCtx = getAudioContext();
-      recordedBuffer = audioCtx.createBuffer(1, recordedData.length, audioCtx.sampleRate);
-      recordedBuffer.copyToChannel(recordedData, 0, 0);
-
-      console.log('Created recorded buffer:', recordedBuffer.length, 'samples, duration:', recordedBuffer.duration, 'seconds');
-      
-      setStatus('Recording complete');
-      document.getElementById('btnPlayRec').disabled = false;
-      document.getElementById('btnToggleAB').disabled = !referenceBuffer;
-      
-      // Set mode to recorded for visualization
-      currentMode = 'recorded';
+    if (source && source._mediaRecorder) {
+        const mr = source._mediaRecorder;
+         if (mr.state !== 'inactive') mr.stop();
+         // give the 'stop' event a moment to flush the final chunk
+         setTimeout(async () => {
+         try {
+         const audioCtx = getAudioContext();
+         const blob = new Blob(source._chunks || [], { type: 'audio/webm' });
+            const ab = await blob.arrayBuffer();
+             // decode to AudioBuffer for uniform playback/analysis
+             recordedBuffer = await audioCtx.decodeAudioData(ab.slice(0));
+             setStatus('Recording complete');
+             document.getElementById('btnPlayRec').disabled = false;
+             document.getElementById('btnToggleAB').disabled = !referenceBuffer;
+             currentMode = 'recorded';
+             } catch (e) {
+             console.error(e);
+             setStatus('Recording failed - decode error');
+             } finally {
+             cleanup(); // fully tear down mic graph
+             stopASR();
+             }
+        }, 60);
     } else {
       console.error('No chunks found in source');
       setStatus('Recording failed - no audio data');
@@ -1509,16 +1500,20 @@ function cleanup() {
   }
   
   if (source) {
-    try {
-      if (source._recorder) {
-        source._recorder.disconnect();
+       try {
+         if (source._mediaRecorder) {
+           if (source._mediaRecorder.state !== 'inactive') source._mediaRecorder.stop();
+           source._mediaRecorder.ondataavailable = null;
+           source._mediaRecorder.onstop = null;
+           source._mediaRecorder = null;
+         }
+       } catch {}
+        try {
+          if (source._recorder) { source._recorder.disconnect(); source._recorder = null; }
+          source.disconnect();
+        } catch {}
+        source = null;
       }
-      source.disconnect();
-    } catch (e) {
-      // Ignore disconnect errors
-    }
-    source = null;
-  }
   
   analyser = null;
   isRecording = false;
