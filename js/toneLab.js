@@ -24,6 +24,11 @@ let spectrogramCtx = null;
 let pitchCanvas = null;
 let pitchCtx = null;
 
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordedObjectURL = null; // for fallback playback if decoding fails
+let recordedMime = 'audio/wav';
+
 // Audio data
 let spectrogramData = [];
 let pitchData = [];
@@ -633,18 +638,15 @@ function waitNextTick(ms = 30) {
 async function startRecording() {
   try {
     console.log('Starting recording...');
-    // Stop any playback and guard ASR lifecycle
     stopPlayback();
     stopASR();
-    await waitNextTick(30);  
-
+    await waitNextTick(30);
 
     const audioCtx = getAudioContext();
-    
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        echoCancellation: true,
+        echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false
       }
@@ -652,93 +654,112 @@ async function startRecording() {
 
     source = audioCtx.createMediaStreamSource(stream);
     if (!analyser) analyser = audioCtx.createAnalyser();
-    // Use centralized FFT size for consistent spectrogram bins
     analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
     try { source.disconnect(); } catch {}
     source.connect(analyser);
     analyserSourceType = 'mic';
-    console.log('Analyser source: mic');
     updateSpectrogramMeta(audioCtx.sampleRate, analyser.fftSize);
 
-    // Setup recording
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-    const chunks = [];
-    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    // choose mime
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/wav')) {
+      recordedMime = 'audio/wav';
+    } else if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      recordedMime = 'audio/webm;codecs=opus';
+    } else {
+      recordedMime = ''; // let browser pick a default
+    }
+
+    recordedChunks = [];
+    if (recordedObjectURL) {
+      URL.revokeObjectURL(recordedObjectURL);
+      recordedObjectURL = null;
+    }
+
+    mediaRecorder = new MediaRecorder(stream, recordedMime ? { mimeType: recordedMime } : undefined);
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) recordedChunks.push(e.data); };
     mediaRecorder.start();
-    source._mediaRecorder = mediaRecorder;
-    source._chunks = chunks;
 
     isRecording = true;
     currentMode = 'recording';
     updateRecordingUI(true);
     setStatus('Recording... Speak now!');
-    console.log('Recording started successfully');
-    // Start ASR if enabled
+
     const autoStart = document.getElementById('sttAutoStart');
     if (!autoStart || autoStart.checked) startASR();
-    
-    // Start real-time analyser loop
-    startAnalyserLoop();
 
+    startAnalyserLoop();
   } catch (error) {
     setStatus('Microphone access denied or unavailable');
-    console.error('Recording failed:', error);
+    console.error('Recording failed to start:', error);
   }
 }
 
-/**
- * Stop recording and process audio
- */
 function stopRecording() {
   if (!isRecording) return;
-
   isRecording = false;
   updateRecordingUI(false);
 
-  try {
-    if (reqId) {
-      cancelAnimationFrame(reqId);
-      reqId = 0;
-    }
+  if (reqId) { cancelAnimationFrame(reqId); reqId = 0; }
 
-    // Process recorded audio
-    if (source && source._mediaRecorder) {
-        const mr = source._mediaRecorder;
-         if (mr.state !== 'inactive') mr.stop();
-         // give the 'stop' event a moment to flush the final chunk
-         setTimeout(async () => {
-         try {
-         const audioCtx = getAudioContext();
-         const blob = new Blob(source._chunks || [], { type: 'audio/webm' });
-            const ab = await blob.arrayBuffer();
-             // decode to AudioBuffer for uniform playback/analysis
-             recordedBuffer = await audioCtx.decodeAudioData(ab.slice(0));
-             setStatus('Recording complete');
-             document.getElementById('btnPlayRec').disabled = false;
-             document.getElementById('btnToggleAB').disabled = !referenceBuffer;
-             currentMode = 'recorded';
-             } catch (e) {
-             console.error(e);
-             setStatus('Recording failed - decode error');
-             } finally {
-             cleanup(); // fully tear down mic graph
-             stopASR();
-             }
-        }, 60);
-    } else {
-      console.error('No chunks found in source');
-      setStatus('Recording failed - no audio data');
-    }
-
-    // Cleanup after processing
+  // If no recorder, just clean up
+  if (!mediaRecorder) {
     cleanup();
-    // Stop ASR at the end of recording
-    stopASR();
-    
-  } catch (error) {
-    setStatus('Failed to process recording');
-    console.error('Stop recording failed:', error);
+    setStatus('No active recorder');
+    return;
   }
+
+  const mr = mediaRecorder;
+  mediaRecorder = null;
+
+  const stopped = new Promise((resolve) => {
+    const finalize = () => { try { mr.ondataavailable = null; } catch {} resolve(); };
+    try {
+      if (mr.state !== 'inactive') {
+        mr.onstop = finalize;
+        mr.stop();
+      } else {
+        finalize();
+      }
+    } catch {
+      finalize();
+    }
+  });
+
+  stopped.then(async () => {
+    try {
+      if (!recordedChunks.length) {
+        setStatus('Recording failed - no audio data');
+        cleanup();
+        stopASR();
+        return;
+      }
+
+      const blob = new Blob(recordedChunks, { type: recordedMime || 'audio/wav' });
+      // Try to decode to AudioBuffer (best for analysis)
+      try {
+        const ab = await blob.arrayBuffer();
+        const ac = getAudioContext();
+        recordedBuffer = await ac.decodeAudioData(ab.slice(0));
+        recordedObjectURL = null; // not needed
+        setStatus('Recording complete');
+      } catch (decodeErr) {
+        console.warn('decodeAudioData failed; using <audio> fallback', decodeErr);
+        // Fallback: keep a URL for element-based playback
+        if (recordedObjectURL) URL.revokeObjectURL(recordedObjectURL);
+        recordedObjectURL = URL.createObjectURL(blob);
+        recordedBuffer = null; // no buffer, but we can still play via <audio>
+        setStatus('Recording complete (fallback playback)');
+      }
+
+      document.getElementById('btnPlayRec').disabled = false;
+      document.getElementById('btnToggleAB').disabled = !referenceBuffer;
+      currentMode = 'recorded';
+    } finally {
+      // Only clean up after we have processed chunks
+      cleanup();
+      stopASR();
+    }
+  });
 }
 
 /**
@@ -766,22 +787,62 @@ function playReference() {
  * Play recorded audio
  */
 function playRecording() {
-  if (!recordedBuffer) {
-    setStatus('No recording available');
-    console.error('No recorded buffer available');
+  // Prefer decoded AudioBuffer path if available
+  if (recordedBuffer) {
+    try {
+      stopPlayback();
+      stopASR();
+      startPlayback(recordedBuffer, 'recorded', 0);
+    } catch (error) {
+      setStatus('Failed to play recording');
+      console.error('Play recording failed:', error);
+    }
     return;
   }
 
-  try {
-    // Lifecycle: stop playback + ASR, then start
-    stopPlayback();
-    stopASR();
-    startPlayback(recordedBuffer, 'recorded', 0);
-    
-  } catch (error) {
-    setStatus('Failed to play recording');
-    console.error('Play recording failed:', error);
+  // Fallback: play the recordedObjectURL via <audio> and still drive the analyser
+  if (recordedObjectURL) {
+    try {
+      stopPlayback();
+      stopASR();
+
+      const ac = getAudioContext();
+      const el = new Audio(recordedObjectURL);
+      el.crossOrigin = 'anonymous';
+      const elemSource = ac.createMediaElementSource(el);
+
+      if (!analyser) analyser = ac.createAnalyser();
+      analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
+      try { analyser.disconnect(); } catch {}
+      try { elemSource.disconnect(); } catch {}
+      elemSource.connect(analyser);
+      analyser.connect(ac.destination);
+      analyserSourceType = 'playback';
+
+      currentMode = 'recorded';
+      setStatus('Playing your recording');
+      // start line & analyser
+      // We don’t know exact duration until metadata loads
+      el.onloadedmetadata = () => {
+        startPlaybackLine(el.duration || 0);
+      };
+      el.onended = () => {
+        setStatus('Playback finished');
+        stopPlaybackLine();
+        stopASR();
+      };
+
+      el.play();
+      startAnalyserLoop();
+    } catch (err) {
+      setStatus('Failed to play recording (fallback)');
+      console.error(err);
+    }
+    return;
   }
+
+  setStatus('No recording available');
+  console.error('No recorded buffer or URL available');
 }
 
 /**
