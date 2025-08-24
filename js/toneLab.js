@@ -646,15 +646,17 @@ async function startRecording() {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
       }
     });
 
     source = audioCtx.createMediaStreamSource(stream);
     if (!analyser) analyser = audioCtx.createAnalyser();
     analyser.fftSize = SPECTROGRAM_CONFIG.fftSize;
+    // Ensure analyser is not feeding speakers when recording starts (echo guard)
+    try { analyser.disconnect(); } catch {}
     try { source.disconnect(); } catch {}
     source.connect(analyser);
     analyserSourceType = 'mic';
@@ -816,7 +818,7 @@ function playRecording() {
       try { analyser.disconnect(); } catch {}
       try { elemSource.disconnect(); } catch {}
       elemSource.connect(analyser);
-      analyser.connect(ac.destination);
+      try { analyser.connect(ac.destination); } catch {}
       analyserSourceType = 'playback';
 
       currentMode = 'recorded';
@@ -832,7 +834,12 @@ function playRecording() {
         stopASR();
       };
 
+      // Resume context on user gesture path is handled by playRecording button
       el.play();
+      const autoStart = document.getElementById('sttAutoStart');
+      if (!autoStart || autoStart.checked) {
+        setTimeout(() => startASR(), 100);
+      }
       startAnalyserLoop();
     } catch (err) {
       setStatus('Failed to play recording (fallback)');
@@ -854,6 +861,8 @@ function stopPlayback() {
     try { playbackSource.disconnect(); } catch {}
     playbackSource = null;
   }
+  // Ensure analyser is disconnected from destination to avoid residual audio paths
+  try { if (analyser) analyser.disconnect(); } catch {}
   isPlaying = false;
   if (playbackAnimationId) {
     cancelAnimationFrame(playbackAnimationId);
@@ -892,7 +901,8 @@ function continueStartPlayback(buffer, sourceType, offsetSec, audioCtx) {
   try { analyser.disconnect(); } catch {}
   try { node.disconnect(); } catch {}
   node.connect(analyser);
-  analyser.connect(audioCtx.destination);
+  // Only connect analyser to destination during playback
+  try { analyser.connect(audioCtx.destination); } catch {}
   analyserSourceType = 'playback';
   console.log('Analyser source: playback');
 
